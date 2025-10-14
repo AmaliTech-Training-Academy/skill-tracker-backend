@@ -1,0 +1,14 @@
+target/
+!target/*.jar
+.mvn/
+*.log
+*.tmp
+.git/
+.gitignore
+README.md
+docker-compose.yml
+.env
+*.md
+.idea/
+*.iml
+.vscode/

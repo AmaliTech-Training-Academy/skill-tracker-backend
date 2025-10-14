@@ -95,11 +95,11 @@
         </dependency>
 
         <!-- Shared Libraries -->
-        <dependency>
-            <groupId>gtp</groupId>
-            <artifactId>common-events</artifactId>
-            <version>${project.version}</version>
-        </dependency>
+<!--        <dependency>-->
+<!--            <groupId>gtp</groupId>-->
+<!--            <artifactId>common-events</artifactId>-->
+<!--            <version>${project.version}</version>-->
+<!--        </dependency>-->
 
         <!-- Shared Libraries -->
         <!--        <dependency>-->

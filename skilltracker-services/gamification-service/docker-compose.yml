@@ -1,0 +1,47 @@
+# skilltracker-services/gamification-service/docker-compose.yml
+
+services:
+  mongodb-gamification:
+    container_name: mongo-gamification-db
+    image: mongo:7
+    environment:
+      MONGO_INITDB_DATABASE: gamification_service_db
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER:-gamificationservice}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-gamificationservice123}
+    ports:
+      - "27019:27017"
+    volumes:
+      - mongo_gamification_data:/data/db
+      - ./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js
+    command: --auth
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - skilltracker-network
+
+  gamification-service:
+    build: .
+    image: skilltracker/gamification-service:latest
+    container_name: gamification-service
+    ports:
+      - "8088:8088"
+    environment:
+      SERVER_PORT: 8088
+      SPRING_DATA_MONGODB_URI: mongodb://${MONGO_USER:-gamificationservice}:${MONGO_PASSWORD:-gamificationservice123}@mongodb-gamification:27017/gamification_service_db?authSource=admin
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8082/eureka/
+      SPRING_CLOUD_CONFIG_URI: http://config-server:8081
+    depends_on:
+      mongodb-gamification:
+        condition: service_healthy
+    networks:
+      - skilltracker-network
+
+networks:
+  skilltracker-network:
+    external: true
+
+volumes:
+  mongo_gamification_data:

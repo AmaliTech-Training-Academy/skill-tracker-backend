@@ -1,0 +1,50 @@
+# skilltracker-services/user-service/docker-compose.yml
+
+services:
+  postgres-user:
+    container_name: postgres-user-db
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: user_service_db
+      POSTGRES_USER: ${POSTGRES_USER:-userservice}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-userservice123}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_user_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-userservice} -d user_service_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - skilltracker-network
+
+  user-service:
+    build:
+      context: ../../
+      dockerfile: skilltracker-services/user-service/Dockerfile
+    image: skilltracker/user-service:latest
+    container_name: user-service
+    ports:
+      - "8084:8084"
+    environment:
+      SERVER_PORT: 8084
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-user:5432/user_service_db
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-userservice}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-userservice123}
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8082/eureka/
+      SPRING_CLOUD_CONFIG_URI: http://config-server:8081
+    depends_on:
+      postgres-user:
+        condition: service_healthy
+    networks:
+      - skilltracker-network
+
+networks:
+  skilltracker-network:
+    external: true
+
+volumes:
+  postgres_user_data:

@@ -1,0 +1,78 @@
+# skilltracker-services/task-service/docker-compose.yml
+
+services:
+  postgres-task:
+    container_name: postgres-task-db
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: task_service_db
+      POSTGRES_USER: ${POSTGRES_USER:-taskservice}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-taskservice123}
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_task_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-taskservice} -d task_service_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - skilltracker-network
+
+  mongodb-task:
+    container_name: mongo-task-db
+    image: mongo:7
+    environment:
+      MONGO_INITDB_DATABASE: task_service_db
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER:-taskservice}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-taskservice123}
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_task_data:/data/db
+      - ./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js
+    command: --auth
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - skilltracker-network
+
+  task-service:
+    build:
+      context: ../..
+      dockerfile: ./skilltracker-services/task-service/Dockerfile
+    image: skilltracker/task-service:latest
+    container_name: task-service
+    ports:
+      - "8085:8085"
+    environment:
+      SERVER_PORT: 8085
+      # PostgreSQL config
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-task:5432/task_service_db
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-taskservice}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-taskservice123}
+      # MongoDB config
+      SPRING_DATA_MONGODB_URI: mongodb://${MONGO_USER:-taskservice}:${MONGO_PASSWORD:-taskservice123}@mongodb-task:27017/task_service_db?authSource=admin
+      # Service discovery
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8082/eureka/
+      SPRING_CLOUD_CONFIG_URI: http://config-server:8081
+    depends_on:
+      postgres-task:
+        condition: service_healthy
+      mongodb-task:
+        condition: service_healthy
+    networks:
+      - skilltracker-network
+
+networks:
+  skilltracker-network:
+    external: true
+
+volumes:
+  postgres_task_data:
+  mongo_task_data:
