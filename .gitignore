@@ -36,7 +36,10 @@ build/
 ## randoms
 template.xml
 .env
+<<<<<<< HEAD
 *.bak
+=======
+>>>>>>> a488459 (chore(monorepo): set up project structure with Makefile automation)
 
 # Compiled class file
 *.class
