@@ -1,0 +1,21 @@
+# skilltracker-services/bff-service/docker-compose.yml
+
+services:
+  bff-service:
+    build: .
+    image: skilltracker/bff-service:latest
+    container_name: bff-service
+    ports:
+      - "8083:8083"
+    environment:
+      SERVER_PORT: 8083
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8082/eureka/
+      SPRING_CLOUD_CONFIG_URI: http://config-server:8081
+      SPRING_REDIS_HOST: redis-cache
+      SPRING_REDIS_PORT: 6379
+    networks:
+      - skilltracker-network
+
+networks:
+  skilltracker-network:
+    external: true

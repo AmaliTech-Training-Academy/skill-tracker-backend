@@ -1,0 +1,134 @@
+# docker-compose.yml (root level - shared infrastructure)
+
+services:
+  # Service Discovery
+  discovery-server:
+    build:
+      context: .
+      dockerfile: ./skilltracker-infra/discovery-server/Dockerfile
+    image: skilltracker/discovery-server:latest
+    container_name: discovery-server
+    ports:
+      - "8082:8082"
+    networks:
+      - skilltracker-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8082/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Config Server
+  config-server:
+    build:
+      context: .
+      dockerfile: ./skilltracker-infra/config-server/Dockerfile
+    image: skilltracker/config-server:latest
+    container_name: config-server
+    ports:
+      - "8081:8081"
+    environment:
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8082/eureka/
+    depends_on:
+      discovery-server:
+        condition: service_healthy
+    networks:
+      - skilltracker-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # API Gateway
+  api-gateway:
+    build:
+      context: .
+      dockerfile: ./skilltracker-infra/api-gateway/Dockerfile
+    image: skilltracker/api-gateway:latest
+    container_name: api-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8082/eureka/
+      SPRING_CLOUD_CONFIG_URI: http://config-server:8081
+    depends_on:
+      discovery-server:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+    networks:
+      - skilltracker-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Centralized Audit MongoDB
+  mongodb-audit:
+    container_name: mongo-audit-db
+    image: mongo:7
+    environment:
+      MONGO_INITDB_DATABASE: audit_db
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_AUDIT_USER:-auditservice}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_AUDIT_PASSWORD:-auditservice123}
+    ports:
+      - "27021:27017"
+    volumes:
+      - mongo_audit_data:/data/db
+    command: --auth
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - skilltracker-network
+
+  # Redis - shared cache
+  redis:
+    container_name: redis-cache
+    image: redis:latest
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    networks:
+      - skilltracker-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # RabbitMQ - message broker
+  rabbitmq:
+    container_name: rabbitmq-broker
+    image: rabbitmq:3-management
+    env_file: .env
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-rabbitmq-user}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-rabbit-mq123}
+    ports:
+      - "5672:5672"   # AMQP
+      - "15672:15672" # Management UI
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - skilltracker-network
+    healthcheck:
+      test: ["CMD", "rabbitmqctl", "status"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+networks:
+  skilltracker-network:
+    driver: bridge
+
+volumes:
+  redis_data:
+  rabbitmq_data:
+  mongo_audit_data:

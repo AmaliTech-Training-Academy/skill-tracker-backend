@@ -1,0 +1,51 @@
+# skilltracker-services/notification-service/docker-compose.yml
+
+services:
+  mongodb-notification:
+    container_name: mongo-notification-db
+    image: mongo:7
+    environment:
+      MONGO_INITDB_DATABASE: notification_service_db
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER:-notificationservice}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-notificationservice123}
+    ports:
+      - "27020:27017"
+    volumes:
+      - mongo_notification_data:/data/db
+      - ./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js
+    command: --auth
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - skilltracker-network
+
+  notification-service:
+    build: .
+    image: skilltracker/notification-service:latest
+    container_name: notification-service
+    ports:
+      - "8091:8091"
+    environment:
+      SERVER_PORT: 8091
+      SPRING_DATA_MONGODB_URI: mongodb://${MONGO_USER:-notificationservice}:${MONGO_PASSWORD:-notificationservice123}@mongodb-notification:27017/notification_service_db?authSource=admin
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8082/eureka/
+      SPRING_CLOUD_CONFIG_URI: http://config-server:8081
+      SPRING_RABBITMQ_HOST: rabbitmq-broker
+      SPRING_RABBITMQ_PORT: 5672
+      SPRING_RABBITMQ_USERNAME: ${RABBITMQ_USER:-guest}
+      SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-guest}
+    depends_on:
+      mongodb-notification:
+        condition: service_healthy
+    networks:
+      - skilltracker-network
+
+networks:
+  skilltracker-network:
+    external: true
+
+volumes:
+  mongo_notification_data:
