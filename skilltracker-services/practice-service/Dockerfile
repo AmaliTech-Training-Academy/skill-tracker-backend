@@ -1,19 +1,18 @@
-# -------------------------------------------------------
-# Skill Tracker Backend - Practice Service Dockerfile
-# -------------------------------------------------------
-
 FROM maven:3.9.9-eclipse-temurin-21 AS build
 WORKDIR /app
 
 COPY pom.xml .
 
 COPY skilltracker-services/practice-service/pom.xml skilltracker-services/practice-service/
-COPY skilltracker-services/practice-service/src skilltracker-services/practice-service/src
 
 COPY skilltracker-common skilltracker-common
 COPY skilltracker-infra skilltracker-infra
 
 WORKDIR /app/skilltracker-services/practice-service/
+
+RUN mvn dependency:go-offline -B
+
+COPY skilltracker-services/practice-service/src src
 
 RUN mvn clean package -DskipTests
 
@@ -30,7 +29,7 @@ USER spring:spring
 
 COPY --from=build /app/skilltracker-services/practice-service/target/*.jar app.jar
 
-EXPOSE 8081
+EXPOSE 8085
 
 # -------------------------------------------------------
 # Run Application

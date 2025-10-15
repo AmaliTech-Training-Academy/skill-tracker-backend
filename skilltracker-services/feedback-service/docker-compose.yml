@@ -12,7 +12,6 @@ services:
       - "5434:5432"
     volumes:
       - postgres_feedback_data:/var/lib/postgresql/data
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-feedbackservice} -d feedback_service_db"]
       interval: 5s
@@ -22,7 +21,9 @@ services:
       - skilltracker-network
 
   feedback-service:
-    build: .
+    build:
+      context: ../../
+      dockerfile: skilltracker-services/feedback-service/Dockerfile
     image: skilltracker/feedback-service:latest
     container_name: feedback-service
     ports:

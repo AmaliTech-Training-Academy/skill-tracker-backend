@@ -2,7 +2,9 @@
 
 services:
   bff-service:
-    build: .
+    build:
+      context: ../../
+      dockerfile: skilltracker-services/bff-service/Dockerfile
     image: skilltracker/bff-service:latest
     container_name: bff-service
     ports:

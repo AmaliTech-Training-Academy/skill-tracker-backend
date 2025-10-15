@@ -4,12 +4,15 @@ WORKDIR /app
 COPY pom.xml .
 
 COPY skilltracker-services/notification-service/pom.xml skilltracker-services/notification-service/
-COPY skilltracker-services/notification-service/src skilltracker-services/notification-service/src
 
 COPY skilltracker-common skilltracker-common
 COPY skilltracker-infra skilltracker-infra
 
 WORKDIR /app/skilltracker-services/notification-service/
+
+RUN mvn dependency:go-offline -B
+
+COPY skilltracker-services/notification-service/src src
 
 RUN mvn clean package -DskipTests
 
@@ -26,7 +29,7 @@ USER spring:spring
 
 COPY --from=build /app/skilltracker-services/notification-service/target/*.jar app.jar
 
-EXPOSE 8081
+EXPOSE 8085
 
 # -------------------------------------------------------
 # Run Application

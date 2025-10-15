@@ -28,14 +28,14 @@
         <module>skilltracker-infra/api-gateway</module>
 
 
-<!--        <module>skilltracker-services/analytics-service</module>-->
-<!--        <module>skilltracker-services/bff-service</module>-->
-<!--        <module>skilltracker-services/feedback-service</module>-->
-<!--        <module>skilltracker-services/gamification-service</module>-->
-<!--        <module>skilltracker-services/notification</module>-->
-<!--        <module>skilltracker-services/payment-service</module>-->
+        <module>skilltracker-services/analytics-service</module>
+        <module>skilltracker-services/bff-service</module>
+        <module>skilltracker-services/feedback-service</module>
+        <module>skilltracker-services/gamification-service</module>
+        <module>skilltracker-services/notification-service</module>
+        <module>skilltracker-services/payment-service</module>
         <module>skilltracker-services/practice-service</module>
-<!--        <module>skilltracker-services/task-service</module>-->
+        <module>skilltracker-services/task-service</module>
         <module>skilltracker-services/user-service</module>
 
 
