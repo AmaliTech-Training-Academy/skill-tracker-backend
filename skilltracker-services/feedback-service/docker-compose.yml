@@ -5,15 +5,15 @@ services:
     container_name: postgres-feedback-db
     image: postgres:15-alpine
     environment:
-      POSTGRES_DB: feedback_service_db
-      POSTGRES_USER: ${POSTGRES_USER:-feedbackservice}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-feedbackservice123}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
       - "5434:5432"
     volumes:
       - postgres_feedback_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-feedbackservice} -d feedback_service_db"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -30,9 +30,9 @@ services:
       - "8090:8090"
     environment:
       SERVER_PORT: 8090
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-feedback:5432/feedback_service_db
-      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-feedbackservice}
-      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-feedbackservice123}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-feedback:5432/${POSTGRES_DB}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8082/eureka/
       SPRING_CLOUD_CONFIG_URI: http://config-server:8081
     depends_on:

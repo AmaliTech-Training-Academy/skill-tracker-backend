@@ -5,15 +5,15 @@ services:
     container_name: postgres-task-db
     image: postgres:15-alpine
     environment:
-      POSTGRES_DB: task_service_db
-      POSTGRES_USER: ${POSTGRES_USER:-taskservice}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-taskservice123}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
       - "5433:5432"
     volumes:
       - postgres_task_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-taskservice} -d task_service_db"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -24,9 +24,9 @@ services:
     container_name: mongo-task-db
     image: mongo:7
     environment:
-      MONGO_INITDB_DATABASE: task_service_db
-      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER:-taskservice}
-      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-taskservice123}
+      MONGO_INITDB_DATABASE: ${MONGO_DB}
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD}
     ports:
       - "27017:27017"
     volumes:
@@ -51,11 +51,11 @@ services:
     environment:
       SERVER_PORT: 8085
       # PostgreSQL config
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-task:5432/task_service_db
-      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-taskservice}
-      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-taskservice123}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-task:${POSTGRES_PORT}/${POSTGRES_DB}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
       # MongoDB config
-      SPRING_DATA_MONGODB_URI: mongodb://${MONGO_USER:-taskservice}:${MONGO_PASSWORD:-taskservice123}@mongodb-task:27017/task_service_db?authSource=admin
+      SPRING_DATA_MONGODB_URI: mongodb://${MONGO_USER}:${MONGO_PASSWORD}@mongodb-task:${MONGODB_PORT}/${MONGO_DB}?authSource=admin
       # Service discovery
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8082/eureka/
       SPRING_CLOUD_CONFIG_URI: http://config-server:8081

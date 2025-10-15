@@ -5,9 +5,9 @@ services:
     container_name: mongo-notification-db
     image: mongo:7
     environment:
-      MONGO_INITDB_DATABASE: notification_service_db
-      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER:-notificationservice}
-      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-notificationservice123}
+      MONGO_INITDB_DATABASE: ${MONGO_DB}
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD}
     ports:
       - "27020:27017"
     volumes:
@@ -31,13 +31,13 @@ services:
       - "8091:8091"
     environment:
       SERVER_PORT: 8091
-      SPRING_DATA_MONGODB_URI: mongodb://${MONGO_USER:-notificationservice}:${MONGO_PASSWORD:-notificationservice123}@mongodb-notification:27017/notification_service_db?authSource=admin
+      SPRING_DATA_MONGODB_URI: mongodb://${MONGO_USER}:${MONGO_PASSWORD}@mongodb-notification:27017/${MONGO_DB}?authSource=admin
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8082/eureka/
       SPRING_CLOUD_CONFIG_URI: http://config-server:8081
       SPRING_RABBITMQ_HOST: rabbitmq-broker
       SPRING_RABBITMQ_PORT: 5672
-      SPRING_RABBITMQ_USERNAME: ${RABBITMQ_USER:-guest}
-      SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-guest}
+      SPRING_RABBITMQ_USERNAME: ${RABBITMQ_USER}
+      SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
     depends_on:
       mongodb-notification:
         condition: service_healthy

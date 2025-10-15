@@ -5,15 +5,15 @@ services:
     container_name: postgres-payment-db
     image: postgres:15-alpine
     environment:
-      POSTGRES_DB: payment_service_db
-      POSTGRES_USER: ${POSTGRES_USER:-paymentservice}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-paymentservice123}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
       - "5435:5432"
     volumes:
       - postgres_payment_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-paymentservice} -d payment_service_db"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -30,11 +30,15 @@ services:
       - "8087:8087"
     environment:
       SERVER_PORT: 8087
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-payment:5432/payment_service_db
-      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-paymentservice}
-      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-paymentservice123}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-payment:5432/${POSTGRES_DB}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8082/eureka/
       SPRING_CLOUD_CONFIG_URI: http://config-server:8081
+      SPRING_RABBITMQ_HOST: rabbitmq-broker
+      SPRING_RABBITMQ_PORT: 5672
+      SPRING_RABBITMQ_USERNAME: ${RABBITMQ_USER}
+      SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
     depends_on:
       postgres-payment:
         condition: service_healthy
