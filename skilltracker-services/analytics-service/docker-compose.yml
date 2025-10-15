@@ -31,7 +31,7 @@ services:
       - "8086:8086"
     environment:
       SERVER_PORT: 8086
-      SPRING_DATA_MONGODB_URI: mongodb://${MONGO_USER:-analyticsservice}:${MONGO_PASSWORD}@mongodb-analytics:27017/${MONGO_DB}?authSource=admin
+      SPRING_DATA_MONGODB_URI: mongodb://${MONGO_USER}:${MONGO_PASSWORD}@mongodb-analytics:27017/${MONGO_DB}?authSource=admin
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8082/eureka/
       SPRING_CLOUD_CONFIG_URI: http://config-server:8081
     depends_on:
