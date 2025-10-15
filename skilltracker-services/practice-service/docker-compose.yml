@@ -5,15 +5,15 @@ services:
     container_name: postgres-practice-db
     image: postgres:15-alpine
     environment:
-      POSTGRES_DB: practice_service_db
-      POSTGRES_USER: ${POSTGRES_USER:-practiceservice}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-practiceservice123}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
       - "5436:5432"
     volumes:
       - postgres_practice_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-practiceservice} -d practice_service_db"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -30,9 +30,9 @@ services:
       - "8089:8089"
     environment:
       SERVER_PORT: 8089
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-practice:5432/practice_service_db
-      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-practiceservice}
-      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-practiceservice123}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-practice:5432/${POSTGRES_DB}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8082/eureka/
       SPRING_CLOUD_CONFIG_URI: http://config-server:8081
     depends_on:

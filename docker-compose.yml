@@ -71,8 +71,8 @@ services:
     image: mongo:7
     environment:
       MONGO_INITDB_DATABASE: audit_db
-      MONGO_INITDB_ROOT_USERNAME: ${MONGO_AUDIT_USER:-auditservice}
-      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_AUDIT_PASSWORD:-auditservice123}
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_AUDIT_USER}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_AUDIT_PASSWORD}
     ports:
       - "27021:27017"
     volumes:
@@ -109,8 +109,8 @@ services:
     image: rabbitmq:3-management
     env_file: .env
     environment:
-      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-rabbitmq-user}
-      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-rabbit-mq123}
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
     ports:
       - "5672:5672"   # AMQP
       - "15672:15672" # Management UI
