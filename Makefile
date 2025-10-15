@@ -12,55 +12,71 @@ INFRA_DIR := skilltracker-infra
 # Default target
 .DEFAULT_GOAL := help
 
+export COMPOSE_BAKE=true
+
+.PHONY: h
+h: help
+
 # -------------------------------------------------------
 # HELP
 # -------------------------------------------------------
-
 help:
 	@echo ""
 	@echo "📘 Skill Tracker Backend - Command Reference"
 	@echo "==========================================================================================="
 	@echo ""
-	@echo "🔧 MAVEN BUILD COMMANDS"
+	@echo "🔧 MAVEN COMMANDS"
 	@echo "-------------------------------------------------------------------------------------------"
-	@echo "🛠️   make build                     - Build all Maven modules"
-	@echo "🧹  make clean                     - Clean Maven build targets"
-	@echo "🧪  make test                      - Run all Maven tests"
-	@echo "📦  make package                   - Package all modules (skip tests)"
+	@echo "🛠️   make build                      - Build all Maven modules"
+	@echo "🧹  make clean                      - Clean Maven build targets"
+	@echo "🧪  make test                       - Run all Maven tests"
+	@echo "📦  make package                    - Package all modules (skip tests)"
 	@echo ""
-	@echo "🚀  make run SERVICE=user          - Run a specific service (e.g. user)"
-	@echo "🔁  make rebuild SERVICE=task      - Clean, build, and run a service"
+	@echo "🚀  make run SERVICE=user           - Run a specific service (e.g. user)"
+	@echo "🔁  make rebuild SERVICE=task       - Clean, build, and run a service"
 	@echo ""
-	@echo "🌍  make run-infra                 - Run infrastructure (Config, Discovery, Gateway)"
-	@echo "🧩  make run-services              - Run all microservices"
-	@echo "⚙️   make run-all                   - Run infra + microservices"
-	@echo "🪄  make run-all-alias             - Alias for 'make run-all'"
+	@echo "🌍  make run-infra                  - Run infrastructure (Config, Discovery, Gateway)"
+	@echo "🧩  make run-services               - Run all microservices"
+	@echo "⚙️   make run-all                    - Run infra + microservices"
+	@echo "🪄  make run-all-alias              - Alias for 'make run-all'"
 	@echo ""
-	@echo "🛑  make stop                      - Stop all running Spring Boot processes"
-	@echo "📜  make logs SERVICE=user         - Tail logs for a specific service"
+	@echo "🛑  make stop                       - Stop all running Spring Boot processes"
+	@echo "📜  make logs SERVICE=user          - Tail logs for a specific service"
 	@echo ""
 	@echo ""
-	@echo "🐳 DOCKER COMMANDS"
-	@echo "------------------------------------------------------------------------------------------"
+	@echo "🐳 DOCKER BUILD COMMANDS"
+	@echo "-------------------------------------------------------------------------------------------"
 	@echo "🏗️   make build-infra               - Build all infrastructure Docker images"
 	@echo "🏗️   make build-services            - Build all microservice Docker images"
 	@echo "🏗️   make build-all                 - Build both infra + microservice images"
 	@echo ""
-	@echo "🏗️   make dkr-build SERVICE=<service>    - Build Docker image for a specific service"
-	@echo "🏗️  make dkr-build SERVICE=<service>   	- Build Docker image for a specific service"
-	@echo "🏗️  make dkr-run SERVICE=<service>     	- Run Docker container for a specific service"
-	@echo "🏗️  make dkr-stop SERVICE=<service>    	- Stop Docker container for a specific service"
+	@echo "🐳  make dkr-build SERVICE=<svc>   - Build Docker image for a specific service"
 	@echo ""
+	@echo ""
+	@echo "▶️ DOCKER RUN COMMANDS"
+	@echo "-------------------------------------------------------------------------------------------"
 	@echo "▶️   make start-infra               - Start infrastructure containers"
+	@echo "▶️   make start-services            - Start all microservice containers"
 	@echo "▶️   make start-all                 - Start infra + all microservice containers"
-	@echo "🧹  make stop-all                   - Stop all running containers"
 	@echo ""
-	@echo "🧽  make dkr-clean              	   - Remove containers, networks & volumes"
-	@echo "📜  make dkr-logs                   - Tail logs from all running containers"
+	@echo "🐳  make dkr-run SERVICE=<svc>     - Run Docker container for a specific service"
+	@echo ""
+	@echo ""
+	@echo "🧭 CONTAINER LIFECYCLE MANAGEMENT"
+	@echo "-------------------------------------------------------------------------------------------"
+	@echo "🛑  make stop-all                   - Stop all running containers (no removal)"
+	@echo "🧹  make down-all                   - Stop and remove all containers"
+	@echo "🔥  make reset-all                  - Stop, remove containers + volumes (hard reset)"
 	@echo ""
 	@echo "♻️   make rebuild-all               - Clean, rebuild & start everything (Docker)"
 	@echo ""
+	@echo ""
+	@echo "🧽 MAINTENANCE & UTILITIES"
 	@echo "-------------------------------------------------------------------------------------------"
+	@echo "🧽  make dkr-clean                  - Remove unused containers, images & volumes"
+	@echo "📜  make dkr-logs                   - Tail logs from all running containers"
+	@echo ""
+	@echo ""
 	@echo "💡 EXAMPLES"
 	@echo "-------------------------------------------------------------------------------------------"
 	@echo "  make run SERVICE=user"
@@ -75,9 +91,13 @@ help:
 	@echo "  make dkr-build SERVICE=user"
 	@echo "  make dkr-run SERVICE=user"
 	@echo "  make dkr-stop SERVICE=user"
+	@echo ""
 	@echo "  make start-all"
 	@echo "  make stop-all"
-	@echo "  make logs-docker"
+	@echo "  make down-all"
+	@echo "  make reset-all"
+	@echo "  make dkr-clean"
+	@echo "  make dkr-logs"
 	@echo "  make rebuild-all"
 	@echo ""
 	@echo "==========================================================================================="
@@ -86,7 +106,6 @@ help:
 # -------------------------------------------------------
 # BUILD COMMANDS
 # -------------------------------------------------------
-
 build:
 	@echo "🏗️  Building all modules..."
 	$(MVN) clean install -DskipTests
@@ -106,7 +125,6 @@ package:
 # -------------------------------------------------------
 # RUN SINGLE SERVICE
 # -------------------------------------------------------
-
 run:
 	@if [ -z "$(SERVICE)" ]; then \
 		echo "❌ Please provide a SERVICE variable, e.g. make run SERVICE=user"; \
@@ -118,7 +136,6 @@ run:
 # -------------------------------------------------------
 # REBUILD SINGLE SERVICE
 # -------------------------------------------------------
-
 rebuild:
 	@if [ -z "$(SERVICE)" ]; then \
 		echo "❌ Please specify a service. Example: make rebuild SERVICE=user"; \
@@ -130,13 +147,8 @@ rebuild:
 	$(MVN) -f $(SERVICES_DIR)/$(SERVICE)-service spring-boot:run
 
 # -----------------------------------------------
-# Run All Services (Infra + Microservices)
-# -----------------------------------------------
-
-# -----------------------------------------------
 # Run Infrastructure Only
 # -----------------------------------------------
-
 run-infra:
 	@echo "🏗️  Starting Infrastructure Services..."
 	@mkdir -p logs
@@ -161,7 +173,6 @@ run-infra:
 # -----------------------------------------------
 # Run Microservices Only
 # -----------------------------------------------
-
 run-services:
 	@echo "🧠 Starting Microservices..."
 	@mkdir -p logs
@@ -177,7 +188,6 @@ run-services:
 # -----------------------------------------------
 # Run Everything (Infra + Services)
 # -----------------------------------------------
-
 run-all:
 	@echo "🚀 Starting Infrastructure + Microservices..."
 	$(MAKE) run-infra
@@ -189,7 +199,6 @@ run-all:
 # -------------------------------------------------------
 # STOP SERVICES
 # -------------------------------------------------------
-
 stop:
 	@echo "🛑 Stopping all Spring Boot services..."
 	@pkill -f "spring-boot:run" || true
@@ -198,7 +207,6 @@ stop:
 # -------------------------------------------------------
 # LOGS
 # -------------------------------------------------------
-
 logs:
 	@if [ -z "$(SERVICE)" ]; then \
 		echo "❌ Please specify a service. Example: make logs SERVICE=user"; \
@@ -218,7 +226,6 @@ run-all-alias: run-all
 # -------------------------------------------------------
 # 🐳 DOCKER COMMANDS
 # -------------------------------------------------------
-
 # -------------------------------------------------------
 # Build Infrastructure Images
 # -------------------------------------------------------
@@ -242,16 +249,12 @@ build-infra:
 # Example: make build-services
 # -------------------------------------------------------
 build-services:
-	@echo "🏗️  Building microservice Docker images..."
-	@cd skilltracker-services/user-service && COMPOSE_BAKE=true docker-compose build
-	@cd skilltracker-services/task-service && COMPOSE_BAKE=true docker-compose build
-	@cd skilltracker-services/analytics-service && COMPOSE_BAKE=true docker-compose build
-	@cd skilltracker-services/feedback-service && COMPOSE_BAKE=true docker-compose build
-	@cd skilltracker-services/gamification-service && COMPOSE_BAKE=true docker-compose build
-	@cd skilltracker-services/notification-service && COMPOSE_BAKE=true docker-compose build
-	@cd skilltracker-services/payment-service && COMPOSE_BAKE=true docker-compose build
-	@cd skilltracker-services/practice-service && COMPOSE_BAKE=true docker-compose build
-	@cd skilltracker-services/bff-service && COMPOSE_BAKE=true docker-compose build
+	@echo "🏗️  Building all microservice Docker images with Buildx Bake..."
+	@docker buildx bake user-service task-service analytics-service feedback-service \
+	gamification-service notification-service payment-service practice-service bff-service \
+	--set *.network=host
+	@echo "✅ All microservice Docker images built successfully!"
+	@echo ""
 
 
 # -------------------------------------------------------
@@ -282,13 +285,9 @@ start-infra:
 
 
 # -------------------------------------------------------
-# Start All Containers (Infra + Microservices)
+# Start Microservices Containers
 # -------------------------------------------------------
-# Starts the infrastructure and then all microservice containers.
-# Useful for bootstrapping the full Skill Tracker system locally.
-# Example: make start-all
-# -------------------------------------------------------
-start-all: start-infra
+start-services:
 	@echo "▶️  Starting all microservice containers..."
 	@cd skilltracker-services/user-service && docker-compose up -d
 	@cd skilltracker-services/task-service && docker-compose up -d
@@ -299,6 +298,15 @@ start-all: start-infra
 	@cd skilltracker-services/payment-service && docker-compose up -d
 	@cd skilltracker-services/practice-service && docker-compose up -d
 	@cd skilltracker-services/bff-service && docker-compose up -d
+
+# -------------------------------------------------------
+# Start All Containers (Infra + Microservices)
+# -------------------------------------------------------
+# Starts the infrastructure and then all microservice containers.
+# Useful for bootstrapping the full Skill Tracker system locally.
+# Example: make start-all
+# -------------------------------------------------------
+start-all: start-infra start-services
 	@echo "✅ All containers started successfully!"
 
 
@@ -314,9 +322,9 @@ dkr-build:
 		echo "❌ Please specify a service to build. Example: make dkr-build SERVICE=user"; \
 		exit 1; \
 	fi
-	@echo "🐳 Building Docker image for $(SERVICE)-service..."
+	@echo "🐳 Building Docker image for $(SERVICE)-service (with Bake)..."
 	@if [ -d "$(SERVICES_DIR)/$(SERVICE)-service" ]; then \
-		cd $(SERVICES_DIR)/$(SERVICE)-service && docker-compose build; \
+		cd $(SERVICES_DIR)/$(SERVICE)-service && COMPOSE_BAKE=true docker compose build; \
 		echo "✅ Successfully built Docker image for $(SERVICE)-service."; \
 	else \
 		echo "⚠️  Service directory not found: $(SERVICES_DIR)/$(SERVICE)-service"; \
@@ -343,12 +351,30 @@ dkr-run:
 # -------------------------------------------------------
 # Stop All Containers
 # -------------------------------------------------------
-# Stops and removes all running containers for both
+# Stops all running containers for both
 # infrastructure and microservices.
 # Example: make stop-all
 # -------------------------------------------------------
 stop-all:
-	@echo "🛑 Stopping all containers..."
+	@echo "🛑 Stopping all containers (without removing them)..."
+	@cd skilltracker-services/bff-service && docker-compose stop
+	@cd skilltracker-services/practice-service && docker-compose stop
+	@cd skilltracker-services/payment-service && docker-compose stop
+	@cd skilltracker-services/notification-service && docker-compose stop
+	@cd skilltracker-services/gamification-service && docker-compose stop
+	@cd skilltracker-services/feedback-service && docker-compose stop
+	@cd skilltracker-services/analytics-service && docker-compose stop
+	@cd skilltracker-services/task-service && docker-compose stop
+	@cd skilltracker-services/user-service && docker-compose stop
+	docker-compose stop
+	@echo "✅ All containers stopped (but not removed)!"
+
+# -------------------------------------------------------
+# Stop and Remove Containers
+# -------------------------------------------------------
+
+down-all:
+	@echo "🧹 Stopping and removing all containers..."
 	@cd skilltracker-services/bff-service && docker-compose down
 	@cd skilltracker-services/practice-service && docker-compose down
 	@cd skilltracker-services/payment-service && docker-compose down
@@ -390,6 +416,12 @@ dkr-clean: stop-all
 	docker system prune -f
 	docker volume prune -f
 	@echo "✅ Docker cleanup complete!"
+
+
+reset-all:
+	@echo "🔥 Removing containers, networks, and volumes..."
+	docker-compose down -v
+	@echo "✅ Environment fully reset!"
 
 
 # -------------------------------------------------------

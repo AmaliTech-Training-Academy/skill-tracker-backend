@@ -1,16 +1,18 @@
-
 FROM maven:3.9.9-eclipse-temurin-21 AS build
 WORKDIR /app
 
 COPY pom.xml .
 
 COPY skilltracker-services/payment-service/pom.xml skilltracker-services/payment-service/
-COPY skilltracker-services/payment-service/src skilltracker-services/payment-service/src
 
 COPY skilltracker-common skilltracker-common
 COPY skilltracker-infra skilltracker-infra
 
 WORKDIR /app/skilltracker-services/payment-service/
+
+RUN mvn dependency:go-offline -B
+
+COPY skilltracker-services/payment-service/src src
 
 RUN mvn clean package -DskipTests
 
@@ -27,7 +29,7 @@ USER spring:spring
 
 COPY --from=build /app/skilltracker-services/payment-service/target/*.jar app.jar
 
-EXPOSE 8081
+EXPOSE 8085
 
 # -------------------------------------------------------
 # Run Application

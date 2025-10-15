@@ -12,7 +12,6 @@ services:
       - "27019:27017"
     volumes:
       - mongo_gamification_data:/data/db
-      - ./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js
     command: --auth
     healthcheck:
       test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
@@ -23,7 +22,9 @@ services:
       - skilltracker-network
 
   gamification-service:
-    build: .
+    build:
+      context: ../../
+      dockerfile: skilltracker-services/gamification-service/Dockerfile
     image: skilltracker/gamification-service:latest
     container_name: gamification-service
     ports:
