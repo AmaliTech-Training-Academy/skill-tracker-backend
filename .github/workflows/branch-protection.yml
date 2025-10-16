@@ -3,40 +3,52 @@ name: Branch Protection (Advisory)
 on:
   pull_request:
     branches: [main, staging]
+    types: [opened, synchronize, reopened, ready_for_review]
   pull_request_review:
     types: [submitted]
 
 jobs:
   enforce-staging-to-main:
-    if: github.base_ref == 'main'
+    if: ${{ github.base_ref == 'main' }}
     runs-on: ubuntu-latest
     steps:
-      - name: Check if PR is from staging
+      - name: Validate source branch
         run: |
+          echo "🔍 Base: ${{ github.base_ref }} | Head: ${{ github.head_ref }}"
           if [[ "${{ github.head_ref }}" != "staging" ]]; then
-            echo "❌ Only staging branch can merge to main"
+            echo "❌ Only PRs from 'staging' can be merged into 'main'."
             exit 1
           fi
-          echo "✅ Valid merge from staging to main"
+          echo "✅ Valid: PR is from 'staging' → 'main'."
 
   require-approvals:
+    if: ${{ github.event_name == 'pull_request' || github.event_name == 'pull_request_review' }}
     runs-on: ubuntu-latest
     steps:
-      - name: Check approvals
+      - name: Check required approvals
         uses: actions/github-script@v7
         with:
           script: |
-            const { data: reviews } = await github.rest.pulls.listReviews({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: context.issue.number
-            });
-            
-            const approvals = reviews.filter(review => review.state === 'APPROVED').length;
-            const required = context.payload.pull_request.base.ref === 'main' ? 3 : 1;
-            
-            if (approvals < required) {
-              core.setFailed(`❌ Need ${required} approvals, got ${approvals}`);
+            const { owner, repo } = context.repo;
+            const pull_number = context.payload.pull_request?.number || context.issue.number;
+            const base_ref = context.payload.pull_request?.base?.ref || context.payload.pull_request?.base_ref;
+
+            const { data: reviews } = await github.rest.pulls.listReviews({ owner, repo, pull_number });
+
+            // Get unique approved reviewers (avoid counting duplicates)
+            const approvals = [...new Set(
+              reviews
+                .filter(r => r.state === "APPROVED")
+                .map(r => r.user.login)
+            )];
+
+            const required = base_ref === 'main' ? 3 : 1;
+
+            console.log(`📊 Target: ${base_ref} | Approvals: ${approvals.length}/${required}`);
+            console.log(`👥 Approved by: ${approvals.join(', ') || 'None'}`);
+
+            if (approvals.length < required) {
+              core.setFailed(`❌ Need ${required} approvals for ${base_ref}, got ${approvals.length}`);
             } else {
-              console.log(`✅ Got ${approvals}/${required} required approvals`);
+              console.log(`✅ Got ${approvals.length}/${required} required approvals for ${base_ref}`);
             }
