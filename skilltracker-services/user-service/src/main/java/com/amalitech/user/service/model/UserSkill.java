@@ -8,16 +8,14 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 /**
- * Represents a user in the system.
- * This entity is typically the core subject of the user-related services,
- * holding primary identification and essential details.
- *
- * <p>It is mapped to the database table named "users".
- *
- * <p>In the context of the 'user-skills' model, this entity is the 'many' side
- * of the one-to-many relationship with {@code UserSkill}, and the 'one' side
- * of the many-to-one relationship from {@code UserSkill}.
- *
+ * Represents the association between a {@link User} and a {@link Skill}.
+ * <p>
+ * This entity serves as a junction (join) table for the many-to-many relationship
+ * between users and skills, mapping which skills are associated with which users.
+ * It is mapped to the database table named "user_skills".
+ * <p>
+ * Each instance links a single user to a single skill, and may contain additional
+ * metadata about the association (such as when the skill was selected).
  */
 @Entity
 @Table(name = "user_skills", indexes = {
