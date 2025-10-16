@@ -4,6 +4,7 @@ import com.amalitech.user.service.model.enums.PremiumTier;
 import com.amalitech.user.service.model.enums.Role;
 import com.amalitech.user.service.model.enums.UserState;
 
+import com.amalitech.user.service.enums.*;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -42,8 +43,8 @@ import java.time.LocalDateTime;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class User {
-
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     @Column(unique = true, nullable = false)
