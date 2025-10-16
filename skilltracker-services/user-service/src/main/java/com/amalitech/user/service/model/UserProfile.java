@@ -9,13 +9,23 @@ import org.hibernate.annotations.UpdateTimestamp;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+/**
+ * Represents the detailed profile information for a {@link User} in the system.
+ * This entity uses a **shared primary key** mapping (one-to-one with {@code @MapsId})
+ * with the {@code User} entity, meaning the primary key of a {@code UserProfile}
+ * is the same as the primary key of its corresponding {@code User}.
+ *
+ * <p>It is mapped to the database table named "user_profiles" and holds non-essential
+ * or optional user details like name, avatar, bio, and notification preferences,
+ * separating them from the core {@code User} entity (e.g., login credentials).
+ *
+ */
 @Entity
 @Table(name = "user_profiles")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
 public class UserProfile {
     @Id
     @Column(name = "user_id")

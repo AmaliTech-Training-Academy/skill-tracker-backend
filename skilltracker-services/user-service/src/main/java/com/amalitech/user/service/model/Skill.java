@@ -10,6 +10,21 @@ import org.hibernate.annotations.UpdateTimestamp;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+/**
+ * Represents a defined skill within the system that users can possess.
+ * This entity stores metadata about a skill, such as its name, description,
+ * categorization, and difficulty level.
+ *
+ * <p>It is mapped to the database table named "skills".
+ *
+ * <p>This entity is the 'many' side in a many-to-one relationship with {@link UserSkill},
+ * linking it to users who possess it. The unique index on the name ensures that
+ * no two skills have the same name.
+ *
+ * @see UserSkill
+ * @see DifficultyLevel
+ * @see SkillCategory
+ */
 @Entity
 @Table(name = "skills", indexes = {
         @Index(name = "idx_category_difficulty", columnList = "category, difficulty_level"),
@@ -19,7 +34,6 @@ import java.util.UUID;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
 public class Skill {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)

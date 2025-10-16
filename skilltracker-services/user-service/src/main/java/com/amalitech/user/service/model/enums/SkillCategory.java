@@ -1,5 +1,8 @@
 package com.amalitech.user.service.model.enums;
 
+/**
+ * Defines the broad categories under which skills are grouped.
+ */
 public enum SkillCategory {
     PROGRAMMING,
     COMMUNICATION,

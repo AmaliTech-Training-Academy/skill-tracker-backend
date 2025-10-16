@@ -12,6 +12,25 @@ import org.hibernate.annotations.UpdateTimestamp;
 import java.util.UUID;
 import java.time.LocalDateTime;
 
+/**
+ * The core entity representing a user in the system.
+ * This class holds essential authentication, authorization, and state information
+ * for a platform user, such as ID, email, hashed password, role, and current state.
+ *
+ * <p>It is mapped to the database table named "users".
+ *
+ * <p>This entity is the primary side for several relationships:
+ * <ul>
+ * <li>One-to-one with {@link UserProfile} (via {@code mappedBy}).</li>
+ * <li>One-to-many relationship with {@link UserSkill} and {@link UserGroupMember} (not explicitly mapped here, but referenced in other models).</li>
+ * <li>Many-to-one relationship from {@link UserGroup} (as the creator).</li>
+ * </ul>
+ *
+ * @see UserProfile
+ * @see Role
+ * @see UserState
+ * @see PremiumTier
+ */
 @Entity
 @Table(name = "users", indexes = {
         @Index(name = "idx_email", columnList = "email", unique = true),
@@ -21,7 +40,6 @@ import java.time.LocalDateTime;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
 public class User {
 
     @Id

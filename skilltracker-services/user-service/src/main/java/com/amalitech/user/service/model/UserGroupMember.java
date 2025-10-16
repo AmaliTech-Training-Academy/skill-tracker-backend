@@ -7,6 +7,20 @@ import org.hibernate.annotations.CreationTimestamp;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+/**
+ * Represents the membership of a specific {@link User} in a specific {@link UserGroup}.
+ * This entity acts as a **junction table** to manage the many-to-many relationship
+ * between the {@code User} and {@code UserGroup} entities, while also storing
+ * metadata like the time the user joined the group.
+ *
+ * <p>It is mapped to the database table named "user_group_members".
+ *
+ * <p>The composite unique index on {@code group_id} and {@code user_id} ensures
+ * that a user can only be a member of a given group once.
+ *
+ * @see User
+ * @see UserGroup
+ */
 @Entity
 @Table(name = "user_group_members", indexes = {
         @Index(name = "idx_group_user", columnList = "group_id, user_id", unique = true),
@@ -16,7 +30,6 @@ import java.util.UUID;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
 public class UserGroupMember {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)

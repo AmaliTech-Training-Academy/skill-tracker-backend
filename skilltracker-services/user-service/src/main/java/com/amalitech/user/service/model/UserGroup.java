@@ -8,13 +8,25 @@ import org.hibernate.annotations.UpdateTimestamp;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+/**
+ * Represents a group within the user service platform.
+ * This entity defines the properties of a group, such as its name, purpose,
+ * visibility, and who created it.
+ *
+ * <p>It is mapped to the database table named "user_groups".
+ *
+ * <p>A group has a many-to-many relationship with the {@link User} entity,
+ * which is managed through the {@link UserGroupMember} junction table.
+ *
+ * @see User
+ * @see UserGroupMember
+ */
 @Entity
 @Table(name = "user_groups")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
 public class UserGroup {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
