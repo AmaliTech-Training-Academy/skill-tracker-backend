@@ -4,7 +4,9 @@ import com.amalitech.user.service.model.enums.PremiumTier;
 import com.amalitech.user.service.model.enums.Role;
 import com.amalitech.user.service.model.enums.TourStatus;
 import com.amalitech.user.service.model.enums.UserState;
+
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -43,20 +45,22 @@ import java.time.LocalDateTime;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class User {
-
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     @Column(unique = true, nullable = false)
     private UUID id;
 
     @NotBlank
+    @Email
     @Column(nullable = false, unique = true, length = 255)
     private String email;
 
     @Column(nullable = true, unique = true, length = 255)
     private String username;
 
+    @NotBlank
     @Column(name = "password_hash", nullable = false, length = 255)
     private String passwordHash;
 
