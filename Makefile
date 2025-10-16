@@ -38,6 +38,7 @@ help:
 	@echo "🌍  make run-infra                  - Run infrastructure (Config, Discovery, Gateway)"
 	@echo "🧩  make run-services               - Run all microservices"
 	@echo "⚙️   make run-all                    - Run infra + microservices"
+	@echo "🪄  make run-all-alias              - Alias for 'make run-all'"
 	@echo ""
 	@echo "🛑  make stop                       - Stop all running Spring Boot processes"
 	@echo "📜  make logs SERVICE=user          - Tail logs for a specific service"
@@ -49,76 +50,55 @@ help:
 	@echo "🏗️   make build-services            - Build all microservice Docker images"
 	@echo "🏗️   make build-all                 - Build both infra + microservice images"
 	@echo ""
-	@echo "📦  make build-discovery            - Build Discovery Server image"
-	@echo "📦  make build-config               - Build Config Server image"
-	@echo "📦  make build-gateway              - Build API Gateway image"
-	@echo "📦  make build-shared               - Build Shared Services images"
-	@echo ""
 	@echo "🐳  make dkr-build SERVICE=<svc>   - Build Docker image for a specific service"
 	@echo ""
 	@echo ""
-	@echo "▶️ DOCKER START COMMANDS"
+	@echo "▶️ DOCKER RUN COMMANDS"
 	@echo "-------------------------------------------------------------------------------------------"
-	@echo "▶️   make start-infra               - Start all infrastructure containers"
+	@echo "▶️   make start-infra               - Start infrastructure containers"
 	@echo "▶️   make start-services            - Start all microservice containers"
 	@echo "▶️   make start-all                 - Start infra + all microservice containers"
-	@echo ""
-	@echo "🔍  make start-discovery            - Start Discovery Server"
-	@echo "⚙️   make start-config              - Start Config Server"
-	@echo "🚪  make start-gateway              - Start API Gateway"
-	@echo "🗄️   make start-shared              - Start Shared Services (MongoDB, Redis, RabbitMQ)"
 	@echo ""
 	@echo "🐳  make dkr-run SERVICE=<svc>     - Run Docker container for a specific service"
 	@echo ""
 	@echo ""
-	@echo "🛑 DOCKER STOP COMMANDS"
+	@echo "🧭 CONTAINER LIFECYCLE MANAGEMENT"
 	@echo "-------------------------------------------------------------------------------------------"
 	@echo "🛑  make stop-all                   - Stop all running containers (no removal)"
 	@echo "🧹  make down-all                   - Stop and remove all containers"
 	@echo "🔥  make reset-all                  - Stop, remove containers + volumes (hard reset)"
 	@echo ""
-	@echo "🛑  make stop-discovery             - Stop Discovery Server"
-	@echo "🛑  make stop-config                - Stop Config Server"
-	@echo "🛑  make stop-gateway               - Stop API Gateway"
-	@echo "🛑  make stop-shared                - Stop Shared Services"
-	@echo ""
-	@echo "🐳  make dkr-stop SERVICE=<svc>    - Stop specific service container"
-	@echo ""
-	@echo ""
-	@echo "🔍 STATUS & MONITORING"
-	@echo "-------------------------------------------------------------------------------------------"
-	@echo "📊  make status                     - Show all running containers"
-	@echo "🔍  make check-infra                - Show infrastructure container status"
-	@echo "🔍  make check-services             - Show microservices container status"
+	@echo "♻️   make rebuild-all               - Clean, rebuild & start everything (Docker)"
 	@echo ""
 	@echo ""
 	@echo "🧽 MAINTENANCE & UTILITIES"
 	@echo "-------------------------------------------------------------------------------------------"
-	@echo "🌐  make create-network             - Create skilltracker-network"
 	@echo "🧽  make dkr-clean                  - Remove unused containers, images & volumes"
 	@echo "📜  make dkr-logs                   - Tail logs from all running containers"
-	@echo "♻️   make rebuild-all               - Clean, rebuild & start everything (Docker)"
 	@echo ""
 	@echo ""
 	@echo "💡 EXAMPLES"
 	@echo "-------------------------------------------------------------------------------------------"
-	@echo "  # Maven workflows"
 	@echo "  make run SERVICE=user"
+	@echo "  make rebuild SERVICE=task"
+	@echo "  make run-infra"
+	@echo "  make run-services"
 	@echo "  make run-all"
-	@echo "  make stop"
+	@echo "  make logs SERVICE=user"
 	@echo ""
-	@echo "  # Docker workflows"
 	@echo "  make build-infra"
-	@echo "  make start-infra"
-	@echo "  make start-service SERVICE=user"
-	@echo "  make status"
+	@echo "  make build-services"
+	@echo "  make dkr-build SERVICE=user"
+	@echo "  make dkr-run SERVICE=user"
+	@echo "  make dkr-stop SERVICE=user"
+	@echo ""
+	@echo "  make start-all"
 	@echo "  make stop-all"
 	@echo "  make down-all"
-	@echo ""
-	@echo "  # Individual components"
-	@echo "  make build-discovery"
-	@echo "  make start-discovery"
-	@echo "  make stop-gateway"
+	@echo "  make reset-all"
+	@echo "  make dkr-clean"
+	@echo "  make dkr-logs"
+	@echo "  make rebuild-all"
 	@echo ""
 	@echo "==========================================================================================="
 
@@ -215,12 +195,13 @@ run-all:
 	$(MAKE) run-services
 
 
+
 # -------------------------------------------------------
-# STOP MAVEN SERVICES
+# STOP SERVICES
 # -------------------------------------------------------
 stop:
 	@echo "🛑 Stopping all Spring Boot services..."
-	@ps aux | grep "[s]pring-boot:run" | awk '{print $$2}' | xargs -r kill || true
+	@pkill -f "spring-boot:run" || true
 	@echo "✅ All Spring Boot processes stopped."
 
 # -------------------------------------------------------
@@ -245,62 +226,27 @@ run-all-alias: run-all
 # -------------------------------------------------------
 # 🐳 DOCKER COMMANDS
 # -------------------------------------------------------
-
-# -------------------------------------------------------
-# CREATE DOCKER NETWORK
-# -------------------------------------------------------
-create-network:
-	@echo "🌐 Creating skilltracker-network..."
-	@docker network create skilltracker-network 2>/dev/null || echo "✅ Network already exists"
-
-# -------------------------------------------------------
-# BUILD INDIVIDUAL INFRASTRUCTURE COMPONENTS
-# -------------------------------------------------------
-build-discovery:
-	@echo "📦 Building Discovery Server..."
-	@cd $(INFRA_DIR)/discovery-server && COMPOSE_BAKE=true docker-compose build
-	@echo "✅ Discovery Server image built!"
-
-build-config:
-	@echo "📦 Building Config Server..."
-	@cd $(INFRA_DIR)/config-server && COMPOSE_BAKE=true docker-compose build
-	@echo "✅ Config Server image built!"
-
-build-gateway:
-	@echo "📦 Building API Gateway..."
-	@cd $(INFRA_DIR)/api-gateway && COMPOSE_BAKE=true docker-compose build
-	@echo "✅ API Gateway image built!"
-
-build-shared:
-	@echo "📦 Building Shared Services..."
-	@if [ -d "$(INFRA_DIR)/shared-services" ]; then \
-		cd $(INFRA_DIR)/shared-services && COMPOSE_BAKE=true docker-compose build; \
-		echo "✅ Shared Services images built!"; \
-	else \
-		echo "⚠️  Shared services directory not found"; \
-	fi
-
 # -------------------------------------------------------
 # Build Infrastructure Images
 # -------------------------------------------------------
+# Builds Docker images for all infrastructure components
+# such as Config Server, Discovery Server, and API Gateway.
+# These services provide the foundational network and configuration
+# layer for the Skill Tracker microservices ecosystem.
+# Example: make build-infra
+# -------------------------------------------------------
 build-infra:
 	@echo "🏗️  Building infrastructure Docker images..."
-	@echo "📦 Building Discovery Server..."
-	@cd $(INFRA_DIR)/discovery-server && COMPOSE_BAKE=true docker-compose build
-	@echo "📦 Building Config Server..."
-	@cd $(INFRA_DIR)/config-server && COMPOSE_BAKE=true docker-compose build
-	@echo "📦 Building API Gateway..."
-	@cd $(INFRA_DIR)/api-gateway && COMPOSE_BAKE=true docker-compose build
-	@if [ -d "$(INFRA_DIR)/shared-services" ]; then \
-		echo "📦 Building Shared Services..."; \
-		cd $(INFRA_DIR)/shared-services && COMPOSE_BAKE=true docker-compose build; \
-	fi
-	@echo "✅ All infrastructure Docker images built successfully!"
-	@echo ""
+	@COMPOSE_BAKE=true docker-compose build
 
 
 # -------------------------------------------------------
 # Build Microservice Images
+# -------------------------------------------------------
+# Builds Docker images for all backend microservices such as
+# user-service, task-service, analytics-service, etc.
+# Each service has its own docker-compose.yml for independent builds.
+# Example: make build-services
 # -------------------------------------------------------
 build-services:
 	@echo "🏗️  Building all microservice Docker images with Buildx Bake..."
@@ -314,68 +260,28 @@ build-services:
 # -------------------------------------------------------
 # Build All Images
 # -------------------------------------------------------
+# Combines both infrastructure and microservice builds.
+# Runs make build-infra followed by make build-services.
+# Example: make build-all
+# -------------------------------------------------------
 build-all: build-infra build-services
 	@echo "✅ All infrastructure and microservice Docker images built successfully!"
 
 
 # -------------------------------------------------------
-# START INDIVIDUAL INFRASTRUCTURE COMPONENTS
-# -------------------------------------------------------
-start-discovery:
-	@echo "🔍 Starting Discovery Server..."
-	$(MAKE) create-network
-	@cd $(INFRA_DIR)/discovery-server && docker-compose up -d
-	@echo "✅ Discovery Server started!"
-
-start-config:
-	@echo "⚙️  Starting Config Server..."
-	$(MAKE) create-network
-	@cd $(INFRA_DIR)/config-server && docker-compose up -d
-	@echo "✅ Config Server started!"
-
-start-gateway:
-	@echo "🚪 Starting API Gateway..."
-	$(MAKE) create-network
-	@cd $(INFRA_DIR)/api-gateway && docker-compose up -d
-	@echo "✅ API Gateway started!"
-
-start-shared:
-	@echo "🗄️  Starting Shared Services..."
-	$(MAKE) create-network
-	@if [ -d "$(INFRA_DIR)/shared-services" ]; then \
-		cd $(INFRA_DIR)/shared-services && docker-compose up -d; \
-		echo "✅ Shared Services started!"; \
-	else \
-		echo "⚠️  Shared services directory not found"; \
-	fi
-
-# -------------------------------------------------------
 # Start Infrastructure Containers
+# -------------------------------------------------------
+# Spins up all infrastructure containers defined in docker-compose.yml
+# (Config Server, Discovery Server, API Gateway, databases, etc.)
+# Creates the 'skilltracker-network' if it does not exist.
+# Example: make start-infra
 # -------------------------------------------------------
 start-infra:
 	@echo "▶️  Starting infrastructure containers..."
-	@docker network create skilltracker-network 2>/dev/null || true
-
-	@echo "🗄️  Starting Shared Services (MongoDB, Redis, RabbitMQ)..."
-	@if [ -d "$(INFRA_DIR)/shared-services" ]; then \
-		cd $(INFRA_DIR)/shared-services && docker-compose up -d; \
-	fi
-	@sleep 5
-
-	@echo "🔍 Starting Discovery Server..."
-	@cd $(INFRA_DIR)/discovery-server && docker-compose up -d
-	@sleep 10
-
-	@echo "⚙️  Starting Config Server..."
-	@cd $(INFRA_DIR)/config-server && docker-compose up -d
-	@sleep 10
-
-	@echo "🚪 Starting API Gateway..."
-	@cd $(INFRA_DIR)/api-gateway && docker-compose up -d
-
+	docker network create skilltracker-network 2>/dev/null || true
+	docker-compose up -d
 	@echo "⏳ Waiting for infrastructure to become healthy..."
 	@sleep 10
-	@echo "✅ All infrastructure containers started!"
 
 
 # -------------------------------------------------------
@@ -396,12 +302,20 @@ start-services:
 # -------------------------------------------------------
 # Start All Containers (Infra + Microservices)
 # -------------------------------------------------------
+# Starts the infrastructure and then all microservice containers.
+# Useful for bootstrapping the full Skill Tracker system locally.
+# Example: make start-all
+# -------------------------------------------------------
 start-all: start-infra start-services
 	@echo "✅ All containers started successfully!"
 
 
 # -------------------------------------------------------
 # Build Specific Microservice Image
+# -------------------------------------------------------
+# Builds a Docker image for a single microservice.
+# Requires specifying the service name via SERVICE variable.
+# Example: make dkr-build SERVICE=user
 # -------------------------------------------------------
 dkr-build:
 	@if [ -z "$(SERVICE)" ]; then \
@@ -434,78 +348,43 @@ dkr-run:
 		exit 1; \
 	fi
 
-
-# -------------------------------------------------------
-# STOP INDIVIDUAL INFRASTRUCTURE COMPONENTS
-# -------------------------------------------------------
-stop-discovery:
-	@echo "🛑 Stopping Discovery Server..."
-	@cd $(INFRA_DIR)/discovery-server && docker-compose down
-	@echo "✅ Discovery Server stopped!"
-
-stop-config:
-	@echo "🛑 Stopping Config Server..."
-	@cd $(INFRA_DIR)/config-server && docker-compose down
-	@echo "✅ Config Server stopped!"
-
-stop-gateway:
-	@echo "🛑 Stopping API Gateway..."
-	@cd $(INFRA_DIR)/api-gateway && docker-compose down
-	@echo "✅ API Gateway stopped!"
-
-stop-shared:
-	@echo "🛑 Stopping Shared Services..."
-	@if [ -d "$(INFRA_DIR)/shared-services" ]; then \
-		cd $(INFRA_DIR)/shared-services && docker-compose down; \
-		echo "✅ Shared Services stopped!"; \
-	fi
-
 # -------------------------------------------------------
 # Stop All Containers
 # -------------------------------------------------------
+# Stops all running containers for both
+# infrastructure and microservices.
+# Example: make stop-all
+# -------------------------------------------------------
 stop-all:
 	@echo "🛑 Stopping all containers (without removing them)..."
-	@echo "🛑 Stopping microservices..."
-	@cd skilltracker-services/bff-service && docker-compose stop 2>/dev/null || true
-	@cd skilltracker-services/practice-service && docker-compose stop 2>/dev/null || true
-	@cd skilltracker-services/payment-service && docker-compose stop 2>/dev/null || true
-	@cd skilltracker-services/notification-service && docker-compose stop 2>/dev/null || true
-	@cd skilltracker-services/gamification-service && docker-compose stop 2>/dev/null || true
-	@cd skilltracker-services/feedback-service && docker-compose stop 2>/dev/null || true
-	@cd skilltracker-services/analytics-service && docker-compose stop 2>/dev/null || true
-	@cd skilltracker-services/task-service && docker-compose stop 2>/dev/null || true
-	@cd skilltracker-services/user-service && docker-compose stop 2>/dev/null || true
-	@echo "🛑 Stopping infrastructure..."
-	@cd $(INFRA_DIR)/api-gateway && docker-compose stop 2>/dev/null || true
-	@cd $(INFRA_DIR)/config-server && docker-compose stop 2>/dev/null || true
-	@cd $(INFRA_DIR)/discovery-server && docker-compose stop 2>/dev/null || true
-	@if [ -d "$(INFRA_DIR)/shared-services" ]; then \
-		cd $(INFRA_DIR)/shared-services && docker-compose stop 2>/dev/null || true; \
-	fi
+	@cd skilltracker-services/bff-service && docker-compose stop
+	@cd skilltracker-services/practice-service && docker-compose stop
+	@cd skilltracker-services/payment-service && docker-compose stop
+	@cd skilltracker-services/notification-service && docker-compose stop
+	@cd skilltracker-services/gamification-service && docker-compose stop
+	@cd skilltracker-services/feedback-service && docker-compose stop
+	@cd skilltracker-services/analytics-service && docker-compose stop
+	@cd skilltracker-services/task-service && docker-compose stop
+	@cd skilltracker-services/user-service && docker-compose stop
+	docker-compose stop
 	@echo "✅ All containers stopped (but not removed)!"
 
 # -------------------------------------------------------
 # Stop and Remove Containers
 # -------------------------------------------------------
+
 down-all:
 	@echo "🧹 Stopping and removing all containers..."
-	@echo "🧹 Removing microservices..."
-	@cd skilltracker-services/bff-service && docker-compose down 2>/dev/null || true
-	@cd skilltracker-services/practice-service && docker-compose down 2>/dev/null || true
-	@cd skilltracker-services/payment-service && docker-compose down 2>/dev/null || true
-	@cd skilltracker-services/notification-service && docker-compose down 2>/dev/null || true
-	@cd skilltracker-services/gamification-service && docker-compose down 2>/dev/null || true
-	@cd skilltracker-services/feedback-service && docker-compose down 2>/dev/null || true
-	@cd skilltracker-services/analytics-service && docker-compose down 2>/dev/null || true
-	@cd skilltracker-services/task-service && docker-compose down 2>/dev/null || true
-	@cd skilltracker-services/user-service && docker-compose down 2>/dev/null || true
-	@echo "🧹 Removing infrastructure..."
-	@cd $(INFRA_DIR)/api-gateway && docker-compose down 2>/dev/null || true
-	@cd $(INFRA_DIR)/config-server && docker-compose down 2>/dev/null || true
-	@cd $(INFRA_DIR)/discovery-server && docker-compose down 2>/dev/null || true
-	@if [ -d "$(INFRA_DIR)/shared-services" ]; then \
-		cd $(INFRA_DIR)/shared-services && docker-compose down 2>/dev/null || true; \
-	fi
+	@cd skilltracker-services/bff-service && docker-compose down
+	@cd skilltracker-services/practice-service && docker-compose down
+	@cd skilltracker-services/payment-service && docker-compose down
+	@cd skilltracker-services/notification-service && docker-compose down
+	@cd skilltracker-services/gamification-service && docker-compose down
+	@cd skilltracker-services/feedback-service && docker-compose down
+	@cd skilltracker-services/analytics-service && docker-compose down
+	@cd skilltracker-services/task-service && docker-compose down
+	@cd skilltracker-services/user-service && docker-compose down
+	docker-compose down
 	@echo "✅ All containers stopped and removed!"
 
 # -------------------------------------------------------
@@ -528,6 +407,10 @@ dkr-stop:
 # -------------------------------------------------------
 # Docker Cleanup
 # -------------------------------------------------------
+# Cleans up unused Docker containers, images, and volumes.
+# Runs after stopping all containers.
+# Example: make dkr-clean
+# -------------------------------------------------------
 dkr-clean: stop-all
 	@echo "🧹 Cleaning up Docker resources..."
 	docker system prune -f
@@ -535,58 +418,32 @@ dkr-clean: stop-all
 	@echo "✅ Docker cleanup complete!"
 
 
-# -------------------------------------------------------
-# Reset All (with volumes)
-# -------------------------------------------------------
 reset-all:
 	@echo "🔥 Removing containers, networks, and volumes..."
-	@echo "🔥 Removing microservices..."
-	@cd skilltracker-services/bff-service && docker-compose down -v 2>/dev/null || true
-	@cd skilltracker-services/practice-service && docker-compose down -v 2>/dev/null || true
-	@cd skilltracker-services/payment-service && docker-compose down -v 2>/dev/null || true
-	@cd skilltracker-services/notification-service && docker-compose down -v 2>/dev/null || true
-	@cd skilltracker-services/gamification-service && docker-compose down -v 2>/dev/null || true
-	@cd skilltracker-services/feedback-service && docker-compose down -v 2>/dev/null || true
-	@cd skilltracker-services/analytics-service && docker-compose down -v 2>/dev/null || true
-	@cd skilltracker-services/task-service && docker-compose down -v 2>/dev/null || true
-	@cd skilltracker-services/user-service && docker-compose down -v 2>/dev/null || true
-	@echo "🔥 Removing infrastructure..."
-	@cd $(INFRA_DIR)/api-gateway && docker-compose down -v 2>/dev/null || true
-	@cd $(INFRA_DIR)/config-server && docker-compose down -v 2>/dev/null || true
-	@cd $(INFRA_DIR)/discovery-server && docker-compose down -v 2>/dev/null || true
-	@if [ -d "$(INFRA_DIR)/shared-services" ]; then \
-		cd $(INFRA_DIR)/shared-services && docker-compose down -v 2>/dev/null || true; \
-	fi
+	docker-compose down -v
 	@echo "✅ Environment fully reset!"
 
 
 # -------------------------------------------------------
 # View Docker Logs
 # -------------------------------------------------------
+# Streams logs from all containers (infra + services).
+# Useful for debugging and monitoring container output.
+# Example: make dkr-logs
+# -------------------------------------------------------
 dkr-logs:
 	@echo "📜 Showing logs from all running containers..."
-	@docker ps --format "{{.Names}}" | xargs -I {} docker logs -f {} --tail=50 2>/dev/null || true
-
-
-# -------------------------------------------------------
-# STATUS & MONITORING
-# -------------------------------------------------------
-status:
-	@echo "📊 Container Status:"
-	@echo ""
-	@docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" || echo "No containers running"
-
-check-infra:
-	@echo "🔍 Infrastructure Status:"
-	@docker ps --filter "name=discovery" --filter "name=config" --filter "name=gateway" --filter "name=mongo" --filter "name=redis" --filter "name=rabbitmq" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" || echo "No infrastructure running"
-
-check-services:
-	@echo "🔍 Microservices Status:"
-	@docker ps --filter "name=user-service" --filter "name=task-service" --filter "name=analytics" --filter "name=feedback" --filter "name=gamification" --filter "name=notification" --filter "name=payment" --filter "name=practice" --filter "name=bff" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" || echo "No microservices running"
+	docker-compose logs -f
 
 
 # -------------------------------------------------------
 # Rebuild and Restart Everything
+# -------------------------------------------------------
+# Performs a full system rebuild:
+# 1. Cleans Docker containers & volumes
+# 2. Rebuilds all images
+# 3. Starts the full stack
+# Example: make rebuild-all
 # -------------------------------------------------------
 rebuild-all: dkr-clean build-all start-all
 	@echo "♻️  Complete Docker rebuild and startup finished successfully!"
