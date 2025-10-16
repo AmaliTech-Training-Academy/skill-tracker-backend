@@ -1,7 +1,6 @@
 package com.amalitech.user.service.model;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
