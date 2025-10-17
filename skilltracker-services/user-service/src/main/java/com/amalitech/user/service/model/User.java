@@ -5,6 +5,7 @@ import com.amalitech.user.service.model.enums.Role;
 import com.amalitech.user.service.model.enums.TourStatus;
 import com.amalitech.user.service.model.enums.UserState;
 
+import com.amalitech.user.service.enums.*;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
