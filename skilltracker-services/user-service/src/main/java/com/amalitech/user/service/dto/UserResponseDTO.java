@@ -17,8 +17,8 @@ public record UserResponseDTO(
 //        @NotBlank(message = "Email is required")
 //        @Email(message = "Invalid email")
 //        @Size(max = 255)
-        String userName,
         Long id,
+        String userName,
         String email,
         Enum<roleEnum> role,
         Enum<stateEnum> state,
