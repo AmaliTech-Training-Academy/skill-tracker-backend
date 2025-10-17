@@ -52,14 +52,12 @@ public class JwtRefreshFilter extends OncePerRequestFilter {
         }
 
         try {
-            // Validate the refresh token using the service
             RefreshToken rt = refreshTokenService.validateToken(refreshTokenValue);
             User user = rt.getUser();
 
-            // Load user details for authorities
+
             UserDetails userDetails = userDetailsService.loadUserByUsername(user.getEmail());
 
-            // Create and set authentication token
             UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                     userDetails, null, userDetails.getAuthorities());
             authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
