@@ -75,7 +75,7 @@
             <dependency>
                 <groupId>me.paulschwarz</groupId>
                 <artifactId>spring-dotenv</artifactId>
-                <version>3.0.0</version>
+                <version>4.0.0</version>
             </dependency>
             <dependency>
                 <groupId>io.micrometer</groupId>
@@ -116,6 +116,13 @@
                 <version>1.18.30</version>
                 <scope>provided</scope>
             </dependency>
+
+            <dependency>
+                <groupId>com.github.ulisesbocchio</groupId>
+                <artifactId>jasypt-spring-boot-starter</artifactId>
+                <version>3.0.5</version>
+            </dependency>
+
         </dependencies>
 
     </dependencyManagement>
