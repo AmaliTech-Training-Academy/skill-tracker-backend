@@ -3,28 +3,28 @@ package com.amalitech.user.service.dto;
 import com.amalitech.user.service.enums.roleEnum;
 import com.amalitech.user.service.enums.stateEnum;
 import com.amalitech.user.service.enums.tierEnum;
+import com.amalitech.user.service.model.enums.PremiumTier;
+import com.amalitech.user.service.model.enums.Role;
+import com.amalitech.user.service.model.enums.UserState;
 import jakarta.validation.constraints.*;
 import lombok.Builder;
 import lombok.RequiredArgsConstructor;
 
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.Date;
+import java.util.UUID;
 
 @Builder
 public record UserResponseDTO(
-//        @NotBlank(message = "Full name is required")
-//        @Size(max = 100)
-//        @NotBlank(message = "Email is required")
-//        @Email(message = "Invalid email")
-//        @Size(max = 255)
-        Long id,
+        UUID id,
         String userName,
         String email,
-        Enum<roleEnum> role,
-        Enum<stateEnum> state,
-        Enum<tierEnum> PremiumTier,
+        Role role,
+        UserState state,
+        PremiumTier PremiumTier,
         String language,
         String timezone,
-        Date last_login_at,
-        Date updatedAt
+        LocalDateTime last_login_at,
+        LocalDateTime updatedAt
         ) {}
