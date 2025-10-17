@@ -67,7 +67,7 @@ public class Skill {
     @PreUpdate
     private void validateLevelXpMap() {
         if (levelXpMap == null || levelXpMap.isEmpty()) {
-            throw new IllegalStateException("Level XP map cannot be empty");
+            throw new IllegalStateException("Level XP map must contain at least one difficulty level with XP threshold");
         }
 
         for (Long xp : levelXpMap.values()) {
