@@ -1,4 +1,4 @@
-name: Trigger Feature to Dev
+name: Trigger Feature to Dev Workflow
 
 on:
   pull_request:
@@ -13,7 +13,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - name: Trigger backend feature-to-dev merge notification
+      - name: Trigger backend feature-to-dev merge workflow
         uses: peter-evans/repository-dispatch@v3
         with:
           token: ${{ secrets.REPO_ACCESS_TOKEN }}
