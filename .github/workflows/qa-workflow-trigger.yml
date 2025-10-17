@@ -1,0 +1,22 @@
+name: Trigger QA Workflows
+
+on:
+  pull_request:
+    types: [closed]
+    branches:
+      - dev
+
+jobs:
+  trigger-qa-workflow:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Trigger all qa workflows
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.REPO_ACCESS_TOKEN }}
+          repository: ${{ secrets.REPOSITORY_NAME }}
+          event-type: backend-feature-to-dev-merged
+          client-payload: '{"pr_title": "${{ github.event.pull_request.title }}", "pr_author": "${{ github.event.pull_request.user.login }}", "pr_url": "${{ github.event.pull_request.html_url }}", "target_branch": "dev", "commit_sha": "${{ github.event.pull_request.merge_commit_sha }}"}'

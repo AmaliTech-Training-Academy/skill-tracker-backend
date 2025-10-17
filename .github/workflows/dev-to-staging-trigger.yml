@@ -7,7 +7,7 @@ on:
       - staging
 
 jobs:
-  trigger-centralized-workflow:
+  trigger-devops-workflow:
     if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'staging' && github.event.pull_request.head.ref == 'dev'
     runs-on: ubuntu-latest
     permissions:
