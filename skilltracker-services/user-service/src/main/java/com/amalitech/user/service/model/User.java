@@ -70,7 +70,7 @@ public class User {
     private UserState state = UserState.REGISTERED;
 
     @Column(name = "is_verified")
-    private Boolean isVerified = true;
+    private Boolean isVerified = false;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "premium_tier", nullable = false)
