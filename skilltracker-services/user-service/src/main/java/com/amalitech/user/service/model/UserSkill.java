@@ -13,7 +13,6 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
-<<<<<<< HEAD
  * Represents the association between a {@link User} and a {@link Skill}.
  * <p>
  * This entity serves as a junction (join) table for the many-to-many relationship
@@ -22,7 +21,6 @@ import java.util.UUID;
  * <p>
  * Each instance links a single user to a single skill, and may contain additional
  * metadata about the association (such as when the skill was selected).
-=======
  * Represents the association between a user and a skill, tracking their progress.
  * This entity links users to skills they are learning or have mastered,
  * storing their current level and accumulated experience points (XP).
@@ -54,7 +52,6 @@ import java.util.UUID;
  * @see User
  * @see Skill
  * @see DifficultyLevel
->>>>>>> f670043 (feat(entities): add User and UserSkill with XP-based progression)
  */
 @Entity
 @Table(name = "user_skills", indexes = {

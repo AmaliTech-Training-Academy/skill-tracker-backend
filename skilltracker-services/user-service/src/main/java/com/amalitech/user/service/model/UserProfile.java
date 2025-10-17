@@ -41,7 +41,7 @@ public class UserProfile {
     @Column(name = "avatar_url", columnDefinition = "TEXT")
     private String avatarUrl;
 
-    @Column(columnDefinition = "TEXT", length = 1000)
+    @Column(columnDefinition = "TEXT")
     private String bio;
 
     @Column(name = "email_notifications")
