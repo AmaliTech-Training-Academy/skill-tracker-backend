@@ -16,7 +16,7 @@ jobs:
       - name: Trigger all qa workflows
         uses: peter-evans/repository-dispatch@v3
         with:
-          token: ${{ secrets.REPO_ACCESS_TOKEN }}
-          repository: ${{ secrets.REPOSITORY_NAME }}
+          token: ${{ secrets.QA_REPO_ACCESS_TOKEN }}
+          repository: ${{ secrets.QA_REPOSITORY_NAME }}
           event-type: backend-feature-to-dev-merged
           client-payload: '{"pr_title": "${{ github.event.pull_request.title }}", "pr_author": "${{ github.event.pull_request.user.login }}", "pr_url": "${{ github.event.pull_request.html_url }}", "target_branch": "dev", "commit_sha": "${{ github.event.pull_request.merge_commit_sha }}"}'
