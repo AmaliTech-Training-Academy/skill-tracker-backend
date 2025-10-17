@@ -26,9 +26,6 @@ public class UserServiceImpl implements UserService {
         User user = new User();
         user.setEmail(userdto.email());
         user.setPasswordHash(userdto.password()); // update this with encoder when security arrives
-        user.setRole(roleEnum.USER);
-        user.setState(stateEnum.REGISTERED);
-        user.setPremiumTier(tierEnum.FREE);
         user.setLanguage("en");
         user.setTimezone("UTC");
 
@@ -37,14 +34,14 @@ public class UserServiceImpl implements UserService {
         // Convert Entity → DTO
         UserResponseDTO userResponse =  new UserResponseDTO(
                 savedUser.getId(),
-                savedUser.getUserName(),
+                savedUser.getUsername(),
                 savedUser.getEmail(),
                 savedUser.getRole(),
                 savedUser.getState(),
                 savedUser.getPremiumTier(),
                 savedUser.getLanguage(),
                 savedUser.getTimezone(),
-                savedUser.getLast_login_at(),
+                savedUser.getLastLoginAt(),
                 savedUser.getUpdatedAt());
 
         return userResponse;
