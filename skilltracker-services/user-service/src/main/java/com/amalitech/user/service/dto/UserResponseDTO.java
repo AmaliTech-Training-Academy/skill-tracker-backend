@@ -18,13 +18,13 @@ import java.util.UUID;
 @Builder
 public record UserResponseDTO(
         UUID id,
-        String userName,
+//        String userName,
         String email,
-        Role role,
-        UserState state,
-        PremiumTier PremiumTier,
+//        Role role,
+//        UserState state,
+//        PremiumTier PremiumTier,
         String language,
-        String timezone,
-        LocalDateTime last_login_at,
-        LocalDateTime updatedAt
-        ) {}
+        String timezone)
+//        LocalDateTime last_login_at,
+//        LocalDateTime updatedAt
+         {}
