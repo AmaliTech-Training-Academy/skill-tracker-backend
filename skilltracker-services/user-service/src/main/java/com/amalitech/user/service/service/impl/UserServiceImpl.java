@@ -36,8 +36,8 @@ public class UserServiceImpl implements UserService {
 
         // Convert Entity → DTO
         UserResponseDTO userResponse =  new UserResponseDTO(
-                savedUser.getUserName(),
                 savedUser.getId(),
+                savedUser.getUserName(),
                 savedUser.getEmail(),
                 savedUser.getRole(),
                 savedUser.getState(),
