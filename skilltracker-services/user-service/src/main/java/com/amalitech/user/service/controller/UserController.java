@@ -2,14 +2,12 @@ package com.amalitech.user.service.controller;
 
 import com.amalitech.user.service.dto.UserRequestDTO;
 import com.amalitech.user.service.dto.UserResponseDTO;
+import com.amalitech.user.service.model.User;
 import com.amalitech.user.service.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/v1/auth")
@@ -18,8 +16,16 @@ public class UserController {
     private UserService service;
 
     @PostMapping("/register")
-    public ResponseEntity<UserResponseDTO> createUser(@RequestBody UserRequestDTO user) {
-        UserResponseDTO newUser = service.createUser(user);
+    public ResponseEntity<User> createUser(@RequestBody User user) {
+        User newUser = service.createUser(user);
      return new ResponseEntity<>(newUser, HttpStatus.CREATED);
+    }
+
+    @PostMapping("/verify/{code}/{email}")
+    public ResponseEntity<User> verifyCode(
+            @PathVariable String code,
+            @PathVariable String email) {
+        User user = service.verifyCode(code, email);
+        return new ResponseEntity<>(user, HttpStatus.OK);
     }
 }
