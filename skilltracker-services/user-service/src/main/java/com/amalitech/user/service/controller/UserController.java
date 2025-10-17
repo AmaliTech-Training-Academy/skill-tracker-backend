@@ -12,12 +12,12 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/v1/users")
+@RequestMapping("/api/v1/auth")
 public class UserController {
     @Autowired
     private UserService service;
 
-    @PostMapping()
+    @PostMapping("/register")
     public ResponseEntity<UserResponseDTO> createUser(@RequestBody UserRequestDTO user) {
         UserResponseDTO newUser = service.createUser(user);
      return new ResponseEntity<>(newUser, HttpStatus.CREATED);
