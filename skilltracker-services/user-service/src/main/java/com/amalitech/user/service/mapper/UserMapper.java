@@ -1,6 +1,7 @@
 package com.amalitech.user.service.mapper;
 
-import com.amalitech.user.service.dto.response.UserDto;
+import com.amalitech.user.service.dto.UserRequestDTO;
+import com.amalitech.user.service.dto.UserResponseDTO;
 import com.amalitech.user.service.model.User;
 import org.springframework.stereotype.Component;
 
@@ -9,19 +10,27 @@ import org.springframework.stereotype.Component;
  */
 @Component
 public class UserMapper {
-    public static UserDto toDto(User user) {
-        if (user == null) {
-            return null;
-        }
 
-        return new UserDto(
-                user.getId(),
-                user.getEmail(),
-                user.getUsername(),
-                user.getState(),
-                user.getPremiumTier(),
-                user.getTourStatus()
-        );
+    public static User toEntity(UserRequestDTO dto) {
+        if (dto == null) return null;
+        return User.builder()
+                .email(dto.email())
+                .passwordHash(dto.password())
+                .build();
+    }
 
+    public static UserResponseDTO toDto(User entity) {
+        if (entity == null) return null;
+        return new UserResponseDTO(
+                entity.getId(),
+                entity.getEmail(),
+                entity.getUsername(),
+                entity.getRole(),
+                entity.getState(),
+                entity.getPremiumTier(),
+                entity.getLanguage(),
+                entity.getTimezone(),
+                entity.getUpdatedAt(),
+                entity.getIsVerified());
     }
 }
