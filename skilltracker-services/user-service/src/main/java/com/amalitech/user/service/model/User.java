@@ -5,7 +5,6 @@ import com.amalitech.user.service.model.enums.Role;
 import com.amalitech.user.service.model.enums.TourStatus;
 import com.amalitech.user.service.model.enums.UserState;
 
-import com.amalitech.user.service.enums.*;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -68,6 +67,9 @@ public class User {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Role role = Role.USER;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private Role role = Role.USER;
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<UserSkill> userSkills = new HashSet<>();
@@ -77,13 +79,21 @@ public class User {
     @Column(nullable = false)
     private UserState state = UserState.REGISTERED;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private UserState state = UserState.REGISTERED;
+
     @Column(nullable = false)
     private boolean is_verified = false;
+
+    @Column(name = "is_verified")
+    private Boolean isVerified = false;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "premium_tier", nullable = false)
     private PremiumTier premiumTier = PremiumTier.FREE;
 
+    @Column(length = 10)
     @Enumerated(EnumType.STRING)
     @Column(name = "tour_status")
     private TourStatus tourStatus = TourStatus.NOT_STARTED;
