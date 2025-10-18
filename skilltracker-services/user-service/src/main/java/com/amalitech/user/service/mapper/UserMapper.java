@@ -3,6 +3,7 @@ package com.amalitech.user.service.mapper;
 import com.amalitech.user.service.dto.UserRequestDTO;
 import com.amalitech.user.service.dto.UserResponseDTO;
 import com.amalitech.user.service.model.User;
+import com.amalitech.user.service.util.PasswordEncoderUtil;
 import org.springframework.stereotype.Component;
 
 /**
@@ -15,7 +16,7 @@ public class UserMapper {
         if (dto == null) return null;
         return User.builder()
                 .email(dto.email())
-                .passwordHash(dto.password())
+                .passwordHash(PasswordEncoderUtil.encodePassword(dto.password()))
                 .build();
     }
 
