@@ -1,13 +1,31 @@
 package com.amalitech.user.service.dto;
-import java.util.Map;
 
-public record ApiResponse<T>(boolean success, T data, ApiError error) {
+import lombok.Data;
 
-    public static <T> ApiResponse<T> success(T data) {
-        return new ApiResponse<>(true, data, null);
+import java.time.Instant;
+
+@Data
+public class ApiResponse<T> {
+    private boolean success;
+    private String message;
+    private T data;
+    private long timestamp = Instant.now().toEpochMilli();
+
+    public ApiResponse(boolean success, String message, T data) {
+        this.success = success;
+        this.message = message;
+        this.data = data;
     }
 
-    public static <T> ApiResponse<T> error(String code, String message, Map<String, Object> details) {
-        return new ApiResponse<>(false, null, new ApiError(code, message, details));
+    public static <T> ApiResponse<T> success(T data) {
+        return new ApiResponse<>(true, "Operation successful", data);
+    }
+
+    public static <T> ApiResponse<T> success(String message, T data) {
+        return new ApiResponse<>(true, message, data);
+    }
+
+    public static <T> ApiResponse<T> error(String message) {
+        return new ApiResponse<>(false, message, null);
     }
 }
