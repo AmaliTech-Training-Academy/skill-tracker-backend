@@ -28,14 +28,18 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
-    public UserResponseDTO createUser(UserRequestDTO userdto) {
+    public UserResponseDTO createUser(UserRequestDTO userdto) throws IllegalStateException {
+        if (repo.existsByEmail(userdto.email())) {
+            throw new IllegalStateException("A user already exists with this email.");
+        }
+
         User user = UserMapper.toEntity(userdto);
         User savedUser = repo.save(user);
 
         notifyUser(
                 savedUser.getEmail(),
                 "Account created successfully!",
-                "Enter this verification code to verify your identity:" + generateCode());
+                "Enter this verification code to verify your identity: " + generateCode());
 
         return UserMapper.toDto(savedUser);
     }
