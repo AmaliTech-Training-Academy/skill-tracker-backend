@@ -101,7 +101,6 @@ public class UserProfileController {
 
     /**
      * Extracts the user ID from UserDetails.
-     * Adjust this method based on your CustomUserDetails implementation.
      */
     private UUID extractUserId(UserDetails userDetails) {
         if (userDetails instanceof CustomUserDetails customUserDetails) {
