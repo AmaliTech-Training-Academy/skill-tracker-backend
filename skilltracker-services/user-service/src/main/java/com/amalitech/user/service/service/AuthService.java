@@ -10,9 +10,7 @@ import com.amalitech.user.service.exception.UserNotFoundException;
 import com.amalitech.user.service.model.*;
 import com.amalitech.user.service.model.enums.Role;
 import com.amalitech.user.service.model.enums.UserState;
-import com.amalitech.user.service.repository.PasswordResetTokenRepository;
 import com.amalitech.user.service.repository.UserRepository;
-import com.amalitech.user.service.repository.VerificationTokenRepository;
 import com.amalitech.user.service.security.CustomUserDetails;
 import com.amalitech.user.service.util.JwtUtil;
 import com.amalitech.user.service.util.RedisUtil;
@@ -25,8 +23,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -38,9 +34,6 @@ public class AuthService {
     private static final Logger log = LoggerFactory.getLogger(AuthService.class);
 
     private final UserRepository userRepository;
-    private final VerificationTokenRepository verificationTokenRepository;
-    private final PasswordResetTokenRepository passwordResetTokenRepository;
-    private final RefreshTokenService refreshTokenService;
     private final BCryptPasswordEncoder passwordEncoder;
     private final EmailService emailService;
     private final AuthenticationManager authenticationManager;
@@ -57,9 +50,6 @@ public class AuthService {
     public AuthService(
             UserRepository userRepository,
             JwtUtil jwtUtil,
-            VerificationTokenRepository verificationTokenRepository,
-            PasswordResetTokenRepository passwordResetTokenRepository,
-            RefreshTokenService refreshTokenService,
             BCryptPasswordEncoder passwordEncoder,
             EmailService emailService,
             RedisUtil redisUtil,
@@ -72,9 +62,6 @@ public class AuthService {
             AuthenticationManager authenticationManager
     ) {
         this.userRepository = userRepository;
-        this.verificationTokenRepository = verificationTokenRepository;
-        this.passwordResetTokenRepository = passwordResetTokenRepository;
-        this.refreshTokenService = refreshTokenService;
         this.passwordEncoder = passwordEncoder;
         this.emailService = emailService;
         this.authenticationManager = authenticationManager;
@@ -203,7 +190,8 @@ public class AuthService {
         if (email == null) {
             throw new InvalidTokenException("Invalid or expired token");
         }
-        User user = userService.findByEmail(email);
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RefreshTokenException("User not found"));
         if (user == null) {
             throw new UserNotFoundException("User not found");
         }
