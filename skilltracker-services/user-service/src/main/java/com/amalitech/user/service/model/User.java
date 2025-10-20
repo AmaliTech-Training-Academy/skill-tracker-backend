@@ -2,15 +2,16 @@ package com.amalitech.user.service.model;
 
 import com.amalitech.user.service.model.enums.PremiumTier;
 import com.amalitech.user.service.model.enums.Role;
+import com.amalitech.user.service.model.enums.TourStatus;
 import com.amalitech.user.service.model.enums.UserState;
-
 import jakarta.persistence.*;
-import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 import java.time.LocalDateTime;
 
@@ -50,14 +51,12 @@ public class User {
     private UUID id;
 
     @NotBlank
-    @Email
     @Column(nullable = false, unique = true, length = 255)
     private String email;
 
     @Column(nullable = true, unique = true, length = 255)
     private String username;
 
-    @NotBlank
     @Column(name = "password_hash", nullable = false, length = 255)
     private String passwordHash;
 
@@ -65,16 +64,24 @@ public class User {
     @Column(nullable = false)
     private Role role = Role.USER;
 
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<UserSkill> userSkills = new HashSet<>();
+
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private UserState state = UserState.REGISTERED;
 
-    @Column(name = "is_verified")
-    private Boolean isVerified = false;
+    @Column(nullable = false)
+    private boolean is_verified = false;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "premium_tier", nullable = false)
     private PremiumTier premiumTier = PremiumTier.FREE;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "tour_status")
+    private TourStatus tourStatus = TourStatus.NOT_STARTED;
 
     @Column(length = 10)
     private String language = "en";
