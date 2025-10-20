@@ -24,7 +24,7 @@ import java.util.UUID;
 @Entity
 @Table(name = "user_group_members", indexes = {
         @Index(name = "idx_group_user", columnList = "group_id, user_id", unique = true),
-        @Index(name = "idx_user_id", columnList = "user_id")
+        @Index(name = "idx_user_group_members_user_id", columnList = "user_id")
 })
 @Getter
 @Setter

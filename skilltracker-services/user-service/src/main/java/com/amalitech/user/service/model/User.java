@@ -1,5 +1,6 @@
 package com.amalitech.user.service.model;
 
+import com.amalitech.user.service.model.enums.GuidedTourStatus;
 import com.amalitech.user.service.model.enums.PremiumTier;
 import com.amalitech.user.service.model.enums.Role;
 import com.amalitech.user.service.model.enums.UserState;
@@ -76,6 +77,13 @@ public class User {
     @Column(name = "premium_tier", nullable = false)
     private PremiumTier premiumTier = PremiumTier.FREE;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "tour_status", nullable = false)
+    private GuidedTourStatus tourStatus = GuidedTourStatus.NOT_STARTED;
+
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private UserProfile profile;
+
     @Column(length = 10)
     private String language = "en";
 
@@ -95,4 +103,19 @@ public class User {
 
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
     private UserProfile userProfile;
+
+    /**
+     * Sets the user's profile while maintaining the bidirectional relationship
+     * between {@link User} and {@link UserProfile}.
+     * <p>
+     * When a profile is assigned, this method also ensures that the profile’s
+     * {@code user} reference is updated to point back to this user entity.
+     * This prevents synchronization issues in ORM-managed relationships.
+     */
+    public void setProfile(UserProfile profile) {
+        this.profile = profile;
+        if (profile != null) {
+            profile.setUser(this);
+        }
+    }
 }

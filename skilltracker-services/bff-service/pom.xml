@@ -13,7 +13,7 @@
 
     <artifactId>bff-service</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>user-service</name>
+    <name>bff-service</name>
 
     <properties>
         <maven.compiler.source>21</maven.compiler.source>

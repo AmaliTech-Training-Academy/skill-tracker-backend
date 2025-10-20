@@ -1,4 +1,4 @@
-package com.amalitech.user.service.dto;
+package com.amalitech.common.security.dto.response;
 
 import java.util.Map;
 
