@@ -1,13 +1,14 @@
 package com.amalitech.user.service.exception;
 
-import com.amalitech.user.service.dto.ApiResponse;
+import com.amalitech.common.security.dto.response.ApiResponse;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-
 import org.springframework.web.server.ResponseStatusException;
+
 import java.util.HashMap;
 import java.util.Map;
 

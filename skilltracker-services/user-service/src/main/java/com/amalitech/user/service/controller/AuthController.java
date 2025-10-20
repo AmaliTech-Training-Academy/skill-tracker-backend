@@ -1,18 +1,19 @@
 package com.amalitech.user.service.controller;
 
-import com.amalitech.user.service.dto.ApiResponse;
-
+import com.amalitech.common.security.dto.response.ApiResponse;
 import com.amalitech.user.service.dto.response.UserDto;
 import com.amalitech.user.service.dto.request.*;
 import com.amalitech.user.service.dto.response.AuthResponse;
 import com.amalitech.user.service.mapper.UserMapper;
-import com.amalitech.user.service.service.AuthService;
-import io.swagger.v3.oas.annotations.Operation;
-import jakarta.servlet.http.HttpServletResponse;
-import jakarta.validation.Valid;
+import com.amalitech.user.service.service.impl.AuthServiceImpl;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+
+import io.swagger.v3.oas.annotations.Operation;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.Valid;
 
 /**
  * Controller for authentication-related endpoints.
@@ -20,9 +21,9 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/v1/auth")
 public class AuthController {
-    private final AuthService authService;
+    private final AuthServiceImpl authService;
 
-    public AuthController(AuthService authService) {
+    public AuthController(AuthServiceImpl authService) {
         this.authService = authService;
     }
 
