@@ -1,18 +1,13 @@
 package com.amalitech.user.service.model;
 
 import com.amalitech.user.service.model.enums.DifficultyLevel;
-
-import io.hypersistence.utils.hibernate.type.json.JsonType;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
-import org.hibernate.annotations.Type;
 
 import java.time.LocalDateTime;
-import java.util.HashMap;
 import java.util.UUID;
-import java.util.Map;
 
 /**
  * Represents a defined skill within the system that users can possess.
@@ -27,9 +22,11 @@ import java.util.Map;
  *
  * @see UserSkill
  * @see DifficultyLevel
+ *
  */
 @Entity
 @Table(name = "skills", indexes = {
+        @Index(name = "idx_category_difficulty", columnList = "category, difficulty_level"),
         @Index(name = "idx_name", columnList = "name", unique = true)
 })
 @Getter
@@ -47,13 +44,9 @@ public class Skill {
     @Column(columnDefinition = "TEXT")
     private String description;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "difficulty_level", nullable = false)
-    private DifficultyLevel difficultyLevel;
 
-    @Type(JsonType.class)
-    @Column(name = "level_xp_map", nullable = false, columnDefinition = "jsonb")
-    private Map<String, Long> levelXpMap = new HashMap<>();
+    @Column(name = "is_active")
+    private Boolean isActive = true;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -62,19 +55,5 @@ public class Skill {
     @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
-
-    @PrePersist
-    @PreUpdate
-    private void validateLevelXpMap() {
-        if (levelXpMap == null || levelXpMap.isEmpty()) {
-            throw new IllegalStateException("Level XP map must contain at least one difficulty level with XP threshold");
-        }
-
-        for (Long xp : levelXpMap.values()) {
-            if (xp < 0) {
-                throw new IllegalStateException("XP values cannot be negative");
-            }
-        }
-    }
 }
 

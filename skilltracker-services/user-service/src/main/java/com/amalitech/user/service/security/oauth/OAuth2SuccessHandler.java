@@ -1,11 +1,11 @@
-package com.amalitech.user.service.security;
+package com.amalitech.user.service.security.oauth;
 
 import com.amalitech.user.service.dto.response.AuthResponse;
 import com.amalitech.user.service.model.User;
 import com.amalitech.user.service.model.enums.Role;
 import com.amalitech.user.service.model.enums.UserState;
 import com.amalitech.user.service.repository.UserRepository;
-import com.amalitech.user.service.util.JwtUtil;
+import com.amalitech.user.service.security.util.JwtUtil;
 import com.amalitech.user.service.util.RedisUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;

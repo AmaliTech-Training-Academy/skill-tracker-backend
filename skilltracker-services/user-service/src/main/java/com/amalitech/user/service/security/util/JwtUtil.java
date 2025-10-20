@@ -1,4 +1,4 @@
-package com.amalitech.user.service.util;
+package com.amalitech.user.service.security.util;
 
 import com.amalitech.user.service.model.enums.Role;
 import io.jsonwebtoken.*;

@@ -2,13 +2,12 @@ package com.amalitech.user.service.controller;
 
 import com.amalitech.user.service.dto.ApiResponse;
 
-import com.amalitech.user.service.dto.UserDto;
+import com.amalitech.user.service.dto.response.UserDto;
 import com.amalitech.user.service.dto.request.*;
 import com.amalitech.user.service.dto.response.AuthResponse;
 import com.amalitech.user.service.mapper.UserMapper;
 import com.amalitech.user.service.service.AuthService;
 import io.swagger.v3.oas.annotations.Operation;
-import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
