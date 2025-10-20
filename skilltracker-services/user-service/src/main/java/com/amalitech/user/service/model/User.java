@@ -82,7 +82,7 @@ public class User {
     private GuidedTourStatus tourStatus = GuidedTourStatus.NOT_STARTED;
 
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
-    private UserProfile profile;
+    private UserProfile userProfile;
 
     @Column(length = 10)
     private String language = "en";
@@ -101,9 +101,6 @@ public class User {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
-    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
-    private UserProfile userProfile;
-
     /**
      * Sets the user's profile while maintaining the bidirectional relationship
      * between {@link User} and {@link UserProfile}.
@@ -113,7 +110,7 @@ public class User {
      * This prevents synchronization issues in ORM-managed relationships.
      */
     public void setProfile(UserProfile profile) {
-        this.profile = profile;
+        this.userProfile = profile;
         if (profile != null) {
             profile.setUser(this);
         }
