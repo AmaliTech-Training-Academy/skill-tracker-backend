@@ -208,14 +208,18 @@ public class AuthServiceImpl implements AuthService {
     public void resetPassword(String token, String newPassword) {
         String key = resetPrefix + token;
         String email = redisUtil.get(key);
+
         if (email == null) {
             throw new InvalidTokenException("Invalid or expired token");
         }
+
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RefreshTokenException("User not found"));
+
         if (user == null) {
             throw new UserNotFoundException("User not found");
         }
+
         userService.updatePassword(user, newPassword);
         redisUtil.delete(key);
     }

@@ -5,6 +5,7 @@ import com.amalitech.user.service.dto.response.UserDto;
 import com.amalitech.user.service.dto.request.*;
 import com.amalitech.user.service.dto.response.AuthResponse;
 import com.amalitech.user.service.mapper.UserMapper;
+import com.amalitech.user.service.service.AuthService;
 import com.amalitech.user.service.service.impl.AuthServiceImpl;
 
 import org.springframework.http.ResponseEntity;
@@ -21,7 +22,7 @@ import jakarta.validation.Valid;
 @RestController
 @RequestMapping("/api/v1/auth")
 public class AuthController {
-    private final AuthServiceImpl authService;
+    private final AuthService authService;
 
     public AuthController(AuthServiceImpl authService) {
         this.authService = authService;
@@ -85,5 +86,4 @@ public class AuthController {
         authService.logout(accessToken, request.token());
         return ResponseEntity.ok(ApiResponse.success("Logged out successfully"));
     }
-
 }
