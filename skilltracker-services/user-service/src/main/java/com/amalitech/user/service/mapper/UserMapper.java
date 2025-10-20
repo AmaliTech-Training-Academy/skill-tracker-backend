@@ -22,6 +22,5 @@ public class UserMapper {
                 user.getPremiumTier(),
                 user.getTourStatus()
         );
-
     }
 }
