@@ -45,7 +45,6 @@ public class AuthServiceImpl implements AuthService {
     private static final Logger log = LoggerFactory.getLogger(AuthServiceImpl.class);
 
     private final UserRepository userRepository;
-    private final UserProfileRepository userProfileRepository;
     private final BCryptPasswordEncoder passwordEncoder;
     private final EmailService emailService;
     private final AuthenticationManager authenticationManager;
@@ -59,7 +58,7 @@ public class AuthServiceImpl implements AuthService {
     private final UserService userService;
 
     public AuthServiceImpl(
-            UserRepository userRepository, UserProfileRepository userProfileRepository,
+            UserRepository userRepository,
             JwtUtil jwtUtil,
             BCryptPasswordEncoder passwordEncoder,
             EmailService emailService,
@@ -73,7 +72,6 @@ public class AuthServiceImpl implements AuthService {
             AuthenticationManager authenticationManager
     ) {
         this.userRepository = userRepository;
-        this.userProfileRepository = userProfileRepository;
         this.passwordEncoder = passwordEncoder;
         this.emailService = emailService;
         this.authenticationManager = authenticationManager;
