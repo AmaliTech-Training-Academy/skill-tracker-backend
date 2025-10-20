@@ -21,34 +21,6 @@ import java.util.UUID;
  * <p>
  * Each instance links a single user to a single skill, and may contain additional
  * metadata about the association (such as when the skill was selected).
- * Represents the association between a user and a skill, tracking their progress.
- * This entity links users to skills they are learning or have mastered,
- * storing their current level and accumulated experience points (XP).
- *
- * <p>It is mapped to the database table named "user_skills".
- *
- * <p>This is a junction entity that creates a many-to-many relationship
- * between {@link User} and {@link Skill}, with additional progress tracking fields.
- *
- * <h2>XP and Level Progression System</h2>
- * <p>Users accumulate XP by completing tasks. When their total XP meets or exceeds
- * the threshold for a higher difficulty level, they are automatically promoted.
- * The XP thresholds are defined in the associated {@link Skill}'s levelXpMap.
- *
- * <p><b>Example XP Progression:</b>
- * <pre>
- * levelXpMap = {
- *   "BEGINNER": 0,
- *   "INTERMEDIATE": 1000,
- *   "ADVANCED": 3000
- * }
- *
- * User starts: currentLevel = BEGINNER, totalXp = 0
- * After task:  totalXp = 500  → still BEGINNER
- * After task:  totalXp = 1200 → promoted to INTERMEDIATE
- * After task:  totalXp = 3500 → promoted to ADVANCED
- * </pre>
- *
  * @see User
  * @see Skill
  * @see DifficultyLevel
