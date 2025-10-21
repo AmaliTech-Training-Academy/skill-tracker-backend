@@ -13,7 +13,6 @@ import java.util.UUID;
 @AllArgsConstructor
 @Builder
 public class UserView {
-
     @Id
     private UUID id;
 
@@ -23,6 +22,6 @@ public class UserView {
     @Column(nullable = false, unique = true)
     private String email;
 
-    private String role; // e.g., USER,ADMIN
+    private String role; // e.g., USER, ADMIN
 }
 
