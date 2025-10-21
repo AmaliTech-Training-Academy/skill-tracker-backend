@@ -1,6 +1,6 @@
-package com.amalitech.user.service.filter;
+package com.amalitech.user.service.security.filter;
 
-import com.amalitech.user.service.util.JwtUtil;
+import com.amalitech.user.service.security.util.JwtUtil;
 import com.amalitech.user.service.util.RedisUtil;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
