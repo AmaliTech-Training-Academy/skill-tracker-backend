@@ -17,7 +17,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class EmailServiceImpl implements EmailService {
 
-    private static final Logger log = LoggerFactory.getLogger(com.amalitech.user.service.service.EmailService.class);
+    private static final Logger log = LoggerFactory.getLogger(EmailServiceImpl.class);
 
     private final JavaMailSender mailSender;
 

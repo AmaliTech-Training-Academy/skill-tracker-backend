@@ -1,9 +1,6 @@
 package com.amalitech.user.service.service;
 
-import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
-
-
 
 /**
  * Service interface for handling email-related operations.

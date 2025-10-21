@@ -31,7 +31,7 @@ import java.util.UUID;
  */
 @Service
 public class AuthServiceImpl implements AuthService {
-    private static final Logger log = LoggerFactory.getLogger(com.amalitech.user.service.service.AuthService.class);
+    private static final Logger log = LoggerFactory.getLogger(AuthServiceImpl.class);
 
     private final UserRepository userRepository;
     private final BCryptPasswordEncoder passwordEncoder;
@@ -76,23 +76,29 @@ public class AuthServiceImpl implements AuthService {
     }
 
     /**
-     * Registers a new user with the provided details, assigns default role, associates skills,
-     * and sends a verification email.
-     *
-     * @param request the registration request containing user details and skills
-     * @throws EmailAlreadyExistsException if email already exists or skill not found
+     * Registers a new user in the system and creates their profile.
+     * <p>
+     * Checks if the email already exists, encodes the password, assigns the default {@code USER}
+     * role, persists the new user, and creates an associated user profile with default settings.
      */
+    @Override
     @Transactional
     public User register(RegisterRequest request) {
         if (userRepository.findByEmail(request.email()).isPresent()) {
-            throw new EmailAlreadyExistsException("Email already exists");
+            throw new RuntimeException("Email already exists");
         }
+
         User user = new User();
         user.setEmail(request.email());
         user.setPasswordHash(passwordEncoder.encode(request.password()));
-        user.setUsername(request.username());
         user.setRole(Role.USER);
-        return  userRepository.save(user);
+
+        UserProfile profile = new UserProfile();
+        profile.setEmailNotifications(true);
+        profile.setPushNotifications(true);
+        user.setProfile(profile);
+
+        return userRepository.save(user);
     }
 
     /**
@@ -153,7 +159,7 @@ public class AuthServiceImpl implements AuthService {
         String newRefreshToken = UUID.randomUUID().toString();
         redisUtil.set(refreshPrefix + newRefreshToken, email, refreshExpiration / 1000);
         String newAccessToken = jwtUtil.generateAccessToken(email, user.getRole(), user.getId());
-        log.info("Tokens refreshed for user: {}", email);
+        log.info("Access and refresh tokens rotated successfully for user: {}", email);
         return new AuthResponse(newAccessToken, newRefreshToken);
     }
 
