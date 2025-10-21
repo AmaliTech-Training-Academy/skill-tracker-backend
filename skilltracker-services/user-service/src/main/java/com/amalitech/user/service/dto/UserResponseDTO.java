@@ -10,12 +10,14 @@ import java.util.UUID;
 @Builder
 public record UserResponseDTO(
         UUID id,
-        String userName,
         String email,
+        String username,
         Role role,
         UserState state,
-        PremiumTier PremiumTier,
+        Boolean isVerified,
+        PremiumTier premiumTier,
         String language,
         String timezone,
-        LocalDateTime last_login_at,
-        Boolean isVerified) {}
+        LocalDateTime updatedAt,
+        LocalDateTime lastLoginAt
+) {}
