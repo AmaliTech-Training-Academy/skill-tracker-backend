@@ -14,7 +14,7 @@ public record UserResponseDTO(
         String username,
         Role role,
         UserState state,
-        Boolean isVerified,
+        Boolean is_verified,
         PremiumTier premiumTier,
         String language,
         String timezone,

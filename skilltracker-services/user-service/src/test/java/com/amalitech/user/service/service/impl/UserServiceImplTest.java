@@ -65,7 +65,8 @@ class UserServiceImplTest {
         verify(emailUtil).sendEmail(
                 eq(savedUser.getEmail()),
                 anyString(),
-                contains("verification code")
+                contains("verification code"),
+                System.getenv("notification.skillboost@gmail.com")
         );
     }
 
@@ -104,7 +105,7 @@ class UserServiceImplTest {
 
     @Test
     void notifyUser_ShouldSendEmail() {
-        userService.notifyUser("john@example.com", "Hello", "Welcome!");
-        verify(emailUtil).sendEmail("john@example.com", "Hello", "Welcome!");
+        userService.notifyUser("john@example.com", "Hello", "Welcome!", System.getenv("notification.skillboost@gmail.com"));
+        verify(emailUtil).sendEmail("john@example.com", "Hello", "Welcome!",System.getenv("notification.skillboost@gmail.com"));
     }
 }

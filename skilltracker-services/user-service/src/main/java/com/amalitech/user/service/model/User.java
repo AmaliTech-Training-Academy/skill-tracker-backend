@@ -81,6 +81,7 @@ public class User {
     @Column(name = "tour_status", nullable = false)
     private GuidedTourStatus tourStatus = GuidedTourStatus.NOT_STARTED;
 
+
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private UserProfile userProfile;
 

@@ -53,7 +53,8 @@ public class UserServiceImpl implements UserService {
         notifyUser(
                 savedUser.getEmail(),
                 "Account created successfully!",
-                "Enter this verification code to verify your identity: " + generateCode());
+                "Enter this verification code to verify your identity: " + generateCode(),
+                System.getenv("MAIL_USERNAME"));
 
         return UserMapper.toDto(savedUser);
     }
@@ -73,11 +74,12 @@ public class UserServiceImpl implements UserService {
         repo.save(user);
     }
 
-    public void notifyUser(String toEmail, String subject, String message) {
+    public void notifyUser(String toEmail, String subject, String message, String sender) {
         emailUtil.sendEmail(
                 toEmail,
                 subject,
-                message
+                message,
+                System.getenv("notification.skillboost@gmail.com")
         );
     }
 

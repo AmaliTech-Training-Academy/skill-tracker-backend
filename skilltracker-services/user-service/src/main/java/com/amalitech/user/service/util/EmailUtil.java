@@ -22,12 +22,12 @@ public class EmailUtil {
      * @param subject Subject of the email
      * @param message Body of the email
      */
-    public void sendEmail(String to, String subject, String message) {
+    public void sendEmail(String to, String subject, String message, String sender) {
         SimpleMailMessage mail = new SimpleMailMessage();
         mail.setTo(to);
         mail.setSubject(subject);
         mail.setText(message);
-        mail.setFrom("no-reply@campusmarket.com"); // Replace with your sender email
+        mail.setFrom(sender);
 
         mailSender.send(mail);
     }

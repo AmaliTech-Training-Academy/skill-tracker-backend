@@ -27,7 +27,7 @@ public class UserMapper {
                 .passwordHash(PasswordEncoderUtil.encodePassword(dto.password()))
                 .role(Role.USER)
                 .state(UserState.REGISTERED)
-                .isVerified(false)
+                .is_verified(false)
                 .premiumTier(PremiumTier.FREE)
                 .language("en")
                 .timezone("UTC")
@@ -45,7 +45,7 @@ public class UserMapper {
                 entity.getUsername(),
                 entity.getRole(),
                 entity.getState(),
-                entity.isVerified(),
+                entity.getIs_verified(),
                 entity.getPremiumTier(),
                 entity.getLanguage(),
                 entity.getTimezone(),
