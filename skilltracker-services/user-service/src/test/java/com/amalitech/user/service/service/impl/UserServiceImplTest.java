@@ -4,7 +4,7 @@ import com.amalitech.user.service.dto.UserRequestDTO;
 import com.amalitech.user.service.dto.UserResponseDTO;
 import com.amalitech.user.service.model.User;
 import com.amalitech.user.service.repository.UserRepository;
-import com.amalitech.user.service.util.EmailUtil;
+import com.amalitech.user.service.service.EmailService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.*;
@@ -23,7 +23,7 @@ class UserServiceImplTest {
     private UserRepository userRepository;
 
     @Mock
-    private EmailUtil emailUtil;
+    private EmailService emailService;
 
     @InjectMocks
     private UserServiceImpl userService;
@@ -62,7 +62,7 @@ class UserServiceImplTest {
         assertNotNull(response);
         assertEquals(savedUser.getEmail(), response.email());
         verify(userRepository).save(any(User.class));
-        verify(emailUtil).sendEmail(
+        verify(emailService).sendEmail(
                 eq(savedUser.getEmail()),
                 anyString(),
                 contains("verification code"),
@@ -106,6 +106,6 @@ class UserServiceImplTest {
     @Test
     void notifyUser_ShouldSendEmail() {
         userService.notifyUser("john@example.com", "Hello", "Welcome!", System.getenv("notification.skillboost@gmail.com"));
-        verify(emailUtil).sendEmail("john@example.com", "Hello", "Welcome!",System.getenv("notification.skillboost@gmail.com"));
+        verify(emailService).sendEmail("john@example.com", "Hello", "Welcome!",System.getenv("notification.skillboost@gmail.com"));
     }
 }
