@@ -7,6 +7,7 @@ import com.amalitech.user.service.model.User;
 import com.amalitech.user.service.repository.UserRepository;
 import com.amalitech.user.service.service.UserService;
 import com.amalitech.user.service.util.EmailUtil;
+import com.amalitech.user.service.util.PasswordEncoderUtil;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 import java.security.SecureRandom;
@@ -52,6 +53,11 @@ public class UserServiceImpl implements UserService {
         }
 
         return Optional.empty();
+    }
+
+    public void updatePassword(User user, String newPassword) {
+        user.setPasswordHash(PasswordEncoderUtil.encodePassword(newPassword));
+        repo.save(user);
     }
 
     public void notifyUser(String toEmail, String subject, String message) {
