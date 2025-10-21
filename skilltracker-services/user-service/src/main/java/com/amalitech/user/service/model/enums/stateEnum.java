@@ -1,4 +1,4 @@
-package com.amalitech.user.service.enums;
+package com.amalitech.user.service.model.enums;
 
 public enum stateEnum {
     REGISTERED,
