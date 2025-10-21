@@ -13,6 +13,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
@@ -42,6 +43,17 @@ public class AuthController {
     public ResponseEntity<ApiResponse<UserResponseDTO>> register(@Valid @RequestBody UserRequestDTO userdto, HttpServletResponse response) {
         UserResponseDTO user = service.createUser(userdto);
         return ResponseEntity.ok(ApiResponse.success(user));
+    }
+
+    @PostMapping("/verify")
+    public ResponseEntity<UserResponseDTO> verifyCode(
+            @RequestParam("code") String code,
+            @RequestParam("email") String email) {
+
+        UserResponseDTO user = service.verifyCode(code, email).orElseThrow(() ->
+                new RuntimeException("Invalid verification code"));
+
+        return new ResponseEntity<>(user, HttpStatus.OK);
     }
 
     /**
