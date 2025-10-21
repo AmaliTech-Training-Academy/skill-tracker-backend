@@ -1,6 +1,5 @@
 package com.amalitech.user.service.controller;
 
-import com.amalitech.user.service.dto.ApiResponse;
 import com.amalitech.user.service.dto.UserRequestDTO;
 import com.amalitech.user.service.dto.UserResponseDTO;
 import com.amalitech.user.service.service.UserService;
@@ -19,19 +18,19 @@ public class UserController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<ApiResponse<UserResponseDTO>> createUser(@RequestBody UserRequestDTO userdto) {
+    public ResponseEntity<UserResponseDTO> createUser(@RequestBody UserRequestDTO userdto) {
         UserResponseDTO newUser = service.createUser(userdto);
-     return ResponseEntity.ok(ApiResponse.success(newUser));
+     return new ResponseEntity<>(newUser, HttpStatus.CREATED);
     }
 
     @PostMapping("/verify")
-    public ResponseEntity<ApiResponse<UserResponseDTO>> verifyCode(
+    public ResponseEntity<UserResponseDTO> verifyCode(
             @RequestParam("code") String code,
             @RequestParam("email") String email) {
 
         UserResponseDTO user = service.verifyCode(code, email).orElseThrow(() ->
                 new RuntimeException("Invalid verification code"));
 
-        return ResponseEntity.ok(ApiResponse.success(user));
+        return new ResponseEntity<>(user, HttpStatus.OK);
     }
 }

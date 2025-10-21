@@ -1,6 +1,5 @@
 package com.amalitech.user.service.util;
 
-import com.amalitech.user.service.model.User;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Component;
 

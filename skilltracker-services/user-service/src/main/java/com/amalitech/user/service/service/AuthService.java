@@ -1,6 +1,7 @@
 package com.amalitech.user.service.service;
 
 import com.amalitech.user.service.dto.request.LoginRequest;
+import com.amalitech.user.service.dto.request.RegisterRequest;
 import com.amalitech.user.service.dto.response.AuthResponse;
 import com.amalitech.user.service.model.*;
 import org.springframework.stereotype.Service;
@@ -12,6 +13,15 @@ import org.springframework.transaction.annotation.Transactional;
  */
 @Service
 public interface AuthService {
+
+    /**
+     * Registers a new user with the provided details.
+     *
+     * @param request the registration request
+     * @return the newly created user
+     */
+    @Transactional
+    User register(RegisterRequest request);
 
     /**
      * Authenticates the user and generates tokens.

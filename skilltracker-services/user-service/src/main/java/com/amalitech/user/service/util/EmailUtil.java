@@ -15,12 +15,19 @@ public class EmailUtil {
         this.mailSender = mailSender;
     }
 
-    public void sendEmail(String sender, String to, String subject, String message) {
+    /**
+     * Sends a simple email message to a recipient.
+     *
+     * @param to Recipient's email address
+     * @param subject Subject of the email
+     * @param message Body of the email
+     */
+    public void sendEmail(String to, String subject, String message) {
         SimpleMailMessage mail = new SimpleMailMessage();
         mail.setTo(to);
         mail.setSubject(subject);
         mail.setText(message);
-        mail.setFrom(sender);
+        mail.setFrom("no-reply@campusmarket.com"); // Replace with your sender email
 
         mailSender.send(mail);
     }

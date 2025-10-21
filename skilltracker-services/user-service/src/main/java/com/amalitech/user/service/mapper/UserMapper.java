@@ -20,13 +20,14 @@ public class UserMapper {
 
     public static User toEntity(UserRequestDTO dto) {
         if (dto == null) return null;
+
         return User.builder()
                 .email(dto.email())
                 .username(dto.username())
                 .passwordHash(PasswordEncoderUtil.encodePassword(dto.password()))
                 .role(Role.USER)
                 .state(UserState.REGISTERED)
-                .is_verified(false)
+                .isVerified(false)
                 .premiumTier(PremiumTier.FREE)
                 .language("en")
                 .timezone("UTC")
@@ -37,16 +38,19 @@ public class UserMapper {
 
     public static UserResponseDTO toDto(User entity) {
         if (entity == null) return null;
+
         return new UserResponseDTO(
                 entity.getId(),
                 entity.getEmail(),
                 entity.getUsername(),
                 entity.getRole(),
                 entity.getState(),
+                entity.isVerified(),
                 entity.getPremiumTier(),
                 entity.getLanguage(),
                 entity.getTimezone(),
                 entity.getUpdatedAt(),
-                entity.is_verified());
+                entity.getLastLoginAt()
+        );
     }
 }

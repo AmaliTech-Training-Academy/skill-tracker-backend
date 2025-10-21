@@ -6,7 +6,6 @@ import com.amalitech.user.service.mapper.UserMapper;
 import com.amalitech.user.service.model.User;
 import com.amalitech.user.service.repository.UserRepository;
 import com.amalitech.user.service.service.UserService;
-import com.amalitech.user.service.util.PasswordEncoderUtil;
 import com.amalitech.user.service.util.EmailUtil;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
@@ -33,13 +32,15 @@ public class UserServiceImpl implements UserService {
         if (repo.existsByEmail(userdto.email())) {
             throw new IllegalStateException("A user already exists with this email.");
         }
+
         User user = UserMapper.toEntity(userdto);
         User savedUser = repo.save(user);
+
         notifyUser(
-                System.getenv("APP_BASE_EMAIL"),
                 savedUser.getEmail(),
                 "Account created successfully!",
-                "Enter this verification code to verify your identity:" + generateCode());
+                "Enter this verification code to verify your identity: " + generateCode());
+
         return UserMapper.toDto(savedUser);
     }
 
@@ -49,12 +50,12 @@ public class UserServiceImpl implements UserService {
             return repo.findByEmail(email)
                     .map(UserMapper::toDto);
         }
+
         return Optional.empty();
     }
 
-    public void notifyUser(String toEmail, String subject, String message, String sender) {
+    public void notifyUser(String toEmail, String subject, String message) {
         emailUtil.sendEmail(
-                sender,
                 toEmail,
                 subject,
                 message
@@ -65,11 +66,5 @@ public class UserServiceImpl implements UserService {
         SecureRandom random = new SecureRandom();
         tempCode = 100000 + random.nextInt(900000);
         return tempCode;
-    }
-
-    @Override
-    public void updatePassword(User user, String newPassword) {
-        user.setPasswordHash(PasswordEncoderUtil.encodePassword(newPassword));
-        repo.save(user);
     }
 }
