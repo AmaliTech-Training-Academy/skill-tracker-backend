@@ -5,12 +5,11 @@ import com.amalitech.user.service.dto.UserResponseDTO;
 import com.amalitech.user.service.mapper.UserMapper;
 import com.amalitech.user.service.model.User;
 import com.amalitech.user.service.repository.UserRepository;
+import com.amalitech.user.service.service.EmailService;
 import com.amalitech.user.service.service.UserService;
-import com.amalitech.user.service.util.EmailUtil;
 import com.amalitech.user.service.util.PasswordEncoderUtil;
 import jakarta.transaction.Transactional;
 
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import java.security.SecureRandom;
 import java.util.Optional;
@@ -21,19 +20,14 @@ import java.util.Optional;
  */
 @Service
 public class UserServiceImpl implements UserService {
-    private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder;
+    private final EmailService emailService;
 
     private final UserRepository repo;
-    private final EmailUtil emailUtil;
-
     private Integer tempCode;
 
-    public UserServiceImpl(UserRepository userRepository, UserRepository repo, PasswordEncoder passwordEncoder, EmailUtil emailUtil) {
+    public UserServiceImpl(UserRepository repo, EmailService emailService) {
         this.repo = repo;
-        this.userRepository = userRepository;
-        this.passwordEncoder = passwordEncoder;
-        this.emailUtil = emailUtil;
+        this.emailService = emailService;
         tempCode = 0;
     }
 
@@ -65,7 +59,6 @@ public class UserServiceImpl implements UserService {
             return repo.findByEmail(email)
                     .map(UserMapper::toDto);
         }
-
         return Optional.empty();
     }
 
@@ -75,7 +68,7 @@ public class UserServiceImpl implements UserService {
     }
 
     public void notifyUser(String toEmail, String subject, String message, String sender) {
-        emailUtil.sendEmail(
+        emailService.sendEmail(
                 toEmail,
                 subject,
                 message,
