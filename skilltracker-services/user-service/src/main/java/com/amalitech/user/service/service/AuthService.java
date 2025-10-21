@@ -3,82 +3,87 @@ package com.amalitech.user.service.service;
 import com.amalitech.user.service.dto.request.LoginRequest;
 import com.amalitech.user.service.dto.request.RegisterRequest;
 import com.amalitech.user.service.dto.response.AuthResponse;
-import com.amalitech.user.service.model.*;
-import org.springframework.stereotype.Service;
+import com.amalitech.user.service.exception.*;
+import com.amalitech.user.service.model.User;
+
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Service class for handling authentication operations including registration, login, token management,
- * and password recovery.
+ * Interface defining the public contract for authentication operations.
+ * This includes user registration, login, token management, and password recovery.
  */
-@Service
 public interface AuthService {
 
     /**
      * Registers a new user with the provided details.
      *
-     * @param request the registration request
-     * @return the newly created user
+     * @param request the registration request containing user details
+     * @return The newly created User entity
+     * @throws RuntimeException if email already exists
      */
     @Transactional
     User register(RegisterRequest request);
 
     /**
-     * Authenticates the user and generates tokens.
+     * Authenticates the user and generates access and refresh tokens.
      *
-     * @param request login credentials
-     * @return access and refresh tokens
+     * @param request the login request containing email and password
+     * @return AuthResponse containing the access and refresh tokens
      */
     AuthResponse login(LoginRequest request);
 
     /**
-     * Generates access and refresh tokens for a user.
+     * Generate accessToken and RefreshTokens for the given user.
      *
-     * @param user the user entity
-     * @return the generated tokens
+     * @param user the user to generate tokens for
+     * @return AuthResponse with access and refresh tokens
      */
     AuthResponse generateTokens(User user);
 
     /**
-     * Rotates the refresh token and issues a new access token.
+     * Refreshes the access token by validating and rotating the refresh token.
      *
      * @param refreshToken the current refresh token
-     * @return refreshed tokens
+     * @return AuthResponse with new access and rotated refresh tokens
+     * @throws RefreshTokenException if token is invalid
      */
     @Transactional
     AuthResponse refresh(String refreshToken);
 
     /**
-     * Initiates a password reset process.
+     * Initiates a password reset by generating and sending a reset token.
      *
-     * @param email the user's email
+     * @param email the user's email address
      */
     @Transactional
     void forgotPassword(String email);
 
     /**
-     * Completes password reset using a valid token.
+     * Completes password reset by validating the token and updating the password.
      *
-     * @param token       the reset token
-     * @param newPassword the new password
+     * @param token       the password reset token
+     * @param newPassword the new password to set
+     * @throws InvalidTokenException if token is invalid
+     * @throws UserNotFoundException if user doesn't exist
      */
     void resetPassword(String token, String newPassword);
 
     /**
-     * Changes a user's password after verifying the old password.
+     * Changes the user's password after verifying the old password.
      *
-     * @param email       user's email
-     * @param oldPassword current password
-     * @param newPassword new password
+     * @param email       the user's email
+     * @param oldPassword the current password for verification
+     * @param newPassword the new password to set
+     * @throws InvalidPasswordException if old password is incorrect
      */
     @Transactional
     void changePassword(String email, String oldPassword, String newPassword);
 
     /**
-     * Logs out a user by revoking tokens.
+     * Logs out the user by revoking the refresh token and blacklisting the access token.
      *
-     * @param accessToken  the access token
-     * @param refreshToken the refresh token
+     * @param accessToken  the access token to blacklist
+     * @param refreshToken the refresh token to delete
      */
     void logout(String accessToken, String refreshToken);
 }
