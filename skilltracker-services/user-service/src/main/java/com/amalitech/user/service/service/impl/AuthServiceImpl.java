@@ -3,10 +3,7 @@ package com.amalitech.user.service.service.impl;
 import com.amalitech.user.service.dto.request.LoginRequest;
 import com.amalitech.user.service.dto.request.RegisterRequest;
 import com.amalitech.user.service.dto.response.AuthResponse;
-import com.amalitech.user.service.exception.InvalidPasswordException;
-import com.amalitech.user.service.exception.InvalidTokenException;
-import com.amalitech.user.service.exception.RefreshTokenException;
-import com.amalitech.user.service.exception.UserNotFoundException;
+import com.amalitech.user.service.exception.*;
 import com.amalitech.user.service.model.*;
 import com.amalitech.user.service.model.enums.Role;
 import com.amalitech.user.service.model.enums.UserState;
@@ -83,12 +80,12 @@ public class AuthServiceImpl implements AuthService {
      * and sends a verification email.
      *
      * @param request the registration request containing user details and skills
-     * @throws RuntimeException if email already exists or skill not found
+     * @throws EmailAlreadyExistsException if email already exists or skill not found
      */
     @Transactional
     public User register(RegisterRequest request) {
         if (userRepository.findByEmail(request.email()).isPresent()) {
-            throw new RuntimeException("Email already exists");
+            throw new EmailAlreadyExistsException("Email already exists");
         }
         User user = new User();
         user.setEmail(request.email());
@@ -140,8 +137,10 @@ public class AuthServiceImpl implements AuthService {
         String key = refreshPrefix + refreshToken;
         String email = redisUtil.get(key);
         if (email == null) {
-            throw new RefreshTokenException("Invalid refresh token");
+            log.warn("Possible invalid or expired refresh token: {}", refreshToken);
+            throw new RefreshTokenException("Authentication failed. Please log in again.");
         }
+
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RefreshTokenException("User not found"));
 
@@ -154,7 +153,7 @@ public class AuthServiceImpl implements AuthService {
         String newRefreshToken = UUID.randomUUID().toString();
         redisUtil.set(refreshPrefix + newRefreshToken, email, refreshExpiration / 1000);
         String newAccessToken = jwtUtil.generateAccessToken(email, user.getRole(), user.getId());
-        log.debug("Tokens refreshed for user: {}", email);
+        log.info("Tokens refreshed for user: {}", email);
         return new AuthResponse(newAccessToken, newRefreshToken);
     }
 
