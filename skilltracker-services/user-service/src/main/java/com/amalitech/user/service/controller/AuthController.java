@@ -1,12 +1,17 @@
 package com.amalitech.user.service.controller;
 
 import com.amalitech.common.security.dto.response.ApiResponse;
+import com.amalitech.user.service.dto.UserRequestDTO;
+import com.amalitech.user.service.dto.UserResponseDTO;
 import com.amalitech.user.service.dto.response.UserDto;
 import com.amalitech.user.service.dto.request.*;
 import com.amalitech.user.service.dto.response.AuthResponse;
 import com.amalitech.user.service.mapper.UserMapper;
 import com.amalitech.user.service.service.AuthService;
-import com.amalitech.user.service.service.impl.AuthServiceImpl;
+import com.amalitech.user.service.service.UserService;
+import io.swagger.v3.oas.annotations.Operation;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.Valid;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -23,17 +28,20 @@ import jakarta.validation.Valid;
 @RequestMapping("/api/v1/auth")
 public class AuthController {
     private final AuthService authService;
+    private final UserService service;
 
-    public AuthController(AuthServiceImpl authService) {
+    public AuthController(UserService service, AuthService authService, UserService service1) {
         this.authService = authService;
+        this.service = service1;
     }
 
     /**
     * Register the user and returns the username, email
     */
     @PostMapping("/register")
-    public ResponseEntity<ApiResponse<UserDto>> register(@Valid @RequestBody RegisterRequest request, HttpServletResponse response) {
-        return ResponseEntity.ok(ApiResponse.success(UserMapper.toDto(authService.register(request))));
+    public ResponseEntity<ApiResponse<UserResponseDTO>> register(@Valid @RequestBody UserRequestDTO userdto, HttpServletResponse response) {
+        UserResponseDTO user = service.createUser(userdto);
+        return ResponseEntity.ok(ApiResponse.success(user));
     }
 
     /**

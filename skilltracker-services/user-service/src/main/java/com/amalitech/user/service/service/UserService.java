@@ -1,20 +1,12 @@
 package com.amalitech.user.service.service;
 
 import com.amalitech.user.service.model.User;
+import com.amalitech.user.service.dto.UserRequestDTO;
+import com.amalitech.user.service.dto.UserResponseDTO;
+import java.util.Optional;
 
-/**
- * Service interface for managing user-related operations, such as
- * profile updates, password management, and skill associations.
- */
 public interface UserService {
-
-    /**
-     * Updates a user's password.
-     * This method is responsible for encoding the new password
-     * before saving it to the database.
-     *
-     * @param user        the User entity to update
-     * @param newPassword the raw, unencoded new password
-     */
+    UserResponseDTO createUser(UserRequestDTO userdto);
+    Optional<UserResponseDTO> verifyCode(String code, String email);
     void updatePassword(User user, String newPassword);
 }

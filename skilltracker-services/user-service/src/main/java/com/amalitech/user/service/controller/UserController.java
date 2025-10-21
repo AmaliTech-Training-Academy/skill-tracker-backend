@@ -1,0 +1,36 @@
+package com.amalitech.user.service.controller;
+
+import com.amalitech.user.service.dto.UserRequestDTO;
+import com.amalitech.user.service.dto.UserResponseDTO;
+import com.amalitech.user.service.service.UserService;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping("/api/v1/auth")
+public class UserController {
+
+    private final UserService service;
+
+    public UserController(UserService service) {
+        this.service = service;
+    }
+
+    @PostMapping("/register")
+    public ResponseEntity<UserResponseDTO> createUser(@RequestBody UserRequestDTO userdto) {
+        UserResponseDTO newUser = service.createUser(userdto);
+     return new ResponseEntity<>(newUser, HttpStatus.CREATED);
+    }
+
+    @PostMapping("/verify")
+    public ResponseEntity<UserResponseDTO> verifyCode(
+            @RequestParam("code") String code,
+            @RequestParam("email") String email) {
+
+        UserResponseDTO user = service.verifyCode(code, email).orElseThrow(() ->
+                new RuntimeException("Invalid verification code"));
+
+        return new ResponseEntity<>(user, HttpStatus.OK);
+    }
+}
