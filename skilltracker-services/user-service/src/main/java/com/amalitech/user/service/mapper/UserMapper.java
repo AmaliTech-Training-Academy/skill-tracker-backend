@@ -2,7 +2,6 @@ package com.amalitech.user.service.mapper;
 
 import com.amalitech.user.service.dto.UserRequestDTO;
 import com.amalitech.user.service.dto.UserResponseDTO;
-import com.amalitech.user.service.enums.tierEnum;
 import com.amalitech.user.service.model.User;
 import com.amalitech.user.service.model.enums.PremiumTier;
 import com.amalitech.user.service.model.enums.Role;
