@@ -25,13 +25,13 @@ public class UserController {
     }
 
     @PostMapping("/verify")
-    public ResponseEntity<UserResponseDTO> verifyCode(
+    public ResponseEntity<ApiResponse<UserResponseDTO>> verifyCode(
             @RequestParam("code") String code,
             @RequestParam("email") String email) {
 
         UserResponseDTO user = service.verifyCode(code, email).orElseThrow(() ->
                 new RuntimeException("Invalid verification code"));
 
-        return new ResponseEntity<>(user, HttpStatus.OK);
+        return ResponseEntity.ok(ApiResponse.success(user));
     }
 }
