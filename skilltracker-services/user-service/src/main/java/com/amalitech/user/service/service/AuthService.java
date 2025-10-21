@@ -45,7 +45,7 @@ public interface AuthService {
      *
      * @param refreshToken the current refresh token
      * @return AuthResponse with new access and rotated refresh tokens
-     * @throws com.amalitech.user.service.exception.RefreshTokenException if token is invalid
+     * @throws RefreshTokenException if token is invalid
      */
     @Transactional
     AuthResponse refresh(String refreshToken);

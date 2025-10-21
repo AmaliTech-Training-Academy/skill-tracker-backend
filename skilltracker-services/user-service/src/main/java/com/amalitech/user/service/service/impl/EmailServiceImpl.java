@@ -1,20 +1,15 @@
 package com.amalitech.user.service.service.impl;
-
 import com.amalitech.user.service.service.EmailService;
-
+import jakarta.mail.MessagingException;
+import jakarta.mail.internet.MimeMessage;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 
-import jakarta.mail.MessagingException;
-import jakarta.mail.internet.MimeMessage;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-
 /**
- * Implementation of the {@link EmailService} interface for sending emails.
+ * Service for sending emails, such as password reset notifications.
  * <p>
  * Uses Spring's {@link JavaMailSender} to construct and send MIME messages.
  * </p>
@@ -27,7 +22,7 @@ public class EmailServiceImpl implements EmailService {
     private final JavaMailSender mailSender;
 
     /**
-     * Constructs the EmailServiceImpl with the given {@link JavaMailSender}.
+     * Constructs the EmailService with the given {@link JavaMailSender}.
      *
      * @param mailSender the JavaMailSender used to send emails
      */
@@ -36,9 +31,15 @@ public class EmailServiceImpl implements EmailService {
     }
 
     /**
-     * {@inheritDoc}
+     * Sends a password reset email to the specified recipient with a reset link.
+     * <p>
+     * The email contains an HTML link that the user can click to reset their password.
+     * </p>
+     *
+     * @param to the recipient's email address
+     * @param resetLink the password reset link to include in the email
+     * @throws RuntimeException if sending the email fails
      */
-    @Override
     public void sendResetEmail(String to, String resetLink) {
         MimeMessage message = mailSender.createMimeMessage();
         try {
@@ -47,9 +48,7 @@ public class EmailServiceImpl implements EmailService {
             helper.setSubject("Password Reset Request");
             helper.setText("<p>Click <a href=\"" + resetLink + "\">here</a> to reset your password.</p>", true);
             mailSender.send(message);
-            log.info("Password reset email sent to: {}", to);
         } catch (MessagingException e) {
-            log.error("Failed to send password reset email to {}: {}", to, e.getMessage(), e);
             throw new RuntimeException("Failed to send email", e);
         }
     }

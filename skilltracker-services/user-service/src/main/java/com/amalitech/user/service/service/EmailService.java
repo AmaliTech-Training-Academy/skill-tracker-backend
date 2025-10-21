@@ -1,22 +1,18 @@
 package com.amalitech.user.service.service;
 
+import org.springframework.stereotype.Service;
+
 /**
- * Service interface for sending emails, such as password reset notifications.
- * <p>
- * Defines the contract for all email-sending operations within the application.
- * </p>
+ * Service interface for handling email-related operations.
  */
+@Service
 public interface EmailService {
 
     /**
-     * Sends a password reset email to the specified recipient with a reset link.
-     * <p>
-     * The email contains an HTML link that the user can click to reset their password.
-     * </p>
+     * Sends a password reset email to the specified recipient.
      *
-     * @param to        the recipient's email address
-     * @param resetLink the password reset link to include in the email
-     * @throws RuntimeException if sending the email fails (e.g., due to MessagingException)
+     * @param to        recipient's email address
+     * @param resetLink the password reset link
      */
     void sendResetEmail(String to, String resetLink);
 }
