@@ -39,7 +39,7 @@ public class UserServiceImpl implements UserService {
                 System.getenv("APP_BASE_EMAIL"),
                 savedUser.getEmail(),
                 "Account created successfully!",
-                "Enter this verification code to verify your identity: " + generateCode());
+                "Enter this verification code to verify your identity:" + generateCode());
         return UserMapper.toDto(savedUser);
     }
 
