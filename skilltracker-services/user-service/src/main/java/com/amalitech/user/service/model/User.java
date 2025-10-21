@@ -67,17 +67,9 @@ public class User {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Role role = Role.USER;
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private Role role = Role.USER;
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<UserSkill> userSkills = new HashSet<>();
-
-
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private UserState state = UserState.REGISTERED;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -86,16 +78,12 @@ public class User {
     @Column(nullable = false)
     private boolean is_verified = false;
 
-    @Column(name = "is_verified")
-    private Boolean isVerified = false;
-
     @Enumerated(EnumType.STRING)
     @Column(name = "premium_tier", nullable = false)
     private PremiumTier premiumTier = PremiumTier.FREE;
 
-    @Column(length = 10)
     @Enumerated(EnumType.STRING)
-    @Column(name = "tour_status")
+    @Column(name = "tour_status", length = 10)
     private TourStatus tourStatus = TourStatus.NOT_STARTED;
 
     @Column(length = 10)

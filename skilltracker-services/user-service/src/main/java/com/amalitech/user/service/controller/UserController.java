@@ -1,5 +1,6 @@
 package com.amalitech.user.service.controller;
 
+import com.amalitech.user.service.dto.ApiResponse;
 import com.amalitech.user.service.dto.UserRequestDTO;
 import com.amalitech.user.service.dto.UserResponseDTO;
 import com.amalitech.user.service.service.UserService;
@@ -18,9 +19,9 @@ public class UserController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<UserResponseDTO> createUser(@RequestBody UserRequestDTO userdto) {
+    public ResponseEntity<ApiResponse<UserResponseDTO>> createUser(@RequestBody UserRequestDTO userdto) {
         UserResponseDTO newUser = service.createUser(userdto);
-     return new ResponseEntity<>(newUser, HttpStatus.CREATED);
+     return ResponseEntity.ok(ApiResponse.success(newUser));
     }
 
     @PostMapping("/verify")

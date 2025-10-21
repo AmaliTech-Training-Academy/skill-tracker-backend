@@ -11,9 +11,5 @@ import java.util.Optional;
 public interface UserService {
     UserResponseDTO createUser(UserRequestDTO userdto);
     Optional<UserResponseDTO> verifyCode(String code, String email);
-
-    public void updatePassword(User user, String newPassword) {
-        user.setPasswordHash(passwordEncoder.encode(newPassword));
-        userRepository.save(user);
-    }
+    void updatePassword(User user, String newPassword);
 }

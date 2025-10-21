@@ -2,6 +2,8 @@ package com.amalitech.user.service.controller;
 
 import com.amalitech.user.service.dto.ApiResponse;
 
+import com.amalitech.user.service.dto.UserRequestDTO;
+import com.amalitech.user.service.dto.UserResponseDTO;
 import com.amalitech.user.service.dto.response.UserDto;
 import com.amalitech.user.service.dto.request.*;
 import com.amalitech.user.service.dto.response.AuthResponse;
@@ -24,14 +26,6 @@ public class AuthController {
 
     public AuthController(AuthService authService) {
         this.authService = authService;
-    }
-
-    /**
-    * Register the user and returns the username, email
-    */
-    @PostMapping("/register")
-    public ResponseEntity<ApiResponse<UserDto>> register(@Valid @RequestBody RegisterRequest request, HttpServletResponse response) {
-        return ResponseEntity.ok(ApiResponse.success(UserMapper.toDto(authService.register(request))));
     }
 
     /**
