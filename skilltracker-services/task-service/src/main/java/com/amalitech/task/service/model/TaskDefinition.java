@@ -2,6 +2,7 @@ package com.amalitech.task.service.model;
 
 import com.amalitech.task.service.model.view.SkillView;
 import jakarta.persistence.*;
+import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -10,6 +11,11 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "task_definitions")
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class TaskDefinition {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)

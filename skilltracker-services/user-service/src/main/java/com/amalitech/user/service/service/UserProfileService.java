@@ -9,7 +9,6 @@ import java.util.UUID;
  * Service interface for managing user profile operations.
  */
 public interface UserProfileService {
-
     /**
      * Retrieves a user profile by user ID.
      *

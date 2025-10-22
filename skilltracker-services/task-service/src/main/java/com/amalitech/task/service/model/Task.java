@@ -31,7 +31,6 @@ import java.util.UUID;
 @Table(name = "tasks",
         indexes = {
         @Index(name = "idx_task_difficulty_published", columnList = "difficulty, is_published"),
-        @Index(name = "idx_task_skill", columnList = "skill_id")
         })
 @Getter
 @Setter
