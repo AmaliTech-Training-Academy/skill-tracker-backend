@@ -20,7 +20,5 @@ public class SkillView {
     private String name;
 
     private String description;
-
-    private String category;
 }
 

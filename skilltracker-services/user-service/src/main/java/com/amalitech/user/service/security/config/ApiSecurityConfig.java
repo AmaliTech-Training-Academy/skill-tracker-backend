@@ -1,6 +1,7 @@
 package com.amalitech.user.service.security.config;
 
 import com.amalitech.user.service.security.filter.JwtAuthenticationFilter;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;

@@ -1,5 +1,8 @@
 package com.amalitech.task.service.model;
 
+import com.amalitech.task.service.model.submission.SubmissionAnswer;
+import com.amalitech.task.service.model.feedback.SubmissionFeedback;
+
 import io.hypersistence.utils.hibernate.type.json.JsonType;
 import jakarta.persistence.*;
 import lombok.*;
@@ -7,7 +10,6 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.Type;
 
 import java.time.LocalDateTime;
-import java.util.Map;
 import java.util.UUID;
 
 @Entity
@@ -32,13 +34,19 @@ public class TaskSubmission {
     @JoinColumn(name = "task_id", nullable = false)
     private Task task;
 
-    @Column(columnDefinition = "jsonb")
+    /**
+     * Stores structured, polymorphic answer JSON.
+     */
     @Type(JsonType.class)
-    private Map<String, Object> answer;
+    @Column(columnDefinition = "jsonb", nullable = false)
+    private SubmissionAnswer answer;
 
-    @Column(columnDefinition = "jsonb")
+    /**
+     * Stores structured, polymorphic feedback JSON.
+     */
     @Type(JsonType.class)
-    private Map<String, Object> feedback;
+    @Column(columnDefinition = "jsonb")
+    private SubmissionFeedback feedback;
 
     private Boolean isCorrect;
 

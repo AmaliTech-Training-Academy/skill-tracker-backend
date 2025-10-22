@@ -41,7 +41,7 @@
 
 
 <!--        <module>skilltracker-common/common-audit</module>-->
-<!--        <module>skilltracker-common/common-event</module>-->
+        <module>skilltracker-common/common-event</module>
         <module>skilltracker-common/common-security</module>
         <module>skilltracker-common/common-util</module>
     </modules>

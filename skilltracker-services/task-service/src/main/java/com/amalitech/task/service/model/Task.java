@@ -4,6 +4,7 @@ import com.amalitech.task.service.model.content.TaskContent;
 import com.amalitech.task.service.model.enums.TaskDifficulty;
 import com.amalitech.task.service.model.enums.TaskType;
 
+import com.amalitech.task.service.model.view.SkillView;
 import io.hypersistence.utils.hibernate.type.json.JsonType;
 import jakarta.persistence.*;
 import lombok.*;
@@ -56,9 +57,6 @@ public class Task {
     @Column(nullable = false)
     private TaskDifficulty difficulty;
 
-    @Column(name = "skill_id", nullable = false)
-    private UUID skillId; //Loose reference to Skill (from User Service)
-
     /**
      * Stores the actual task content (MCQ questions, essay prompts, coding instructions, etc.)
      * in JSON format. Allows flexibility for different task types.
@@ -67,12 +65,12 @@ public class Task {
     @Column(nullable = false, columnDefinition = "jsonb")
     private TaskContent content;
 
-    /**
-     * Optional reference to a programming language (for coding tasks only).
-     */
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "language_id")
-    private ProgrammingLanguage programmingLanguage;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "task_definition_id", nullable = false)
+    private TaskDefinition taskDefinition;
+
+    @Column(nullable = false)
+    private int version;
 
     @Column(name = "estimated_duration_minutes")
     private Integer estimatedDurationInMinutes;
