@@ -2,8 +2,6 @@ package com.amalitech.task.service.service;
 
 import com.amalitech.task.service.dto.StarterCodeDTO;
 import com.amalitech.task.service.dto.TaskDTO;
-import com.amalitech.task.service.dto.TaskAvailabilityDTO;
-import com.amalitech.task.service.dto.TestCaseDTO;
 import com.amalitech.task.service.dto.request.BatchGenerationRequest;
 import com.amalitech.task.service.events.TaskEventProducer;
 import com.amalitech.task.service.exception.ResourceNotFoundException;
