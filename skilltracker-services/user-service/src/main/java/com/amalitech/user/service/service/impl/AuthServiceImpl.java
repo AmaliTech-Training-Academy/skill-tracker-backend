@@ -44,7 +44,6 @@ public class AuthServiceImpl implements AuthService {
     private final String refreshPrefix;
     private final String resetPrefix;
     private final String appBaseUrl;
-    private final UserService userService;
 
 
     public AuthServiceImpl(
@@ -53,7 +52,6 @@ public class AuthServiceImpl implements AuthService {
             BCryptPasswordEncoder passwordEncoder,
             EmailService emailService,
             RedisUtil redisUtil,
-            UserService userService,
             @Value("${jwt.refresh-expiration-ms}") long refreshExpiration,
             @Value("${app.reset-token-expiration-ms}") long resetExpiration,
             @Value("${app.refresh-token-prefix}") String refreshPrefix,
@@ -72,7 +70,6 @@ public class AuthServiceImpl implements AuthService {
         this.refreshPrefix = refreshPrefix;
         this.resetPrefix = resetPrefix;
         this.appBaseUrl = appBaseUrl;
-        this.userService = userService;
     }
 
     /**
@@ -201,7 +198,7 @@ public class AuthServiceImpl implements AuthService {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RefreshTokenException("User not found"));
 
-        userService.updatePassword(user, newPassword);
+        updatePassword(user, newPassword);
         redisUtil.delete(key);
 
     }
@@ -221,7 +218,17 @@ public class AuthServiceImpl implements AuthService {
         if (user == null || !passwordEncoder.matches(oldPassword, user.getPasswordHash())) {
             throw new InvalidPasswordException("Invalid old password");
         }
-        userService.updatePassword(user, newPassword);
+        updatePassword(user, newPassword);
+    }
+
+    /**
+     * update oldpassword in data base with new password.
+     *
+     * @param user, newPassword to replace the old password
+     */
+    public void updatePassword(User user, String newPassword) {
+        user.setPasswordHash(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
     }
 
     /**
