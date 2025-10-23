@@ -3,19 +3,16 @@ package com.amalitech.user.service.service.impl;
 import com.amalitech.user.service.dto.UserRequestDTO;
 import com.amalitech.user.service.dto.UserResponseDTO;
 import com.amalitech.user.service.dto.request.LoginRequest;
-import com.amalitech.user.service.dto.request.RegisterRequest;
 import com.amalitech.user.service.dto.response.AuthResponse;
 import com.amalitech.user.service.exception.*;
 import com.amalitech.user.service.mapper.UserMapper;
 import com.amalitech.user.service.model.*;
-import com.amalitech.user.service.model.enums.Role;
 import com.amalitech.user.service.model.enums.UserState;
 import com.amalitech.user.service.repository.UserRepository;
 import com.amalitech.user.service.security.CustomUserDetails;
 import com.amalitech.user.service.security.util.JwtUtil;
 import com.amalitech.user.service.service.AuthService;
 import com.amalitech.user.service.service.EmailService;
-import com.amalitech.user.service.service.UserService;
 import com.amalitech.user.service.util.RedisUtil;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -50,7 +47,6 @@ public class AuthServiceImpl implements AuthService {
     private final String refreshPrefix;
     private final String resetPrefix;
     private final String appBaseUrl;
-    private final UserService userService;
     private Integer tempCode;
 
 
@@ -78,7 +74,6 @@ public class AuthServiceImpl implements AuthService {
         this.refreshPrefix = refreshPrefix;
         this.resetPrefix = resetPrefix;
         this.appBaseUrl = appBaseUrl;
-        this.userService = userService;
         this.tempCode = 0;
     }
 
@@ -261,7 +256,7 @@ public class AuthServiceImpl implements AuthService {
             return userRepository.findByEmail(email)
                     .map(UserMapper::toDto);
         }
-        return Optional.empty();
+        throw new InvalidVerificationCodeException("Invalid verification code");
     }
 
     public void notifyUser(String toEmail, String subject, String message) {
