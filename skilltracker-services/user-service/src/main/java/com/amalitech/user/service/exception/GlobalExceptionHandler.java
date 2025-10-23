@@ -96,7 +96,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiError> handleInvalidToken(InvalidTokenException ex, HttpServletRequest request) {
         ApiError error = ApiError.of(
                 HttpStatus.NOT_FOUND.value(),
-                "Invalid token",
+                "Invalid token.",
                 ex.getMessage(),
                 request.getRequestURI(),
                 null,
