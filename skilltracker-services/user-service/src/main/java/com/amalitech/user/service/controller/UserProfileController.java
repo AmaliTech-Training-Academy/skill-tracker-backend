@@ -39,7 +39,7 @@ public class UserProfileController {
             @AuthenticationPrincipal UserDetails userDetails) {
         UUID userId = extractUserId(userDetails);
         UserProfileResponse profile = userProfileService.getUserProfile(userId);
-        return ResponseEntity.ok(ApiResponse.success("Profile retrieved successfully", profile));
+        return ResponseEntity.ok(ApiResponse.success("Profile retrieved successfully", profile,""));
     }
 
     /**
@@ -51,7 +51,7 @@ public class UserProfileController {
     @GetMapping("/{userId}")
     public ResponseEntity<ApiResponse<UserProfileResponse>> getUserProfile(@PathVariable UUID userId) {
         UserProfileResponse profile = userProfileService.getUserProfile(userId);
-        return ResponseEntity.ok(ApiResponse.success("Profile retrieved successfully", profile));
+        return ResponseEntity.ok(ApiResponse.success("Profile retrieved successfully", profile, ""));
     }
 
     /**
@@ -67,7 +67,7 @@ public class UserProfileController {
             @Valid @RequestBody UpdateUserProfileRequest request) {
         UUID userId = extractUserId(userDetails);
         UserProfileResponse updatedProfile = userProfileService.updateUserProfile(userId, request);
-        return ResponseEntity.ok(ApiResponse.success("User profile updated successfully", updatedProfile));
+        return ResponseEntity.ok(ApiResponse.success("User profile updated successfully", updatedProfile,""));
     }
 
     /**
@@ -83,7 +83,7 @@ public class UserProfileController {
             @Valid @RequestBody UpdateUserProfileRequest request) {
         UUID userId = extractUserId(userDetails);
         UserProfileResponse updatedProfile = userProfileService.updateUserProfile(userId, request);
-        return ResponseEntity.ok(ApiResponse.success("Profile updated successfully", updatedProfile));
+        return ResponseEntity.ok(ApiResponse.success("Profile updated successfully", updatedProfile, ""));
     }
 
     /**
@@ -96,7 +96,7 @@ public class UserProfileController {
     public ResponseEntity<ApiResponse<Void>> deleteMyProfile(@AuthenticationPrincipal UserDetails userDetails) {
         UUID userId = extractUserId(userDetails);
         userProfileService.deleteUserProfile(userId);
-        return ResponseEntity.ok(ApiResponse.success("Profile deleted successfully", null));
+        return ResponseEntity.ok(ApiResponse.success("Profile deleted successfully", null,""));
     }
 
     /**
