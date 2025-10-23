@@ -22,6 +22,13 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+/**
+ * Implementation of the TaskService interface.
+ * Provides business logic for task management, personalization, and availability checking.
+ * Handles task retrieval with caching and triggers asynchronous task generation when needed.
+ *
+ */
+
 @Service
 @Slf4j
 @Transactional(readOnly = true)
@@ -33,6 +40,10 @@ public class TaskServiceImpl implements TaskService {
     private final TaskEventProducer taskEventProducer;
     private final TaskMapper taskMapper;
 
+    /**
+     * Minimum number of tasks required per difficulty level before triggering generation.
+     * Configurable via application property: app.task.min-tasks-per-difficulty
+     */
     @Value("${app.task.min-tasks-per-difficulty:5}")
     private int minTasksPerDifficulty;
 
@@ -121,6 +132,16 @@ public class TaskServiceImpl implements TaskService {
                 .build();
     }
 
+    /**
+     * Retrieves cached tasks or triggers generation if insufficient tasks are available.
+     * This method implements a cache-first strategy, checking for existing tasks before
+     * requesting new task generation asynchronously.
+     *
+     * @param skill the skill view containing skill information
+     * @param difficulty the difficulty level of tasks to retrieve
+     * @param limit the maximum number of tasks to retrieve
+     * @return a list of tasks from the cache (may be less than the requested limit)
+     */
     private List<Task> getOrGenerateTasksForSkillAndDifficulty(
             SkillView skill, TaskDifficulty difficulty, int limit) {
 
@@ -151,11 +172,31 @@ public class TaskServiceImpl implements TaskService {
         return cachedTasks;
     }
 
+    /**
+     * Retrieves a skill view by its name.
+     *
+     * @param skillName the name of the skill to retrieve
+     * @return the skill view entity
+     * @throws ResourceNotFoundException if no skill is found with the specified name
+     */
     private SkillView getSkillByName(String skillName) {
         return skillViewRepository.findByName(skillName)
                 .orElseThrow(() -> new ResourceNotFoundException("Skill not found: " + skillName));
     }
 
+    /**
+     * Determines the appropriate difficulty level for a user based on their submission history.
+     * The difficulty is calculated based on the number of correct submissions:
+     * <ul>
+     *   <li>Less than 5 correct: EASY</li>
+     *   <li>5-14 correct: MEDIUM</li>
+     *   <li>15 or more correct: HARD</li>
+     * </ul>
+     *
+     * @param userId the unique identifier of the user
+     * @param skillId the unique identifier of the skill
+     * @return the determined difficulty level
+     */
     private TaskDifficulty determineUserDifficulty(UUID userId, UUID skillId) {
         Long correctCount = submissionRepository.countByUserIdAndIsCorrect(userId, true);
 

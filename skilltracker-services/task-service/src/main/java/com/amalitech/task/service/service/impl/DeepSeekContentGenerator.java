@@ -50,6 +50,9 @@ public class DeepSeekContentGenerator implements ContentGeneratorService {
         this.taskDefinitionRepository = taskDefinitionRepository;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     @Transactional
     public Task generateMcqTask(SkillView skill, TaskDifficulty difficulty, String topic) {
@@ -64,10 +67,30 @@ public class DeepSeekContentGenerator implements ContentGeneratorService {
         return createAndSaveTask(skill, TaskType.MULTIPLE_CHOICE, difficulty, content, topic);
     }
 
+    /**
+     * Builds an MCQ generation prompt using the configured template.
+     * The template is populated with skill name, difficulty level, and topic
+     * to create a context-specific prompt for the AI model.
+     *
+     * @param skillName the name of the skill
+     * @param difficulty the difficulty level
+     * @param topic the topic for the question
+     * @return the formatted prompt string ready for AI processing
+     */
     private String buildMcqPrompt(String skillName, TaskDifficulty difficulty, String topic) {
         return String.format(mcqPromptTemplate, skillName, difficulty, topic);
     }
 
+
+    /**
+     * Calls the DeepSeek AI model with the provided prompt.
+     * This method sends a structured request to the AI model with system and user messages,
+     * ensuring the response is in valid JSON format without markdown formatting.
+     *
+     * @param promptText the prompt text to send to the AI model
+     * @return the cleaned JSON response from the AI model
+     * @throws RuntimeException if the API call fails or encounters an error
+     */
     private String callDeepSeek(String promptText) {
         try {
             log.debug("Calling DeepSeek API with prompt length: {}", promptText.length());
@@ -90,6 +113,15 @@ public class DeepSeekContentGenerator implements ContentGeneratorService {
         }
     }
 
+
+    /**
+     * Cleans the AI response by removing markdown code block markers.
+     * Handles responses that may be wrapped in markdown JSON code blocks
+     * (e.g., ```json ... ``` or ``` ... ```).
+     *
+     * @param response the raw response from the AI model
+     * @return the cleaned JSON string without markdown markers
+     */
     private String cleanJsonResponse(String response) {
         response = response.trim();
         if (response.startsWith("```json")) {
@@ -104,6 +136,23 @@ public class DeepSeekContentGenerator implements ContentGeneratorService {
         return response.trim();
     }
 
+
+    /**
+     * Parses the AI response JSON into an MCQ content object.
+     * Expected JSON structure:
+     * <pre>
+     * {
+     *   "question": "The question text",
+     *   "options": ["Option 1", "Option 2", "Option 3", "Option 4"],
+     *   "correctOption": 0,
+     *   "explanation": "Explanation of the correct answer"
+     * }
+     * </pre>
+     *
+     * @param response the JSON response string from the AI model
+     * @return the parsed McqTaskContent object
+     * @throws RuntimeException if JSON parsing fails or required fields are missing
+     */
     private McqTaskContent parseMcqResponse(String response) {
         try {
             JsonNode json = objectMapper.readTree(response);
@@ -123,6 +172,27 @@ public class DeepSeekContentGenerator implements ContentGeneratorService {
         }
     }
 
+    /**
+     * Creates and persists a task with its associated task definition.
+     * This method handles:
+     * <ul>
+     *   <li>Extracting metadata from the content (title, description, xp, duration)</li>
+     *   <li>Creating or retrieving the task definition with version management</li>
+     *   <li>Building the complete task entity with all required fields</li>
+     *   <li>Persisting the task to the database</li>
+     * </ul>
+     *
+     * <p>If the task definition doesn't exist, it creates a new one. Otherwise,
+     * it increments the version number for the existing definition.</p>
+     *
+     * @param skill the skill view associated with the task
+     * @param type the task type (e.g., MULTIPLE_CHOICE)
+     * @param difficulty the difficulty level of the task
+     * @param content the generated task content
+     * @param topic the topic used as fallback for title generation
+     * @return the persisted Task entity
+     * @throws RuntimeException if task creation or persistence fails
+     */
     private Task createAndSaveTask(SkillView skill, TaskType type, TaskDifficulty difficulty,
                                    TaskContent content, String topic) {
         try {
