@@ -23,7 +23,6 @@ public class UserMapper {
         if (dto == null) return null;
         User user = new User();
         user.setEmail(dto.email());
-        user.setUsername(dto.username());
         user.setPasswordHash(apiPasswordEncoder.encode(dto.password()));
         user.setRole(Role.USER);
         user.setState(UserState.REGISTERED);
