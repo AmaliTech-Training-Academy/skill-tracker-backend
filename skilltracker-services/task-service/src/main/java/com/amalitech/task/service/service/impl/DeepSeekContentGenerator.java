@@ -146,16 +146,17 @@ public class DeepSeekContentGenerator implements ContentGeneratorService {
         try {
             JsonNode json = objectMapper.valueToTree(content);
 
-            String title = json.has("title") ? json.get("title").asText() : topic;
+            String title;
+            if (json.has("title")) {
+                title = json.get("title").asText();
+            } else {
+                title = topic + " #" + UUID.randomUUID().toString().substring(0, 4);
+            }
             String description = json.has("description") ?
                     json.get("description").asText() : "AI-generated task";
             int xpReward = json.has("xpReward") ? json.get("xpReward").asInt() : 10;
             int duration = json.has("estimatedDuration") ?
                     json.get("estimatedDuration").asInt() : 10;
-
-            if (!json.has("title")) {
-                title = topic + " #" + UUID.randomUUID().toString().substring(0, 4);
-            }
 
             String finalTitle = title;
             TaskDefinition definition = taskDefinitionRepository
