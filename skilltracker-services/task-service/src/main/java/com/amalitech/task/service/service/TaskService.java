@@ -40,7 +40,7 @@ public interface TaskService {
      * Retrieves a single, detailed task by its ID, including starter code
      * and visible test cases.
      *
-     * @param taskId The
+     * @param taskId The unique identifier of the task to retrieve.
      * @return The detailed TaskDTO.
      * @throws ResourceNotFoundException if task is not found.
      */
