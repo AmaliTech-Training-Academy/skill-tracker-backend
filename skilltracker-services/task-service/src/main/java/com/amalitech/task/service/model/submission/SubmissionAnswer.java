@@ -3,6 +3,7 @@ package com.amalitech.task.service.model.submission;
 import com.amalitech.task.service.model.submission.impl.CodingSubmissionAnswer;
 import com.amalitech.task.service.model.submission.impl.EssaySubmissionAnswer;
 import com.amalitech.task.service.model.submission.impl.McqSubmissionAnswer;
+
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
@@ -13,7 +14,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 @JsonTypeInfo(
         use = JsonTypeInfo.Id.NAME,
         include = JsonTypeInfo.As.PROPERTY,
-        property = "answerType" // This 'answerType' field will be in the JSON
+        property = "answerType"
 )
 @JsonSubTypes({
         @JsonSubTypes.Type(value = McqSubmissionAnswer.class, name = "MCQ"),

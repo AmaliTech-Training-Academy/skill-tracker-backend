@@ -18,7 +18,6 @@ import java.util.UUID;
 @AllArgsConstructor
 @Builder
 public class ProgrammingLanguage {
-
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;

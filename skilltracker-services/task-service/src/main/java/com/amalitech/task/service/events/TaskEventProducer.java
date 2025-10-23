@@ -2,7 +2,8 @@ package com.amalitech.task.service.events;
 
 import com.amalitech.task.service.config.RabbitMQConfig;
 import com.amalitech.task.service.dto.request.BatchGenerationRequest;
-import com.amalitech.task.service.dto.request.GenerateTaskRequest; // Your DTO
+import com.amalitech.task.service.dto.request.GenerateTaskRequest;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;

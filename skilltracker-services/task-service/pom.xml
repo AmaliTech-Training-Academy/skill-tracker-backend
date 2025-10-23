@@ -12,7 +12,14 @@
     </parent>
 
     <repositories>
-        <!-- (you can include these, though central should cover the published versions) -->
+        <repository>
+            <id>central</id>
+            <name>Maven Central Repository</name>
+            <url>https://repo.maven.apache.org/maven2</url>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </repository>
         <repository>
             <id>spring-milestone</id>
             <url>https://repo.spring.io/milestone</url>
@@ -170,13 +177,12 @@
         <dependency>
             <groupId>org.springframework.ai</groupId>
             <artifactId>spring-ai-starter-model-deepseek</artifactId>
-            <version>1.0.0</version>
         </dependency>
-        <dependency>
-            <groupId>org.springframework.ai</groupId>
-            <artifactId>spring-ai-deepseek-spring-boot-starter</artifactId>
-            <version>1.0.0-M3</version>
-        </dependency>
+<!--        <dependency>-->
+<!--            <groupId>org.springframework.ai</groupId>-->
+<!--            <artifactId>spring-ai-deepseek-spring-boot-starter</artifactId>-->
+<!--            <version>1.0.0-M3</version>-->
+<!--        </dependency>-->
 
 
 
@@ -193,31 +199,18 @@
             <version>${project.version}</version>
         </dependency>
 
-        <!--        <dependency>-->
-        <!--            <groupId>com.amalitech</groupId>-->
-        <!--            <artifactId>common-event</artifactId>-->
-        <!--            <version>${project.version}</version>-->
-        <!--        </dependency>-->
-        <!--        <dependency>-->
-        <!--            <groupId>com.amalitech</groupId>-->
-        <!--            <artifactId>common-audit</artifactId>-->
-        <!--            <version>${project.version}</version>-->
-        <!--        </dependency>-->
+                <dependency>
+                    <groupId>com.amalitech</groupId>
+                    <artifactId>common-event</artifactId>
+                    <version>${project.version}</version>
+                </dependency>
+<!--                <dependency>-->
+<!--                    <groupId>com.amalitech</groupId>-->
+<!--                    <artifactId>common-audit</artifactId>-->
+<!--                    <version>${project.version}</version>-->
+<!--                </dependency>-->
 
     </dependencies>
-
-    <dependencyManagement>
-        <dependencies>
-            <dependency>
-                <groupId>org.springframework.ai</groupId>
-                <artifactId>spring-ai-bom</artifactId>
-                <version>1.0.0-RC1</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
-        </dependencies>
-    </dependencyManagement>
-
 
 
     <build>

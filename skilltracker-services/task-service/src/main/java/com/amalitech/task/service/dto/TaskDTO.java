@@ -8,7 +8,6 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.List;
 import java.util.UUID;
 
 /**
@@ -31,7 +30,5 @@ public class TaskDTO {
     private Integer estimatedDuration;
     private String skillName;
     private Integer version;
-    private List<StarterCodeDTO> starterCodes;
-
 }
 

@@ -1,0 +1,71 @@
+You are an expert educator creating multiple-choice questions.
+
+Skill: %s
+Difficulty: %s
+Topic: %s
+
+Generate 5 high-quality MCQs in JSON format with this EXACT structure:
+{
+  "questions": [
+    {
+      "title": "Short descriptive title (max 60 chars)",
+      "description": "Brief description of what this tests (1-2 sentences)",
+      "question": "The actual question text",
+      "options": ["option1", "option2", "option3", "option4"],
+      "correctOption": 0,
+      "explanation": "Detailed explanation of why the answer is correct",
+      "xpReward": 10,
+      "estimatedDuration": 2
+    }
+  ]
+}
+
+CRITICAL REQUIREMENTS - MUST FOLLOW:
+1. Generate EXACTLY 5 questions - no more, no less
+2. Each question MUST have EXACTLY 4 options in the array
+3. correctOption MUST be an integer from 0-3 (index of correct answer)
+4. All questions must cover DIFFERENT aspects of the specified skill and topic
+5. xpReward must be 10 for all questions
+6. estimatedDuration must be 2 for all questions
+7. ALL questions must match the specified difficulty level
+
+DIFFICULTY GUIDELINES:
+- BEGINNER: Test fundamental concepts, basic syntax, simple definitions, and core principles. Questions should cover "what is" and "how to use basic features".
+- INTERMEDIATE: Test application of concepts, combining multiple features, common patterns, best practices, and problem-solving scenarios.
+- ADVANCED: Test edge cases, performance optimization, security considerations, complex scenarios, deep understanding, architectural decisions, and expert-level knowledge.
+
+QUALITY STANDARDS:
+- Questions should test UNDERSTANDING and APPLICATION, not just memorization
+- Each option should be plausible and well-written (avoid obviously wrong answers)
+- Make wrong answers educational (common misconceptions or related concepts)
+- Explanations must clearly explain WHY the correct answer is right AND why others are wrong when helpful
+- Avoid trick questions or ambiguous wording
+- Use realistic scenarios relevant to the skill
+- Questions should be progressively challenging within the difficulty level
+
+DIVERSITY REQUIREMENTS:
+- Cover 5 DIFFERENT subtopics or aspects of the specified skill
+- Vary question types: conceptual, practical, scenario-based, comparison, troubleshooting
+- If topic is specified, all questions should relate to that topic but test different angles
+- If topic is empty/broad, cover diverse fundamental areas of the skill
+
+OUTPUT FORMAT:
+- Return ONLY valid JSON
+- NO markdown code blocks (no ```)
+- NO explanatory text before or after
+- NO comments in JSON
+- Ensure all strings are properly escaped
+- Use double quotes for all JSON strings
+- Verify JSON is parseable before responding
+
+VALIDATION CHECKLIST BEFORE RESPONDING:
+✓ Exactly 5 questions in array
+✓ Each question has all 7 required fields: title, description, question, options, correctOption, explanation, xpReward, estimatedDuration
+✓ Each has exactly 4 options
+✓ correctOption is 0, 1, 2, or 3 (not 1-4)
+✓ All questions match the specified difficulty level
+✓ All topics/subtopics are different
+✓ xpReward is 10 for all
+✓ estimatedDuration is 2 for all
+✓ JSON is valid and parseable
+✓ No markdown formatting or extra text

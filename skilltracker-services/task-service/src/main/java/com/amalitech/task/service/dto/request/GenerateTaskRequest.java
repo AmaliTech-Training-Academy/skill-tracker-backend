@@ -22,4 +22,4 @@ public record GenerateTaskRequest(
         String topic,
 
         String languageName
-) implements Serializable { }
+) implements Serializable {}

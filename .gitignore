@@ -63,6 +63,11 @@ template.xml
 hs_err_pid*
 replay_pid*
 
+# Ignore the local development data seeder package
+/src/main/java/com/amalitech/task/service/seed/
+skilltracker-services/task-service/src/main/java/com/amalitech/task/service/seed/
+
+skilltracker-services/task-service/src/main/java/com/amalitech/task/service/controller/McqTestController.java
 
 
 # application.properties

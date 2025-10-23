@@ -1,6 +1,7 @@
 package com.amalitech.task.service.model.feedback.impl;
 
 import com.amalitech.task.service.model.feedback.SubmissionFeedback;
+
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -23,7 +24,7 @@ public class CodingSubmissionFeedback implements SubmissionFeedback {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class TestCaseResult {
-        private UUID testCaseId; // Link to TaskTestCase
+        private UUID testCaseId;
         private boolean isHidden;
         private boolean passed;
         private String expected;
