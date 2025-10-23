@@ -36,7 +36,7 @@ public class TaskGenerationService {
 
     /**
      * LISTENER 1: For USER "batch" requests (MCQ-only)
-     * This one USES THE REDIS LOCK to prevent thundering herds.
+     * USES THE REDIS LOCK to prevent thundering herds.
      */
     @RabbitListener(queues = RabbitMQConfig.BATCH_GENERATION_QUEUE)
     public void handleBatchGenerationRequest(BatchGenerationRequest request) {
@@ -74,7 +74,7 @@ public class TaskGenerationService {
 
     /**
      * LISTENER 2: For ADMIN "special order" requests (MCQ-only)
-     * This one DOES NOT NEED A LOCK, as it's a specific, manual action.
+     * This DOES NOT NEED A LOCK, as it's a specific, manual action.
      */
     @RabbitListener(queues = RabbitMQConfig.ADMIN_GENERATION_QUEUE)
     public void handleAdminGenerationRequest(GenerateTaskRequest request) {
