@@ -15,17 +15,20 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.SystemMessage;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.prompt.Prompt;
+import org.springframework.ai.chat.prompt.PromptTemplate;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -36,18 +39,19 @@ public class DeepSeekContentGenerator implements ContentGeneratorService {
     private final TaskRepository taskRepository;
     private final TaskDefinitionRepository taskDefinitionRepository;
 
-    @Value("classpath:prompts/mcq_prompt.txt")
-    private String mcqPromptTemplate;
+    private final PromptTemplate mcqPromptTemplate;
 
     public DeepSeekContentGenerator(ChatModel chatModel,
                                     ObjectMapper objectMapper,
                                     TaskRepository taskRepository,
-                                    TaskDefinitionRepository taskDefinitionRepository
+                                    TaskDefinitionRepository taskDefinitionRepository,
+                                    PromptTemplate mcqPromptTemplate
     ) {
         this.chatModel = chatModel;
         this.objectMapper = objectMapper;
         this.taskRepository = taskRepository;
         this.taskDefinitionRepository = taskDefinitionRepository;
+        this.mcqPromptTemplate = mcqPromptTemplate;
     }
 
     /**
@@ -59,48 +63,32 @@ public class DeepSeekContentGenerator implements ContentGeneratorService {
         log.info("Generating MCQ task for skill: {}, difficulty: {}, topic: {}",
                 skill.getName(), difficulty, topic);
 
-        String prompt = buildMcqPrompt(skill.getName(), difficulty, topic);
-        String aiResponse = callDeepSeek(prompt);
+        Map<String, Object> promptParameters = Map.of(
+                "skill", skill.getName(),
+                "difficulty", difficulty.name(),
+                "topic", topic
+        );
 
+        Prompt prompt = mcqPromptTemplate.create(promptParameters);
+        String aiResponse = callDeepSeek(prompt);
         McqTaskContent content = parseMcqResponse(aiResponse);
 
         return createAndSaveTask(skill, TaskType.MULTIPLE_CHOICE, difficulty, content, topic);
     }
 
     /**
-     * Builds an MCQ generation prompt using the configured template.
-     * The template is populated with skill name, difficulty level, and topic
-     * to create a context-specific prompt for the AI model.
-     *
-     * @param skillName the name of the skill
-     * @param difficulty the difficulty level
-     * @param topic the topic for the question
-     * @return the formatted prompt string ready for AI processing
-     */
-    private String buildMcqPrompt(String skillName, TaskDifficulty difficulty, String topic) {
-        return String.format(mcqPromptTemplate, skillName, difficulty, topic);
-    }
-
-
-    /**
      * Calls the DeepSeek AI model with the provided prompt.
      * This method sends a structured request to the AI model with system and user messages,
      * ensuring the response is in valid JSON format without markdown formatting.
      *
-     * @param promptText the prompt text to send to the AI model
+     * @param prompt the prompt text to send to the AI model
      * @return the cleaned JSON response from the AI model
      * @throws RuntimeException if the API call fails or encounters an error
      */
-    private String callDeepSeek(String promptText) {
+    private String callDeepSeek(Prompt prompt) {
         try {
-            log.debug("Calling DeepSeek API with prompt length: {}", promptText.length());
+            log.debug("Calling DeepSeek API with prompt...");
 
-            var systemMessage = new SystemMessage(
-                    "You are an expert educational content creator. Always respond with valid JSON only. No markdown, no explanations."
-            );
-            var userMessage = new UserMessage(promptText);
-
-            var prompt = new Prompt(List.of(systemMessage, userMessage));
             ChatResponse response = chatModel.call(prompt);
 
             String content = response.getResult().getOutput().getText();
@@ -157,9 +145,8 @@ public class DeepSeekContentGenerator implements ContentGeneratorService {
         try {
             JsonNode json = objectMapper.readTree(response);
 
-            // Null checks for required fields
             JsonNode optionsNode = json.get("options");
-            if (optionsNode == null || !optionsNode.isArray() || optionsNode.size() == 0) {
+            if (optionsNode == null || !optionsNode.isArray() || optionsNode.isEmpty()) {
                 throw new RuntimeException("Missing or invalid 'options' field in MCQ response");
             }
             JsonNode questionNode = json.get("question");
@@ -263,4 +250,3 @@ public class DeepSeekContentGenerator implements ContentGeneratorService {
         }
     }
 }
-
