@@ -35,8 +35,10 @@ public class AuthController {
     /** Register the user and returns the username, email */
     @PostMapping("/register")
     public ResponseEntity<ApiResponse<UserResponseDTO>> register(@Valid @RequestBody UserRequestDTO userdto, HttpServletResponse response) {
+
         UserResponseDTO user = authService.createUser(userdto);
-        return ResponseEntity.ok(ApiResponse.success(user));
+
+        return ResponseEntity.ok(ApiResponse.success("User successfully created", user, null));
     }
 
     @PostMapping("/verify")
