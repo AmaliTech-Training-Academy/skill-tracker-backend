@@ -22,68 +22,63 @@ import jakarta.validation.Valid;
 @RestController
 @RequestMapping("/api/v1/auth")
 public class AuthController {
+
     private final AuthService authService;
 
     public AuthController(AuthServiceImpl authService) {
         this.authService = authService;
     }
 
-    /**
-    * Register the user and returns the username, email
-    */
+    /** Register the user and returns the username, email */
     @PostMapping("/register")
-    public ResponseEntity<ApiResponse<UserDto>> register(@Valid @RequestBody RegisterRequest request, HttpServletResponse response) {
-        return ResponseEntity.ok(ApiResponse.success(UserMapper.toDto(authService.register(request))));
+    public ResponseEntity<ApiResponse<UserDto>> register(@Valid @RequestBody RegisterRequest request) {
+        UserDto userDto = UserMapper.toDto(authService.register(request));
+        return ResponseEntity.ok(ApiResponse.success("User registered successfully", userDto, null));
     }
 
-    /**
-     * Authenticates the user and returns an access token, setting a secure refresh token cookie.
-     */
-    @Operation(summary = "Login with email and password")
+    /** Authenticates the user and returns an access token */
     @PostMapping("/login")
-    public ResponseEntity<ApiResponse<AuthResponse>> login(@Valid @RequestBody LoginRequest request, HttpServletResponse response) {
-        return ResponseEntity.ok(ApiResponse.success(authService.login(request)));
+    public ResponseEntity<ApiResponse<AuthResponse>> login(@Valid @RequestBody LoginRequest request) {
+        AuthResponse authResponse = authService.login(request);
+        return ResponseEntity.ok(ApiResponse.success("Login successful", authResponse, null));
     }
 
-    /**
-     * Refreshes the access token using the refresh token from the cookie and rotates the refresh token.
-     */
-    @Operation(summary = "Refresh access token")
+    /** Refreshes the access token */
     @PostMapping("/refresh")
     public ResponseEntity<ApiResponse<AuthResponse>> refresh(@Valid @RequestBody RefreshRequest request) {
-        return ResponseEntity.ok(ApiResponse.success(authService.refresh(request.token())));
+        AuthResponse authResponse = authService.refresh(request.token());
+        return ResponseEntity.ok(ApiResponse.success("Token refreshed successfully", authResponse, null));
     }
 
-    @Operation(summary = "Forgot password - send reset link")
+    /** Forgot password - send reset link */
     @PostMapping("/forgot-password")
     public ResponseEntity<ApiResponse<String>> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
         authService.forgotPassword(request.email());
-        return ResponseEntity.ok(ApiResponse.success("Reset link sent"));
+        return ResponseEntity.ok(ApiResponse.success("Reset link sent", "Check your email", null));
     }
 
-    @Operation(summary = "Change password (authenticated)")
+    /** Change password (authenticated) */
     @PostMapping("/change-password")
     public ResponseEntity<ApiResponse<String>> changePassword(@Valid @RequestBody ChangePasswordRequest request) {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
         authService.changePassword(email, request.oldPassword(), request.newPassword());
-        return ResponseEntity.ok(ApiResponse.success("Password changed successfully"));
+        return ResponseEntity.ok(ApiResponse.success("Password changed successfully", null, null));
     }
 
-    @Operation(summary = "Reset password using token")
+    /** Reset password using token */
     @PostMapping("/reset-password")
-    public ResponseEntity<String> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+    public ResponseEntity<ApiResponse<String>> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
         authService.resetPassword(request.token(), request.password());
-        return ResponseEntity.ok("Password reset successfully.");
+        return ResponseEntity.ok(ApiResponse.success("Password reset successfully", null, null));
     }
 
-    /**
-     * Logs out the user by revoking the refresh token and clearing the cookie.
-     */
-    @Operation(summary = "Logout - revoke refresh token")
+    /** Logout - revoke refresh token */
     @PostMapping("/logout")
-    public ResponseEntity<ApiResponse<String>> logout(@RequestHeader("Authorization") String authHeader, @RequestBody RefreshRequest request) {
+    public ResponseEntity<ApiResponse<String>> logout(
+            @RequestHeader("Authorization") String authHeader,
+            @RequestBody RefreshRequest request) {
         String accessToken = authHeader.replace("Bearer ", "");
         authService.logout(accessToken, request.token());
-        return ResponseEntity.ok(ApiResponse.success("Logged out successfully"));
+        return ResponseEntity.ok(ApiResponse.success("Logged out successfully", null, null));
     }
 }
