@@ -24,7 +24,7 @@ public class GlobalExceptionHandler {
 
     private String getTraceId() {
         String traceId = MDC.get("traceId");
-        return (traceId != null && !traceId.isBlank()) ? traceId : "....";
+        return (traceId != null && !traceId.isBlank()) ? traceId : "...";
     }
 
     @ExceptionHandler(RefreshTokenException.class)

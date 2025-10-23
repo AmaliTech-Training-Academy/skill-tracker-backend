@@ -40,7 +40,7 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<AuthResponse>> login(@Valid @RequestBody LoginRequest request) {
         AuthResponse authResponse = authService.login(request);
-        return ResponseEntity.ok(ApiResponse.success("Login successful", authResponse, null));
+        return ResponseEntity.ok(ApiResponse.success("Login successful.", authResponse, null));
     }
 
     /** Refreshes the access token */
