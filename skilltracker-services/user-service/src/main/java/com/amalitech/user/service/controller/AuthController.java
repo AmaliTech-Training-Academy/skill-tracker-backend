@@ -1,6 +1,8 @@
 package com.amalitech.user.service.controller;
 
 import com.amalitech.common.security.dto.response.ApiResponse;
+import com.amalitech.user.service.dto.UserRequestDTO;
+import com.amalitech.user.service.dto.UserResponseDTO;
 import com.amalitech.user.service.dto.response.UserDto;
 import com.amalitech.user.service.dto.request.*;
 import com.amalitech.user.service.dto.response.AuthResponse;
@@ -8,6 +10,7 @@ import com.amalitech.user.service.mapper.UserMapper;
 import com.amalitech.user.service.service.AuthService;
 import com.amalitech.user.service.service.impl.AuthServiceImpl;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
@@ -31,9 +34,20 @@ public class AuthController {
 
     /** Register the user and returns the username, email */
     @PostMapping("/register")
-    public ResponseEntity<ApiResponse<UserDto>> register(@Valid @RequestBody RegisterRequest request) {
-        UserDto userDto = UserMapper.toDto(authService.register(request));
-        return ResponseEntity.ok(ApiResponse.success("User registered successfully", userDto, null));
+    public ResponseEntity<ApiResponse<UserResponseDTO>> register(@Valid @RequestBody UserRequestDTO userdto, HttpServletResponse response) {
+        UserResponseDTO user = authService.createUser(userdto);
+        return ResponseEntity.ok(ApiResponse.success(user));
+    }
+
+    @PostMapping("/verify")
+    public ResponseEntity<UserResponseDTO> verifyCode(
+            @RequestParam("code") String code,
+            @RequestParam("email") String email) {
+
+        UserResponseDTO user = authService.verifyCode(code, email).orElseThrow(() ->
+                new RuntimeException("Invalid verification code"));
+
+        return new ResponseEntity<>(user, HttpStatus.OK);
     }
 
     /** Authenticates the user and returns an access token */
