@@ -1,12 +1,17 @@
 package com.amalitech.user.service.service;
 
+import com.amalitech.user.service.dto.UserRequestDTO;
+import com.amalitech.user.service.dto.UserResponseDTO;
 import com.amalitech.user.service.dto.request.LoginRequest;
 import com.amalitech.user.service.dto.request.RegisterRequest;
 import com.amalitech.user.service.dto.response.AuthResponse;
 import com.amalitech.user.service.exception.*;
 import com.amalitech.user.service.model.User;
 
+import jakarta.validation.Valid;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Optional;
 
 /**
  * Interface defining the public contract for authentication operations.
@@ -21,8 +26,6 @@ public interface AuthService {
      * @return The newly created User entity
      * @throws RuntimeException if email already exists
      */
-    @Transactional
-    User register(RegisterRequest request);
 
     /**
      * Authenticates the user and generates access and refresh tokens.
@@ -86,4 +89,7 @@ public interface AuthService {
      * @param refreshToken the refresh token to delete
      */
     void logout(String accessToken, String refreshToken);
+
+    UserResponseDTO createUser(@Valid UserRequestDTO userdto);
+    Optional<UserResponseDTO> verifyCode(String code, String email);
 }

@@ -1,9 +1,12 @@
 package com.amalitech.user.service.service.impl;
 
+import com.amalitech.user.service.dto.UserRequestDTO;
+import com.amalitech.user.service.dto.UserResponseDTO;
 import com.amalitech.user.service.dto.request.LoginRequest;
 import com.amalitech.user.service.dto.request.RegisterRequest;
 import com.amalitech.user.service.dto.response.AuthResponse;
 import com.amalitech.user.service.exception.*;
+import com.amalitech.user.service.mapper.UserMapper;
 import com.amalitech.user.service.model.*;
 import com.amalitech.user.service.model.enums.Role;
 import com.amalitech.user.service.model.enums.UserState;
@@ -23,6 +26,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.security.SecureRandom;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -45,6 +51,7 @@ public class AuthServiceImpl implements AuthService {
     private final String resetPrefix;
     private final String appBaseUrl;
     private final UserService userService;
+    private Integer tempCode;
 
 
     public AuthServiceImpl(
@@ -73,6 +80,7 @@ public class AuthServiceImpl implements AuthService {
         this.resetPrefix = resetPrefix;
         this.appBaseUrl = appBaseUrl;
         this.userService = userService;
+        this.tempCode = 0;
     }
 
     /**
@@ -83,22 +91,25 @@ public class AuthServiceImpl implements AuthService {
      */
     @Override
     @Transactional
-    public User register(RegisterRequest request) {
-        if (userRepository.findByEmail(request.email()).isPresent()) {
-            throw new RuntimeException("Email already exists");
+    public UserResponseDTO createUser(UserRequestDTO userdto) throws IllegalStateException {
+        if (userRepository.existsByEmail(userdto.email())) {
+            throw new EmailAlreadyExistsException("A user already exists with this email.");
         }
 
-        User user = new User();
-        user.setEmail(request.email());
-        user.setPasswordHash(passwordEncoder.encode(request.password()));
-        user.setRole(Role.USER);
+        User user = UserMapper.toEntity(userdto);
+        User savedUser = userRepository.save(user);
+
+        notifyUser(
+                savedUser.getEmail(),
+                "Account created successfully!",
+                "Enter this verification code to verify your identity: " + generateCode());
 
         UserProfile profile = new UserProfile();
         profile.setEmailNotifications(true);
         profile.setPushNotifications(true);
         user.setProfile(profile);
 
-        return userRepository.save(user);
+        return UserMapper.toDto(savedUser);
     }
 
     /**
@@ -235,5 +246,27 @@ public class AuthServiceImpl implements AuthService {
         redisUtil.set("blacklist:" + accessToken, "revoked", ttl);
     }
 
+    @Override
+    public Optional<UserResponseDTO> verifyCode(String code, String email) {
+        if(code.equals(tempCode.toString())){
+            return userRepository.findByEmail(email)
+                    .map(UserMapper::toDto);
+        }
+        return Optional.empty();
+    }
 
+    public void notifyUser(String toEmail, String subject, String message) {
+        emailService.sendEmail(
+                toEmail,
+                subject,
+                message,
+                System.getenv("MAIL_USERNAME")
+        );
+    }
+
+    public Integer generateCode() {
+        SecureRandom random = new SecureRandom();
+        tempCode = 100000 + random.nextInt(900000);
+        return tempCode;
+    }
 }
