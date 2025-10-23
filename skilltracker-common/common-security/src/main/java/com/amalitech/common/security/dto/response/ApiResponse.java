@@ -24,7 +24,7 @@ public class ApiResponse<T> {
                 message,
                 data,
                 Map.of(
-                        "traceId", traceId != null ? traceId : java.util.UUID.randomUUID().toString(),
+                        "traceId", traceId != null ? traceId : "....",
                         "timestamp", Instant.now().toString()
                 )
         );

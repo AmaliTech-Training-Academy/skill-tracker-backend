@@ -82,7 +82,7 @@ public class AuthServiceImpl implements AuthService {
     @Transactional
     public User register(RegisterRequest request) {
         if (userRepository.findByEmail(request.email()).isPresent()) {
-            throw new EmailAlreadyExistsException("Email already exists");
+            throw new EmailAlreadyExistsException("Email already exists.");
         }
 
         User user = new User();
