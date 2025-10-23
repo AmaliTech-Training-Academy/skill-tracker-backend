@@ -108,14 +108,32 @@ public class DeepSeekContentGenerator implements ContentGeneratorService {
         try {
             JsonNode json = objectMapper.readTree(response);
 
+            // Null checks for required fields
+            JsonNode optionsNode = json.get("options");
+            if (optionsNode == null || !optionsNode.isArray() || optionsNode.size() == 0) {
+                throw new RuntimeException("Missing or invalid 'options' field in MCQ response");
+            }
+            JsonNode questionNode = json.get("question");
+            if (questionNode == null || questionNode.asText().isEmpty()) {
+                throw new RuntimeException("Missing or invalid 'question' field in MCQ response");
+            }
+            JsonNode correctOptionNode = json.get("correctOption");
+            if (correctOptionNode == null || !correctOptionNode.isInt()) {
+                throw new RuntimeException("Missing or invalid 'correctOption' field in MCQ response");
+            }
+            JsonNode explanationNode = json.get("explanation");
+            if (explanationNode == null || explanationNode.asText().isEmpty()) {
+                throw new RuntimeException("Missing or invalid 'explanation' field in MCQ response");
+            }
+
             List<String> options = new ArrayList<>();
-            json.get("options").forEach(node -> options.add(node.asText()));
+            optionsNode.forEach(node -> options.add(node.asText()));
 
             return McqTaskContent.builder()
-                    .question(json.get("question").asText())
+                    .question(questionNode.asText())
                     .options(options)
-                    .correctOption(json.get("correctOption").asInt())
-                    .explanation(json.get("explanation").asText())
+                    .correctOption(correctOptionNode.asInt())
+                    .explanation(explanationNode.asText())
                     .build();
 
         } catch (JsonProcessingException e) {
