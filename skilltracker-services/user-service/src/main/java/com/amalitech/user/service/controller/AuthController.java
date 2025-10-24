@@ -58,21 +58,21 @@ public class AuthController {
     }
 
     /** Refreshes the access token */
-    @PostMapping("/refresh")
+    @PostMapping("/token/refresh")
     public ResponseEntity<ApiResponse<AuthResponse>> refresh(HttpServletRequest request, HttpServletResponse response) {
         AuthResponse authResponse = authService.refresh(request, response);
         return ResponseEntity.ok(ApiResponse.success("Token refreshed successfully", authResponse, null));
     }
 
     /** Forgot password - send reset link .*/
-    @PostMapping("/forgot-password")
+    @PostMapping("/password/forgot")
     public ResponseEntity<ApiResponse<String>> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
         authService.forgotPassword(request.email());
         return ResponseEntity.ok(ApiResponse.success("Reset link sent", "Check your email", null));
     }
 
     /** Change password (authenticated) */
-    @PostMapping("/change-password")
+    @PostMapping("/password/change-password")
     public ResponseEntity<ApiResponse<String>> changePassword(@Valid @RequestBody ChangePasswordRequest request) {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
         authService.changePassword(email, request.oldPassword(), request.newPassword());
@@ -80,7 +80,7 @@ public class AuthController {
     }
 
     /** Reset password using token */
-    @PostMapping("/reset-password")
+    @PostMapping("/password/reset")
     public ResponseEntity<ApiResponse<String>> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
         authService.resetPassword(request.token(), request.password());
         return ResponseEntity.ok(ApiResponse.success("Password reset successfully", null, null));
