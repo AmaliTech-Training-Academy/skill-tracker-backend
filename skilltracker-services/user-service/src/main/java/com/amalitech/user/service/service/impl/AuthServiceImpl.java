@@ -13,7 +13,10 @@ import com.amalitech.user.service.security.CustomUserDetails;
 import com.amalitech.user.service.security.util.JwtUtil;
 import com.amalitech.user.service.service.AuthService;
 import com.amalitech.user.service.service.EmailService;
+import com.amalitech.user.service.util.CookieUtil;
 import com.amalitech.user.service.util.RedisUtil;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -30,7 +33,7 @@ import java.util.UUID;
 
 /**
  * Service class for handling authentication operations including registration, login, token management,
- * and password recovery.
+ * and password recovery
  */
 @Service
 public class AuthServiceImpl implements AuthService {
@@ -48,6 +51,7 @@ public class AuthServiceImpl implements AuthService {
     private final String resetPrefix;
     private final String appBaseUrl;
     private Integer tempCode;
+    private CookieUtil cookieUtil;
 
 
     public AuthServiceImpl(
@@ -61,7 +65,8 @@ public class AuthServiceImpl implements AuthService {
             @Value("${app.refresh-token-prefix}") String refreshPrefix,
             @Value("${app.reset-token-prefix}") String resetPrefix,
             @Value("${app.base-url}") String appBaseUrl,
-            AuthenticationManager authenticationManager
+            AuthenticationManager authenticationManager,
+            CookieUtil cookieUtil
     ) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
@@ -75,6 +80,7 @@ public class AuthServiceImpl implements AuthService {
         this.resetPrefix = resetPrefix;
         this.appBaseUrl = appBaseUrl;
         this.tempCode = 0;
+        this.cookieUtil = cookieUtil;
     }
 
     /**
@@ -113,14 +119,14 @@ public class AuthServiceImpl implements AuthService {
      * @return AuthTokens containing the access and refresh tokens
      * @throws RuntimeException if credentials are invalid or account not verified
      */
-    public AuthResponse login(LoginRequest request) {
+    public AuthResponse login(LoginRequest request, HttpServletResponse response) {
         Authentication auth = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.email(), request.password()));
 
         CustomUserDetails userDetails = (CustomUserDetails) auth.getPrincipal();
         User user = userDetails.getUser();
 
-        return generateTokens(user);
+        return generateTokens(user, response);
     }
 
     /**
@@ -129,26 +135,31 @@ public class AuthServiceImpl implements AuthService {
      * @param user the user to generate tokens for
      * @return AuthTokens  access and rotated refresh tokens
      */
-    public AuthResponse generateTokens(User user) {
+    public AuthResponse generateTokens(User user, HttpServletResponse response) {
         String accessToken = jwtUtil.generateAccessToken(user.getEmail(), user.getRole(), user.getId());
         String refreshToken = UUID.randomUUID().toString();
         redisUtil.set(refreshPrefix + refreshToken, user.getEmail(), refreshExpiration / 1000);
-        return new AuthResponse(accessToken, refreshToken);
+        cookieUtil.setSecureCookie(response, "accessToken", accessToken,
+                jwtUtil.getExpirationSeconds(accessToken));
+        cookieUtil.setSecureCookie(response, "refreshToken", refreshToken,
+                refreshExpiration / 1000);
+        return new AuthResponse("tokens generated and set in httpOnly cookie");
     }
 
     /**
      * Refreshes the access token by validating and rotating the refresh token.
      *
-     * @param refreshToken the current refresh token
+     * @param request request to retrieve refresh token from
+     * @param response response to set new access token and refresh token
      * @return {@link AuthResponse} with new access and rotated refresh tokens
-     * @throws RefreshTokenException if refresh token is invalid, revoked, or expired
+     * @throws RefreshTokenException if refresh token is invalid, revoked, or expired.
      */
     @Transactional
-    public AuthResponse refresh(String refreshToken) {
-        String key = refreshPrefix + refreshToken;
+    public AuthResponse refresh(HttpServletRequest request, HttpServletResponse response) {
+        String key = refreshPrefix + cookieUtil.getCookieValue(request, "refreshToken");
         String email = redisUtil.get(key);
         if (email == null) {
-            log.warn("Possible invalid or expired refresh token: {}", refreshToken);
+            log.warn("Possible invalid or expired refresh token: {}", cookieUtil.getCookieValue(request, "refreshToken"));
             throw new RefreshTokenException("Authentication failed. Please log in again.");
         }
 
@@ -164,8 +175,12 @@ public class AuthServiceImpl implements AuthService {
         String newRefreshToken = UUID.randomUUID().toString();
         redisUtil.set(refreshPrefix + newRefreshToken, email, refreshExpiration / 1000);
         String newAccessToken = jwtUtil.generateAccessToken(email, user.getRole(), user.getId());
+        cookieUtil.setSecureCookie(response, "accessToken", newAccessToken,
+                jwtUtil.getExpirationSeconds(newAccessToken));
+        cookieUtil.setSecureCookie(response, "refreshToken", newRefreshToken,
+                refreshExpiration / 1000);
         log.info("Access and refresh tokens rotated successfully for user: {}", email);
-        return new AuthResponse(newAccessToken, newRefreshToken);
+        return new AuthResponse("tokens refreshed successfully");
     }
 
     /**
@@ -242,12 +257,27 @@ public class AuthServiceImpl implements AuthService {
     /**
      * Logs out the user by revoking the refresh token.
      *
-     * @param refreshToken,accessToken the refresh token to delete
+     * @param request,response get tokens from request and set tokens on response
      */
-    public void logout(String accessToken, String refreshToken) {
-        redisUtil.delete(refreshPrefix + refreshToken);
-        long ttl = jwtUtil.getExpirationSeconds(accessToken);
-        redisUtil.set("blacklist:" + accessToken, "revoked", ttl);
+    public void logout(HttpServletRequest request, HttpServletResponse response) {
+        String accessToken = cookieUtil.getCookieValue(request, "accessToken");
+        String refreshToken = cookieUtil.getCookieValue(request, "refreshToken");
+
+        if (accessToken == null && refreshToken == null) {
+            return;
+        }
+
+        if (refreshToken != null) {
+            redisUtil.delete(refreshPrefix + refreshToken);
+        }
+
+        if (accessToken != null) {
+            long ttl = jwtUtil.getExpirationSeconds(accessToken); // remaining lifetime
+            redisUtil.set("blacklist:" + accessToken, "revoked", ttl);
+        }
+
+        cookieUtil.clearCookie(response, "accessToken");
+        cookieUtil.clearCookie(response, "refreshToken");
     }
 
     @Override

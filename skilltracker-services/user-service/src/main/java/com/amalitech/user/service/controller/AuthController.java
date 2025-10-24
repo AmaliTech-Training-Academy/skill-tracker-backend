@@ -3,19 +3,17 @@ package com.amalitech.user.service.controller;
 import com.amalitech.common.security.dto.response.ApiResponse;
 import com.amalitech.user.service.dto.UserRequestDTO;
 import com.amalitech.user.service.dto.UserResponseDTO;
-import com.amalitech.user.service.dto.response.UserDto;
 import com.amalitech.user.service.dto.request.*;
 import com.amalitech.user.service.dto.response.AuthResponse;
-import com.amalitech.user.service.mapper.UserMapper;
 import com.amalitech.user.service.service.AuthService;
 import com.amalitech.user.service.service.impl.AuthServiceImpl;
 
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
-import io.swagger.v3.oas.annotations.Operation;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 
@@ -54,19 +52,19 @@ public class AuthController {
 
     /** Authenticates the user and returns an access token */
     @PostMapping("/login")
-    public ResponseEntity<ApiResponse<AuthResponse>> login(@Valid @RequestBody LoginRequest request) {
-        AuthResponse authResponse = authService.login(request);
+    public ResponseEntity<ApiResponse<AuthResponse>> login(@Valid @RequestBody LoginRequest request, HttpServletResponse response) {
+        AuthResponse authResponse = authService.login(request, response);
         return ResponseEntity.ok(ApiResponse.success("Login successful.", authResponse, null));
     }
 
     /** Refreshes the access token */
     @PostMapping("/refresh")
-    public ResponseEntity<ApiResponse<AuthResponse>> refresh(@Valid @RequestBody RefreshRequest request) {
-        AuthResponse authResponse = authService.refresh(request.token());
+    public ResponseEntity<ApiResponse<AuthResponse>> refresh(HttpServletRequest request, HttpServletResponse response) {
+        AuthResponse authResponse = authService.refresh(request, response);
         return ResponseEntity.ok(ApiResponse.success("Token refreshed successfully", authResponse, null));
     }
 
-    /** Forgot password - send reset link */
+    /** Forgot password - send reset link .*/
     @PostMapping("/forgot-password")
     public ResponseEntity<ApiResponse<String>> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
         authService.forgotPassword(request.email());
@@ -91,10 +89,10 @@ public class AuthController {
     /** Logout - revoke refresh token */
     @PostMapping("/logout")
     public ResponseEntity<ApiResponse<String>> logout(
-            @RequestHeader("Authorization") String authHeader,
-            @RequestBody RefreshRequest request) {
-        String accessToken = authHeader.replace("Bearer ", "");
-        authService.logout(accessToken, request.token());
+            HttpServletRequest request,
+            HttpServletResponse response) {
+        authService.logout(request, response);
         return ResponseEntity.ok(ApiResponse.success("Logged out successfully", null, null));
     }
 }
+

@@ -1,6 +1,7 @@
 package com.amalitech.user.service.security.filter;
 
 import com.amalitech.user.service.security.util.JwtUtil;
+import com.amalitech.user.service.util.CookieUtil;
 import com.amalitech.user.service.util.RedisUtil;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -24,11 +25,11 @@ import java.io.IOException;
  * This filter checks:
  * <ul>
  *     <li>Presence of an Authorization header with a Bearer token</li>
- *     <li>Whether the token is blacklisted in Redis</li>
+ *     <li>Whether the token is blacklisted in Redis.</li>
  *     <li>Whether the token is valid and not expired</li>
  * </ul>
  * <p>
- * If validation succeeds, the user is authenticated in the Spring Security context.
+ * If validation succeeds, the user is authenticated in the Spring Security context
  */
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
@@ -38,11 +39,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final RedisUtil redisUtil;
     private final JwtUtil jwtUtil;
     private final UserDetailsService userDetailsService;
+    private final CookieUtil cookieUtil;
 
-    public JwtAuthenticationFilter(JwtUtil jwtUtil, UserDetailsService userDetailsService, RedisUtil redisUtil) {
+    public JwtAuthenticationFilter(JwtUtil jwtUtil,
+                                   UserDetailsService userDetailsService,
+                                   RedisUtil redisUtil,
+                                   CookieUtil cookieUtil) {
         this.redisUtil = redisUtil;
         this.jwtUtil = jwtUtil;
         this.userDetailsService = userDetailsService;
+        this.cookieUtil = cookieUtil;
     }
 
     /**
@@ -66,18 +72,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
 
-        String header = request.getHeader("Authorization");
-        if (header == null || !header.startsWith("Bearer ")) {
+        String token = cookieUtil.getCookieValue(request, "accessToken"); // Extract from cookie
+
+        if (token == null || token.isEmpty()) {
             filterChain.doFilter(request, response);
             return;
         }
 
-        String token = header.substring(7);
-
         if (log.isDebugEnabled()) {
-            log.debug("JWT Token received (masked): {}", maskToken(token));
+            log.debug("JWT Token received from cookie (masked): {}", maskToken(token));
         }
-
 
         if (redisUtil.exists("blacklist:" + token)) {
             log.warn("Access token is blacklisted");
