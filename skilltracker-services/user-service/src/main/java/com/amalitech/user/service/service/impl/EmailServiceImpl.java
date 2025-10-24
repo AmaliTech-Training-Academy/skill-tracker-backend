@@ -1,67 +1,129 @@
 package com.amalitech.user.service.service.impl;
+
 import com.amalitech.user.service.service.EmailService;
-import jakarta.mail.MessagingException;
-import jakarta.mail.internet.MimeMessage;
+
+import com.sendgrid.Method;
+import com.sendgrid.Request;
+import com.sendgrid.Response;
+import com.sendgrid.SendGrid;
+import com.sendgrid.helpers.mail.Mail;
+import com.sendgrid.helpers.mail.objects.Content;
+import com.sendgrid.helpers.mail.objects.Email;
+
+import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.ResourceLoader;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StreamUtils;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 
 /**
- * Service for sending emails, such as password reset notifications.
- * <p>
- * Uses Spring's {@link JavaMailSender} to construct and send MIME messages.
+ * Implementation of {@link EmailService} for sending emails using SendGrid API.
+ *
+ * <p>This service provides functionality for sending various types of emails,
+ * including password reset notifications, through the SendGrid email delivery service.
+ * It constructs and sends MIME messages using the SendGrid Java client library.</p>
+ *
+ * <p><b>Key Features:</b>
+ * <ul>
+ *   <li>Sends transactional emails via SendGrid REST API</li>
+ *   <li>Handles email sending errors with proper logging</li>
+ *   <li>Provides a specialized method for password reset emails</li>
+ *   <li>Uses configured sender email from application properties</li>
+ * </ul>
  * </p>
+ * @see EmailService
+ * @see SendGrid
  */
 @Service
 public class EmailServiceImpl implements EmailService {
 
     private static final Logger log = LoggerFactory.getLogger(EmailServiceImpl.class);
 
-    private final JavaMailSender mailSender;
+    private final SendGrid sendGrid;
+    private final String fromEmail;
+    private final ResourceLoader resourceLoader;
 
-    /**
-     * Constructs the EmailService with the given {@link JavaMailSender}.
-     *
-     * @param mailSender the JavaMailSender used to send emails
-     */
-    public EmailServiceImpl(JavaMailSender mailSender) {
-        this.mailSender = mailSender;
+    private String resetTemplate;
+
+    public EmailServiceImpl(SendGrid sendGrid,
+                            @Value("${sendgrid.from.email}") String fromEmail,
+                            ResourceLoader resourceLoader) {
+        this.sendGrid = sendGrid;
+        this.fromEmail = fromEmail;
+        this.resourceLoader = resourceLoader;
     }
 
     /**
-     * Sends a password reset email to the specified recipient with a reset link.
-     * <p>
-     * The email contains an HTML link that the user can click to reset their password.
-     * </p>
-     *
-     * @param to the recipient's email address
-     * @param resetLink the password reset link to include in the email
-     * @throws RuntimeException if sending the email fails
+     * This method runs once when the service starts.
+     * It loads the HTML template from the classpath and stores it in memory.
      */
-    public void sendResetEmail(String to, String resetLink) {
-        MimeMessage message = mailSender.createMimeMessage();
+    @PostConstruct
+    public void loadTemplate() {
         try {
-            MimeMessageHelper helper = new MimeMessageHelper(message, true);
-            helper.setTo(to);
-            helper.setSubject("Password Reset Request");
-            helper.setText("<p>Click <a href=\"" + resetLink + "\">here</a> to reset your password.</p>", true);
-            mailSender.send(message);
-        } catch (MessagingException e) {
-            throw new RuntimeException("Failed to send email", e);
+            Resource resource = resourceLoader.getResource("classpath:templates/email-templates/reset-password.html");
+            try (InputStream inputStream = resource.getInputStream()) {
+                this.resetTemplate = StreamUtils.copyToString(inputStream, StandardCharsets.UTF_8);
+                log.info("Successfully loaded 'reset-password.html' template.");
+            }
+        } catch (IOException e) {
+            log.error("Failed to load 'reset-password.html' template", e);
+            throw new RuntimeException("Failed to load email template", e);
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void sendEmail(String toEmail, String subject, String body, String from) {
+        this.send(toEmail, subject, body, "text/plain");
+    }
 
-    public void sendEmail(String to, String subject, String message, String sender){
-        SimpleMailMessage mail = new SimpleMailMessage();
-        mail.setTo(to);
-        mail.setSubject(subject);
-        mail.setText(message);
-        mail.setFrom(sender);
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void sendResetEmail(String to, String resetLink) {
+        String subject = "Your SkillBoost Password Reset";
 
-        mailSender.send(mail);
+        String body = this.resetTemplate.replace("{{resetLink}}", resetLink);
+
+        this.send(to, subject, body, "text/html");
+    }
+
+
+    /**
+     * Worker method to handle the actual SendGrid API call.
+     * It now accepts a dynamic contentType.
+     */
+    private void send(String toEmail, String subject, String body, String contentType) {
+        Email fromSender = new Email(this.fromEmail);
+        Email toRecipient = new Email(toEmail);
+        Content content = new Content(contentType, body);
+        Mail mail = new Mail(fromSender, subject, toRecipient, content);
+        Request request = new Request();
+
+        try {
+            request.setMethod(Method.POST);
+            request.setEndpoint("mail/send");
+            request.setBody(mail.build());
+            Response response = sendGrid.api(request);
+
+            log.info("SendGrid email request sent to {}. Status Code: {}", toEmail, response.getStatusCode());
+            if (response.getStatusCode() < 200 || response.getStatusCode() >= 300) {
+                log.error("Failed to send email via SendGrid. Body: {}", response.getBody());
+                throw new RuntimeException("Failed to send email: " + response.getBody());
+            }
+        } catch (IOException ex) {
+            log.error("Error sending email to {}: {}", toEmail, ex.getMessage());
+            throw new RuntimeException("Error sending email", ex);
+        }
     }
 }
