@@ -1,6 +1,5 @@
 package com.amalitech.user.service.dto.response;
 
-
 import com.amalitech.user.service.model.enums.PremiumTier;
 import com.amalitech.user.service.model.enums.GuidedTourStatus;
 import com.amalitech.user.service.model.enums.UserState;

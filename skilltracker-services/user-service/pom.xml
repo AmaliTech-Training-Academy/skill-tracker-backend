@@ -30,7 +30,6 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-amqp</artifactId>
-            <version>3.5.3</version>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -173,15 +172,24 @@
             <artifactId>common-util</artifactId>
             <version>${project.version}</version>
         </dependency>
-        <!--        <dependency>-->
-        <!--            <groupId>com.amalitech</groupId>-->
-        <!--            <artifactId>common-event</artifactId>-->
-        <!--            <version>${project.version}</version>-->
-        <!--        </dependency>-->
+        <dependency>
+            <groupId>com.amalitech</groupId>
+            <artifactId>common-event</artifactId>
+            <version>${project.version}</version>
+        </dependency>
         <!--        <dependency>-->
         <!--            <groupId>com.amalitech</groupId>-->
         <!--            <artifactId>common-audit</artifactId>-->
         <!--            <version>${project.version}</version>-->
         <!--        </dependency>-->
     </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
 </project>
