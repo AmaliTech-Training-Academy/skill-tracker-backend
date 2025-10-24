@@ -8,6 +8,19 @@ COPY skilltracker-services/bff-service/pom.xml skilltracker-services/bff-service
 COPY skilltracker-common skilltracker-common
 COPY skilltracker-infra skilltracker-infra
 
+# Install parent POM first
+RUN mvn -N install -DskipTests -B
+
+# Build and install common modules
+WORKDIR /app/skilltracker-common/common-security
+RUN mvn clean install -DskipTests -B
+
+WORKDIR /app/skilltracker-common/common-util
+RUN mvn clean install -DskipTests -B
+
+WORKDIR /app/skilltracker-common/common-event
+RUN mvn clean install -DskipTests -B
+
 WORKDIR /app/skilltracker-services/bff-service/
 
 RUN mvn dependency:go-offline -B
@@ -15,7 +28,6 @@ RUN mvn dependency:go-offline -B
 COPY skilltracker-services/bff-service/src src
 
 RUN mvn clean package -DskipTests
-
 WORKDIR /app
 
 # -------------------------------------------------------
@@ -29,7 +41,7 @@ USER spring:spring
 
 COPY --from=build /app/skilltracker-services/bff-service/target/*.jar app.jar
 
-EXPOSE 8085
+EXPOSE 8083
 
 # -------------------------------------------------------
 # Run Application

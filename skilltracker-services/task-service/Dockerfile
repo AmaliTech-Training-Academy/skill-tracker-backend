@@ -10,6 +10,19 @@ COPY skilltracker-services/task-service/pom.xml skilltracker-services/task-servi
 COPY skilltracker-common skilltracker-common
 COPY skilltracker-infra skilltracker-infra
 
+# Install parent POM first
+RUN mvn -N install -DskipTests -B
+
+# Build and install common modules
+WORKDIR /app/skilltracker-common/common-security
+RUN mvn clean install -DskipTests -B
+
+WORKDIR /app/skilltracker-common/common-util
+RUN mvn clean install -DskipTests -B
+
+WORKDIR /app/skilltracker-common/common-event
+RUN mvn clean install -DskipTests -B
+
 WORKDIR /app/skilltracker-services/task-service/
 
 RUN mvn dependency:go-offline -B

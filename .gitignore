@@ -38,6 +38,9 @@ template.xml
 .env
 *.bak
 
+# Database initialization with sensitive credentials
+init-postgres.sql
+
 # Compiled class file
 *.class
 
@@ -68,6 +71,7 @@ replay_pid*
 skilltracker-services/task-service/src/main/java/com/amalitech/task/service/seed/
 
 skilltracker-services/task-service/src/main/java/com/amalitech/task/service/controller/McqTestController.java
+
 
 
 # application.properties
