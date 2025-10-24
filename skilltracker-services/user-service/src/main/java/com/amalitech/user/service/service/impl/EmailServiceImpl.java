@@ -10,12 +10,18 @@ import com.sendgrid.helpers.mail.Mail;
 import com.sendgrid.helpers.mail.objects.Content;
 import com.sendgrid.helpers.mail.objects.Email;
 
+import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.ResourceLoader;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StreamUtils;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 
 /**
  * Implementation of {@link EmailService} for sending emails using SendGrid API.
@@ -42,10 +48,34 @@ public class EmailServiceImpl implements EmailService {
 
     private final SendGrid sendGrid;
     private final String fromEmail;
+    private final ResourceLoader resourceLoader;
 
-    public EmailServiceImpl(SendGrid sendGrid, @Value("${sendgrid.from.email}") String fromEmail) {
+    private String resetTemplate;
+
+    public EmailServiceImpl(SendGrid sendGrid,
+                            @Value("${sendgrid.from.email}") String fromEmail,
+                            ResourceLoader resourceLoader) {
         this.sendGrid = sendGrid;
         this.fromEmail = fromEmail;
+        this.resourceLoader = resourceLoader;
+    }
+
+    /**
+     * This method runs once when the service starts.
+     * It loads the HTML template from the classpath and stores it in memory.
+     */
+    @PostConstruct
+    public void loadTemplate() {
+        try {
+            Resource resource = resourceLoader.getResource("classpath:templates/email-templates/reset-password.html");
+            try (InputStream inputStream = resource.getInputStream()) {
+                this.resetTemplate = StreamUtils.copyToString(inputStream, StandardCharsets.UTF_8);
+                log.info("Successfully loaded 'reset-password.html' template.");
+            }
+        } catch (IOException e) {
+            log.error("Failed to load 'reset-password.html' template", e);
+            throw new RuntimeException("Failed to load email template", e);
+        }
     }
 
     /**
@@ -53,20 +83,37 @@ public class EmailServiceImpl implements EmailService {
      */
     @Override
     public void sendEmail(String toEmail, String subject, String body, String from) {
+        this.send(toEmail, subject, body, "text/plain");
+    }
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void sendResetEmail(String to, String resetLink) {
+        String subject = "Your SkillBoost Password Reset";
+
+        String body = this.resetTemplate.replace("{{resetLink}}", resetLink);
+
+        this.send(to, subject, body, "text/html");
+    }
+
+
+    /**
+     * Worker method to handle the actual SendGrid API call.
+     * It now accepts a dynamic contentType.
+     */
+    private void send(String toEmail, String subject, String body, String contentType) {
         Email fromSender = new Email(this.fromEmail);
         Email toRecipient = new Email(toEmail);
-
-        Content content = new Content("text/plain", body);
-
+        Content content = new Content(contentType, body);
         Mail mail = new Mail(fromSender, subject, toRecipient, content);
-
         Request request = new Request();
+
         try {
             request.setMethod(Method.POST);
             request.setEndpoint("mail/send");
             request.setBody(mail.build());
-
             Response response = sendGrid.api(request);
 
             log.info("SendGrid email request sent to {}. Status Code: {}", toEmail, response.getStatusCode());
@@ -78,17 +125,5 @@ public class EmailServiceImpl implements EmailService {
             log.error("Error sending email to {}: {}", toEmail, ex.getMessage());
             throw new RuntimeException("Error sending email", ex);
         }
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void sendResetEmail(String to, String resetLink) {
-
-        String subject = "Your SkillBoost Password Reset";
-        String body = "Click here to reset your password: " + resetLink;
-
-        this.sendEmail(to, subject, body, this.fromEmail);
     }
 }
