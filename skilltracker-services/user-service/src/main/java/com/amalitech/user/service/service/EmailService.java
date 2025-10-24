@@ -1,5 +1,9 @@
 package com.amalitech.user.service.service;
 
+import com.sendgrid.Request;
+import com.sendgrid.Response;
+import com.sendgrid.helpers.mail.Mail;
+import com.sendgrid.helpers.mail.objects.Content;
 import org.springframework.stereotype.Service;
 
 /**
@@ -9,12 +13,47 @@ import org.springframework.stereotype.Service;
 public interface EmailService {
 
     /**
-     * Sends a password reset email to the specified recipient.
+     * Sends a password-reset email containing a reset link to the specified recipient.
      *
-     * @param to        recipient's email address
-     * @param resetLink the password reset link
+     * <p>This method creates a standardized password reset email with a predefined
+     * subject and body that includes the provided reset link. It delegates to the
+     * {@link #sendEmail(String, String, String, String)} method for actual delivery.</p>
+     *
+     * @param to The recipient's email address who requested password reset
+     * @param resetLink The password reset URL that the user can click to reset their password
+     *
+     * @see #sendEmail(String, String, String, String)
      */
     void sendResetEmail(String to, String resetLink);
 
-    void sendEmail(String toEmail, String subject, String message, String mailUsername);
+    /**
+     * Sends an email using the SendGrid API.
+     *
+     * <p>This method constructs an email message with the provided parameters and
+     * sends it through the SendGrid service. The email is sent as plain text by default.
+     * The 'from' parameter is ignored in favor of the configured sender email.</p>
+     *
+     * <p><b>Error Handling:</b>
+     * <ul>
+     *   <li>Logs successful email delivery with status codes</li>
+     *   <li>Throws RuntimeException for non-2xx HTTP responses from SendGrid</li>
+     *   <li>Throws RuntimeException for IO exceptions during API communication</li>
+     *   <li>Provides detailed error logging for troubleshooting</li>
+     * </ul>
+     * </p>
+     *
+     * @param toEmail The recipient's email address. Must be a valid email format.
+     * @param subject The email subject line. Should be descriptive and concise.
+     * @param body    The email body content in plain text format.
+     * @param from    This parameter is ignored. The configured 'fromEmail' is used instead.
+     *
+     * @throws RuntimeException if the SendGrid API returns a non-2xx status code
+     * @throws RuntimeException if an IOException occurs during API communication
+     *
+     * @see Mail
+     * @see Content
+     * @see Request
+     * @see Response
+     */
+    void sendEmail(String toEmail, String subject, String body, String from);
 }

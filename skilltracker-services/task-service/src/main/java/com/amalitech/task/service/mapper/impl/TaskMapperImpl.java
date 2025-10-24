@@ -9,6 +9,9 @@ import org.springframework.stereotype.Component;
 @Component
 public class TaskMapperImpl implements TaskMapper {
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public TaskDTO toDTO(Task task) {
         if (task == null) {

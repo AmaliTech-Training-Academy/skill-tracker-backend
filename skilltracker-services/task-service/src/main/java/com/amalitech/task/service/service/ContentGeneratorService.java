@@ -11,12 +11,20 @@ import com.amalitech.task.service.model.view.SkillView;
  */
 public interface ContentGeneratorService {
     /**
-     * Generates, parses, and saves a new MCQ task.
+     * Generates a multiple-choice question task using AI content generation.
+     * This method orchestrates the entire MCQ generation workflow:
+     * <ol>
+     *   <li>Builds a prompt from the template with skill, difficulty, and topic</li>
+     *   <li>Calls the DeepSeek API to generate content</li>
+     *   <li>Parses the AI response into structured MCQ content</li>
+     *   <li>Creates and persists the task with versioning</li>
+     * </ol>
      *
-     * @param skill The skill to associate the task with.
-     * @param difficulty The task's difficulty.
-     * @param topic A specific topic for the question.
-     * @return The newly created and persisted Task.
+     * @param skill the skill view for which to generate the task
+     * @param difficulty the difficulty level of the task (EASY, MEDIUM, HARD)
+     * @param topic the specific topic or subject area for the question
+     * @return the generated and persisted Task entity
+     * @throws RuntimeException if AI generation or task creation fails
      */
     Task generateMcqTask(SkillView skill, TaskDifficulty difficulty, String topic);
 }
