@@ -32,6 +32,7 @@ public class SendGridConfig {
      * can be autowired into other components that require email functionality.</p>
      * @see SendGrid
      * @see Bean
+     * @return A configured SendGrid client instance
      */
     @Bean
     public SendGrid sendGridClient() {
