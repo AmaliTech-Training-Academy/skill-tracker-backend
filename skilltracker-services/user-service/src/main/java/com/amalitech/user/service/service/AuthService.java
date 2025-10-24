@@ -8,6 +8,8 @@ import com.amalitech.user.service.dto.response.AuthResponse;
 import com.amalitech.user.service.exception.*;
 import com.amalitech.user.service.model.User;
 
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,7 +35,7 @@ public interface AuthService {
      * @param request the login request containing email and password
      * @return AuthResponse containing the access and refresh tokens
      */
-    AuthResponse login(LoginRequest request);
+    AuthResponse login(LoginRequest request, HttpServletResponse response);
 
     /**
      * Generate accessToken and RefreshTokens for the given user.
@@ -41,17 +43,18 @@ public interface AuthService {
      * @param user the user to generate tokens for
      * @return AuthResponse with access and refresh tokens
      */
-    AuthResponse generateTokens(User user);
+    AuthResponse generateTokens(User user, HttpServletResponse response);
 
     /**
      * Refreshes the access token by validating and rotating the refresh token.
      *
-     * @param refreshToken the current refresh token
-     * @return AuthResponse with new access and rotated refresh tokens
-     * @throws RefreshTokenException if token is invalid
+     * @param request the current refresh token
+     * @param response the current refresh token
+     * @return AuthResponse with new access and rotated refresh tokens.
+     * @throws RefreshTokenException if token is invalid.
      */
     @Transactional
-    AuthResponse refresh(String refreshToken);
+    AuthResponse refresh(HttpServletRequest request, HttpServletResponse response);
 
     /**
      * Initiates a password reset by generating and sending a reset token.
@@ -85,10 +88,10 @@ public interface AuthService {
     /**
      * Logs out the user by revoking the refresh token and blacklisting the access token.
      *
-     * @param accessToken  the access token to blacklist
-     * @param refreshToken the refresh token to delete
+     * @param request  retrieve tokens from request header set tokens on response header
+     * @param response set tokens on response header
      */
-    void logout(String accessToken, String refreshToken);
+    void logout(HttpServletRequest request, HttpServletResponse response);
 
     UserResponseDTO createUser(@Valid UserRequestDTO userdto);
     Optional<UserResponseDTO> verifyCode(String code, String email);
