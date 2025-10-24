@@ -22,8 +22,15 @@ public class SecurityConfig {
                 .httpBasic(ServerHttpSecurity.HttpBasicSpec::disable)
                 .formLogin(ServerHttpSecurity.FormLoginSpec::disable)
                 .authorizeExchange(exchange -> exchange
-                        .pathMatchers("/api/v1/auth/**", "/oauth2/**", "/error").permitAll()
-                        .pathMatchers("/health", "/actuator/health").permitAll()
+                        // Allow auth endpoints and OAuth2 redirects
+                        .pathMatchers(
+                                "/api/v1/auth/**",
+                                "/oauth2/**",
+                                "/login/oauth2/**",    // ✅ allow OAuth2 callback
+                                "/error",
+                                "/health",
+                                "/actuator/health"
+                        ).permitAll()
                         .anyExchange().authenticated()
                 )
                 .build();
