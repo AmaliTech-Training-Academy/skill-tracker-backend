@@ -2,6 +2,7 @@ package com.amalitech.user.service.security.config;
 
 
 import com.amalitech.user.service.security.oauth.OAuth2SuccessHandler;
+import com.amalitech.user.service.security.oauth.oAuth2FailureHandler;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -24,9 +25,9 @@ public class WebSecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain webFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain webFilterChain(HttpSecurity http, oAuth2FailureHandler oAuth2FailureHandler) throws Exception {
         http
-                .securityMatcher("/oauth2/**", "/login/**", "/error")
+                .securityMatcher("/**")
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
@@ -42,6 +43,7 @@ public class WebSecurityConfig {
                 .requestCache(cache -> cache.requestCache(new NullRequestCache()))
                 .oauth2Login(oauth2 -> oauth2
                         .successHandler(oAuth2SuccessHandler)
+                        .failureHandler(oAuth2FailureHandler)
                 )
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint((req, res, e) -> res.sendError(401, "Unauthorized"))
