@@ -58,8 +58,7 @@ public class User {
     @Column(nullable = true, unique = true, length = 255)
     private String username;
 
-    @NotBlank
-    @Column(name = "password_hash", nullable = false, length = 255)
+    @Column(name = "password_hash", nullable = true, length = 255)
     private String passwordHash;
 
     @Enumerated(EnumType.STRING)
