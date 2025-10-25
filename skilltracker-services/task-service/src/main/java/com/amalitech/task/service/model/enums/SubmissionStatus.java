@@ -4,6 +4,6 @@ public enum SubmissionStatus {
     PENDING,
     EVALUATING,
     COMPLETED,
-    FAILED
+    ERROR
 }
 

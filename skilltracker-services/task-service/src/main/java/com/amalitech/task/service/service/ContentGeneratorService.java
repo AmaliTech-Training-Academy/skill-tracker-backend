@@ -4,6 +4,8 @@ import com.amalitech.task.service.model.Task;
 import com.amalitech.task.service.model.enums.TaskDifficulty;
 import com.amalitech.task.service.model.view.SkillView;
 
+import java.util.List;
+
 /**
  * Interface for all AI-driven content generation.
  * This abstracts the specific AI provider (e.g., DeepSeek) and the
@@ -27,4 +29,14 @@ public interface ContentGeneratorService {
      * @throws RuntimeException if AI generation or task creation fails
      */
     Task generateMcqTask(SkillView skill, TaskDifficulty difficulty, String topic);
+
+    /**
+     * Generates a list of coding tasks based on the provided prompt.
+     *
+     * @param skill      The skill to generate tasks for.
+     * @param difficulty The difficulty level.
+     * @param topic      A specific topic (can be broad).
+     * @return A list of newly created and persisted Task entities.
+     */
+    List<Task> generateCodingTask(SkillView skill, TaskDifficulty difficulty, String topic);
 }
