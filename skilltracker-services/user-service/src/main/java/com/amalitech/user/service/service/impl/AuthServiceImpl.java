@@ -199,7 +199,7 @@ public class AuthServiceImpl implements AuthService {
         String resetToken = UUID.randomUUID().toString();
         String key = resetPrefix + resetToken;
         redisUtil.set(key, email, resetExpiration / 1000);
-        String resetLink = appBaseUrl + "/api/v1/auth/reset-password?token=" + resetToken;
+        String resetLink = appBaseUrl + "/api/v1/auth/password/reset?token=" + resetToken;
         emailService.sendResetEmail(email, resetLink);
     }
 
