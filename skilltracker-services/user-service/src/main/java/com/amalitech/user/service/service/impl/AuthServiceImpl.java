@@ -287,6 +287,7 @@ public class AuthServiceImpl implements AuthService {
 
             user.setIsVerified(true);
             userRepository.save(user);
+            tempCode = 0;
 
             return userRepository.findByEmail(email)
                     .map(UserMapper::toDto);
