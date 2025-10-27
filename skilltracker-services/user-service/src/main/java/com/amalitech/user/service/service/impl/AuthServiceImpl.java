@@ -283,6 +283,11 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public Optional<UserResponseDTO> verifyCode(String code, String email) {
         if(code.equals(tempCode.toString())){
+            User user = userRepository.findByEmail(email).orElseThrow(() -> new UserNotFoundException("User not found"));
+
+            user.setIsVerified(true);
+            userRepository.save(user);
+
             return userRepository.findByEmail(email)
                     .map(UserMapper::toDto);
         }
