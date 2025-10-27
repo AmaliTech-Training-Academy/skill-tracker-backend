@@ -39,7 +39,7 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.success("User successfully created", user, null));
     }
 
-    @PostMapping("/verify")
+    @PostMapping("/verify-email-otp")
     public ResponseEntity<ApiResponse<UserResponseDTO>> verifyCode(
             @RequestParam("code") String code,
             @RequestParam("email") String email) {
