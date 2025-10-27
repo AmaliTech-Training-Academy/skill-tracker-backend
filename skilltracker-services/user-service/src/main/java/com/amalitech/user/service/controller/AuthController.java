@@ -47,7 +47,7 @@ public class AuthController {
         UserResponseDTO user = authService.verifyCode(code, email).orElseThrow(() ->
                 new RuntimeException("Invalid verification code"));
 
-        return ResponseEntity.ok(ApiResponse.success("Verification Successful", user, null));
+        return ResponseEntity.ok(ApiResponse.success("Verification is Successful", user, null));
     }
 
         /** Authenticates the user and returns an access token */
