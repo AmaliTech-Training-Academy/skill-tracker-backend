@@ -40,17 +40,17 @@ public class AuthController {
     }
 
     @PostMapping("/verify")
-    public ResponseEntity<UserResponseDTO> verifyCode(
+    public ResponseEntity<ApiResponse<UserResponseDTO>> verifyCode(
             @RequestParam("code") String code,
             @RequestParam("email") String email) {
 
         UserResponseDTO user = authService.verifyCode(code, email).orElseThrow(() ->
                 new RuntimeException("Invalid verification code"));
 
-        return new ResponseEntity<>(user, HttpStatus.OK);
+        return ResponseEntity.ok(ApiResponse.success("Verification Successful", user, null));
     }
 
-    /** Authenticates the user and returns an access token */
+        /** Authenticates the user and returns an access token */
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<AuthResponse>> login(@Valid @RequestBody LoginRequest request, HttpServletResponse response) {
         AuthResponse authResponse = authService.login(request, response);
