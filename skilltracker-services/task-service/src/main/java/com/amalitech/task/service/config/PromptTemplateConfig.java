@@ -8,7 +8,7 @@ import org.springframework.core.io.Resource;
 
 @Configuration
 public class PromptTemplateConfig {
-    @Value("classpath:prompts/mcq_prompt.txt")
+    @Value("classpath:prompts/mcq/mcq_prompt.txt")
     private Resource mcqPromptResource;
 
     /**
@@ -18,5 +18,12 @@ public class PromptTemplateConfig {
     @Bean
     public PromptTemplate mcqPromptTemplate() {
         return new PromptTemplate(mcqPromptResource);
+    }
+
+    @Bean
+    public PromptTemplate codingPromptTemplate(
+            @Value("classpath:prompts/coding/coding_generation_prompt.txt") Resource codingPromptResource
+    ) {
+        return new PromptTemplate(codingPromptResource);
     }
 }
