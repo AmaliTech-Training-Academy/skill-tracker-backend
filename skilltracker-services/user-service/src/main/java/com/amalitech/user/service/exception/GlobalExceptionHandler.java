@@ -32,7 +32,7 @@ public class GlobalExceptionHandler {
         ApiError error = ApiError.of(
                 HttpStatus.UNAUTHORIZED.value(),
                 "Invalid refresh token",
-                ex.getMessage(),
+                null,
                 request.getRequestURI(),
                 null,
                 getTraceId()
@@ -44,8 +44,8 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiError> handleEmailAlreadyExistsException(EmailAlreadyExistsException ex, HttpServletRequest request) {
         ApiError error = ApiError.of(
                 HttpStatus.CONFLICT.value(),
-                ex.getMessage(),
-                ex.getMessage(),
+                "Email already exists",
+                null,
                 request.getRequestURI(),
                 null,
                 getTraceId()
@@ -57,8 +57,8 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiError> handleUserNotFound(UserNotFoundException ex, HttpServletRequest request) {
         ApiError error = ApiError.of(
                 HttpStatus.NOT_FOUND.value(),
-                ex.getMessage(),
-                ex.getMessage(),
+                "user not found",
+                null,
                 request.getRequestURI(),
                 null,
                 getTraceId()
@@ -70,7 +70,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiError> handleBadCredentials(BadCredentialsException ex, HttpServletRequest request) {
         ApiError error = ApiError.of(
                 HttpStatus.UNAUTHORIZED.value(),
-                ex.getMessage(),
+                "invalid credentials",
                 "The email or password provided is incorrect.",
                 request.getRequestURI(),
                 null,
@@ -95,9 +95,9 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(InvalidTokenException.class)
     public ResponseEntity<ApiError> handleInvalidToken(InvalidTokenException ex, HttpServletRequest request) {
         ApiError error = ApiError.of(
-                HttpStatus.NOT_FOUND.value(),
+                HttpStatus.UNAUTHORIZED.value(),
                 "Invalid token.",
-                ex.getMessage(),
+                null,
                 request.getRequestURI(),
                 null,
                 getTraceId()
@@ -115,8 +115,8 @@ public class GlobalExceptionHandler {
 
         ApiError error = ApiError.of(
                 HttpStatus.BAD_REQUEST.value(),
-                ex.getMessage(),
                 "One or more fields are invalid",
+                null,
                 request.getRequestURI(),
                 fieldErrors,
                 getTraceId()
@@ -143,7 +143,7 @@ public class GlobalExceptionHandler {
         ApiError error = ApiError.of(
                 HttpStatus.INTERNAL_SERVER_ERROR.value(),
                 "An unexpected error occurred",
-                ex.getMessage(),
+                null,
                 request.getRequestURI(),
                 null,
                 getTraceId()
