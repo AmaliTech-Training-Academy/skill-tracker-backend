@@ -39,7 +39,7 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.success("User successfully created", user, null));
     }
 
-    @PostMapping("/verify")
+    @PostMapping("/verify-email-otp")
     public ResponseEntity<ApiResponse<UserResponseDTO>> verifyCode(
             @RequestParam("code") String code,
             @RequestParam("email") String email) {
@@ -47,7 +47,7 @@ public class AuthController {
         UserResponseDTO user = authService.verifyCode(code, email).orElseThrow(() ->
                 new RuntimeException("Invalid verification code"));
 
-        return ResponseEntity.ok(ApiResponse.success("Verification Successful", user, null));
+        return ResponseEntity.ok(ApiResponse.success("Verification is Successful", user, null));
     }
 
         /** Authenticates the user and returns an access token */
