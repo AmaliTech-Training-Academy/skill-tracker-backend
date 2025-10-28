@@ -79,20 +79,8 @@ public class ApiSecurityConfig {
                             log.error("API Access Denied: {}", e.getMessage(), e);
                             res.sendError(403, "Forbidden");
                         })
-                )
-                .cors(cors -> cors.configurationSource(apiCorsConfigurationSource()));
+                );
         return http.build();
     }
 
-    @Bean
-    public CorsConfigurationSource apiCorsConfigurationSource() {
-        CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(List.of(frontendUrl));
-        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        config.setAllowedHeaders(List.of("Authorization", "Content-Type"));
-        config.setAllowCredentials(true);
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", config);
-        return source;
-    }
 }
