@@ -3,6 +3,7 @@ package com.amalitech.user.service.security.config;
 
 import com.amalitech.user.service.security.oauth.OAuth2SuccessHandler;
 import com.amalitech.user.service.security.oauth.oAuth2FailureHandler;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -19,6 +20,9 @@ import java.util.List;
 public class WebSecurityConfig {
 
     private final OAuth2SuccessHandler oAuth2SuccessHandler;
+    @Value("${FRONTEND_URL}")
+    private String frontendUrl;
+
 
     public WebSecurityConfig(OAuth2SuccessHandler oAuth2SuccessHandler) {
         this.oAuth2SuccessHandler = oAuth2SuccessHandler;
@@ -61,7 +65,7 @@ public class WebSecurityConfig {
     @Bean
     public CorsConfigurationSource webCorsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(List.of("http://localhost:3000"));  // Adjust for prod
+        config.setAllowedOrigins(List.of(frontendUrl));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("Authorization", "Content-Type"));
         config.setAllowCredentials(true);
