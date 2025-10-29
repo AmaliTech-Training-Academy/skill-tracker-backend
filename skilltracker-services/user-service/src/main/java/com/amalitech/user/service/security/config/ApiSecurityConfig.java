@@ -4,6 +4,7 @@ import com.amalitech.user.service.security.filter.JwtAuthenticationFilter;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -28,6 +29,8 @@ public class ApiSecurityConfig {
 
     private static final Logger log = LoggerFactory.getLogger(ApiSecurityConfig.class);
 
+    @Value("${FRONTEND_URL}")
+    private String frontendUrl;
     private final JwtAuthenticationFilter jwtAuthFilter;
     private final UserDetailsService userDetailsService;
 
@@ -60,7 +63,17 @@ public class ApiSecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/v1/auth/**").permitAll()
+                        .requestMatchers(
+                                "/api/v1/auth/register",
+                                "/api/v1/auth/login",
+                                "/api/v1/auth/token/refresh",
+                                "/api/v1/auth/password/forgot",
+                                "/api/v1/auth/password/reset",
+                                "/api/v1/auth/verify",
+                                "/error",
+                                "/health",
+                                "/actuator/health"
+                        ).permitAll()
                         .requestMatchers("/api/v1/users/**").hasAuthority("USER")
                         .anyRequest().authenticated()
                 )
@@ -76,20 +89,8 @@ public class ApiSecurityConfig {
                             log.error("API Access Denied: {}", e.getMessage(), e);
                             res.sendError(403, "Forbidden");
                         })
-                )
-                .cors(cors -> cors.configurationSource(apiCorsConfigurationSource()));
+                );
         return http.build();
     }
 
-    @Bean
-    public CorsConfigurationSource apiCorsConfigurationSource() {
-        CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(List.of("http://localhost:3000"));
-        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        config.setAllowedHeaders(List.of("Authorization", "Content-Type"));
-        config.setAllowCredentials(true);
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", config);
-        return source;
-    }
 }

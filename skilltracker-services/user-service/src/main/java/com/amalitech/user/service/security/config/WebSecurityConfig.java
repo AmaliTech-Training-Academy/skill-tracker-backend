@@ -2,6 +2,8 @@ package com.amalitech.user.service.security.config;
 
 
 import com.amalitech.user.service.security.oauth.OAuth2SuccessHandler;
+import com.amalitech.user.service.security.oauth.oAuth2FailureHandler;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -18,15 +20,18 @@ import java.util.List;
 public class WebSecurityConfig {
 
     private final OAuth2SuccessHandler oAuth2SuccessHandler;
+    @Value("${FRONTEND_URL}")
+    private String frontendUrl;
+
 
     public WebSecurityConfig(OAuth2SuccessHandler oAuth2SuccessHandler) {
         this.oAuth2SuccessHandler = oAuth2SuccessHandler;
     }
 
     @Bean
-    public SecurityFilterChain webFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain webFilterChain(HttpSecurity http, oAuth2FailureHandler oAuth2FailureHandler) throws Exception {
         http
-                .securityMatcher("/oauth2/**", "/login/**", "/error")
+                .securityMatcher("/**")
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
@@ -42,6 +47,7 @@ public class WebSecurityConfig {
                 .requestCache(cache -> cache.requestCache(new NullRequestCache()))
                 .oauth2Login(oauth2 -> oauth2
                         .successHandler(oAuth2SuccessHandler)
+                        .failureHandler(oAuth2FailureHandler)
                 )
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint((req, res, e) -> res.sendError(401, "Unauthorized"))
@@ -51,20 +57,8 @@ public class WebSecurityConfig {
                         .contentSecurityPolicy(csp -> csp.policyDirectives("default-src 'self'"))
                         .frameOptions(frame -> frame.deny())
                         .httpStrictTransportSecurity(hsts -> hsts.includeSubDomains(true).maxAgeInSeconds(31536000))
-                )
-                .cors(cors -> cors.configurationSource(webCorsConfigurationSource()));
+                );
         return http.build();
     }
 
-    @Bean
-    public CorsConfigurationSource webCorsConfigurationSource() {
-        CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(List.of("http://localhost:3000"));  // Adjust for prod
-        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        config.setAllowedHeaders(List.of("Authorization", "Content-Type"));
-        config.setAllowCredentials(true);
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", config);
-        return source;
-    }
 }

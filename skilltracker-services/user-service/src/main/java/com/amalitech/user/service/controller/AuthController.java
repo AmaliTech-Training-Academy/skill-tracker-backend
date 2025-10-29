@@ -39,36 +39,36 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.success("User successfully created", user, null));
     }
 
-    @PostMapping("/verify")
-    public ResponseEntity<UserResponseDTO> verifyCode(
+    @PostMapping("/verify-email-otp")
+    public ResponseEntity<ApiResponse<UserResponseDTO>> verifyCode(
             @RequestParam("code") String code,
             @RequestParam("email") String email) {
 
         UserResponseDTO user = authService.verifyCode(code, email).orElseThrow(() ->
                 new RuntimeException("Invalid verification code"));
 
-        return new ResponseEntity<>(user, HttpStatus.OK);
+        return ResponseEntity.ok(ApiResponse.success("Verification is Successful", user, null));
     }
 
-    /** Authenticates the user and returns an access token */
+        /** Authenticates the user and returns an access token */
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<AuthResponse>> login(@Valid @RequestBody LoginRequest request, HttpServletResponse response) {
-        AuthResponse authResponse = authService.login(request, response);
-        return ResponseEntity.ok(ApiResponse.success("Login successful.", authResponse, null));
+        authService.login(request, response);
+        return ResponseEntity.ok(ApiResponse.success("Login successful.", null, null));
     }
 
     /** Refreshes the access token */
     @PostMapping("/token/refresh")
     public ResponseEntity<ApiResponse<AuthResponse>> refresh(HttpServletRequest request, HttpServletResponse response) {
-        AuthResponse authResponse = authService.refresh(request, response);
-        return ResponseEntity.ok(ApiResponse.success("Token refreshed successfully", authResponse, null));
+        authService.refresh(request, response);
+        return ResponseEntity.ok(ApiResponse.success("Token refreshed successfully", null, null));
     }
 
     /** Forgot password - send reset link .*/
     @PostMapping("/password/forgot")
     public ResponseEntity<ApiResponse<String>> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
         authService.forgotPassword(request.email());
-        return ResponseEntity.ok(ApiResponse.success("Reset link sent", "Check your email", null));
+        return ResponseEntity.ok(ApiResponse.success("Reset link sent", null, null));
     }
 
     /** Change password (authenticated) */

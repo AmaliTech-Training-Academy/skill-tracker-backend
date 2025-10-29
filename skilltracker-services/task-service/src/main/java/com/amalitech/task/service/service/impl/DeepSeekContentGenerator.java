@@ -1,5 +1,6 @@
 package com.amalitech.task.service.service.impl;
 
+import com.amalitech.task.service.model.content.impl.CodingTaskContent;
 import com.amalitech.task.service.service.ContentGeneratorService;
 import com.amalitech.task.service.model.Task;
 import com.amalitech.task.service.model.TaskDefinition;
@@ -26,6 +27,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 @Service
 @Slf4j
@@ -36,18 +39,20 @@ public class DeepSeekContentGenerator implements ContentGeneratorService {
     private final TaskDefinitionRepository taskDefinitionRepository;
 
     private final PromptTemplate mcqPromptTemplate;
+    private final PromptTemplate codingPromptTemplate;
 
     public DeepSeekContentGenerator(ChatModel chatModel,
                                     ObjectMapper objectMapper,
                                     TaskRepository taskRepository,
                                     TaskDefinitionRepository taskDefinitionRepository,
-                                    PromptTemplate mcqPromptTemplate
+                                    PromptTemplate mcqPromptTemplate, PromptTemplate codingPromptTemplate
     ) {
         this.chatModel = chatModel;
         this.objectMapper = objectMapper;
         this.taskRepository = taskRepository;
         this.taskDefinitionRepository = taskDefinitionRepository;
         this.mcqPromptTemplate = mcqPromptTemplate;
+        this.codingPromptTemplate = codingPromptTemplate;
     }
 
     /**
@@ -67,110 +72,94 @@ public class DeepSeekContentGenerator implements ContentGeneratorService {
 
         Prompt prompt = mcqPromptTemplate.create(promptParameters);
         String aiResponse = callDeepSeek(prompt);
-        McqTaskContent content = parseMcqResponse(aiResponse);
+
+        McqTaskContent content = parseMcqResponseToPojo(aiResponse);
 
         return createAndSaveTask(skill, TaskType.MULTIPLE_CHOICE, difficulty, content, topic);
     }
 
     /**
-     * Calls the DeepSeek AI model with the provided prompt.
-     * This method sends a structured request to the AI model with system and user messages,
-     * ensuring the response is in valid JSON format without markdown formatting.
-     *
-     * @param prompt the prompt text to send to the AI model
-     * @return the cleaned JSON response from the AI model
-     * @throws RuntimeException if the API call fails or encounters an error
+     * {@inheritDoc}
      */
-    private String callDeepSeek(Prompt prompt) {
-        try {
-            log.debug("Calling DeepSeek API with prompt...");
+    @Override
+    @Transactional
+    public List<Task> generateCodingTask(SkillView skill, TaskDifficulty difficulty, String topic) {
+        log.info("Generating Coding tasks for skill: {}, difficulty: {}, topic: {}",
+                skill.getName(), difficulty, topic);
 
-            ChatResponse response = chatModel.call(prompt);
+        Map<String, Object> promptParameters = Map.of(
+                "skill", skill.getName(),
+                "difficulty", difficulty.name(),
+                "topic", topic
+        );
 
-            String content = response.getResult().getOutput().getText();
-            log.debug("DeepSeek response: {}", content);
-            return cleanJsonResponse(content);
+        Prompt prompt = codingPromptTemplate.create(promptParameters);
+        String aiResponse = callDeepSeek(prompt);
 
-        } catch (Exception e) {
-            log.error("Error calling DeepSeek API: {}", e.getMessage(), e);
-            throw new RuntimeException("Failed to generate task content", e);
+        List<JsonNode> challengeNodes = parseCodingResponseToNodes(aiResponse);
+
+        List<Task> savedTasks = new ArrayList<>();
+        for (JsonNode challengeNode : challengeNodes) {
+            Task savedTask = createAndSaveCodingTask(skill, difficulty, challengeNode);
+            savedTasks.add(savedTask);
         }
+        return savedTasks;
     }
 
-
     /**
-     * Cleans the AI response by removing markdown code block markers.
-     * Handles responses that may be wrapped in markdown JSON code blocks
-     * (e.g., ```json ... ``` or ``` ... ```).
-     *
-     * @param response the raw response from the AI model
-     * @return the cleaned JSON string without markdown markers
+     * creates a Coding Task from the raw AI JSON.
+     * This bridges the gap between the prompt JSON and the Task/TaskContent entities.
      */
-    private String cleanJsonResponse(String response) {
-        response = response.trim();
-        if (response.startsWith("```json")) {
-            response = response.substring(7);
-        }
-        if (response.startsWith("```")) {
-            response = response.substring(3);
-        }
-        if (response.endsWith("```")) {
-            response = response.substring(0, response.length() - 3);
-        }
-        return response.trim();
-    }
+    private Task createAndSaveCodingTask(SkillView skill, TaskDifficulty difficulty, JsonNode challengeNode) {
+        String title = challengeNode.path("title").asText("AI-Generated Coding Task");
+        String description = challengeNode.path("description").asText("AI-generated description.");
+        int xpReward = challengeNode.path("maxXP").asInt(25);
+        int duration = challengeNode.path("estimatedDuration").asInt(15);
 
+        CodingTaskContent content = new CodingTaskContent();
+        content.setPrompt(
+                challengeNode.path("description").asText() +
+                        "\n\n" +
+                        challengeNode.path("detailedRequirements").asText()
+        );
+        content.setConstraints(challengeNode.path("constraints").asText("No specific constraints."));
 
-    /**
-     * Parses the AI response JSON into an MCQ content object.
-     * Expected JSON structure:
-     * <pre>
-     * {
-     *   "question": "The question text",
-     *   "options": ["Option 1", "Option 2", "Option 3", "Option 4"],
-     *   "correctOption": 0,
-     *   "explanation": "Explanation of the correct answer"
-     * }
-     * </pre>
-     *
-     * @param response the JSON response string from the AI model
-     * @return the parsed McqTaskContent object
-     * @throws RuntimeException if JSON parsing fails or required fields are missing
-     */
-    private McqTaskContent parseMcqResponse(String response) {
-        try {
-            JsonNode json = objectMapper.readTree(response);
+        List<CodingTaskContent.Example> examples = StreamSupport.stream(challengeNode.path("testCases").spliterator(), false)
+                .filter(node -> !node.path("isHidden").asBoolean(false))
+                .map(node -> CodingTaskContent.Example.builder()
+                        .input(node.path("input").asText())
+                        .output(node.path("expectedOutput").asText())
+                        .build())
+                .collect(Collectors.toList());
+        content.setExamples(examples);
 
-            JsonNode optionsNode = json.get("options");
-            if (optionsNode == null || !optionsNode.isArray() || optionsNode.isEmpty()) {
-                throw new RuntimeException("Missing or invalid 'options' field in MCQ response");
-            }
-            JsonNode questionNode = json.get("question");
-            if (questionNode == null || questionNode.asText().isEmpty()) {
-                throw new RuntimeException("Missing or invalid 'question' field in MCQ response");
-            }
-            JsonNode correctOptionNode = json.get("correctOption");
-            if (correctOptionNode == null || !correctOptionNode.isInt()) {
-                throw new RuntimeException("Missing or invalid 'correctOption' field in MCQ response");
-            }
-            JsonNode explanationNode = json.get("explanation");
-            if (explanationNode == null || explanationNode.asText().isEmpty()) {
-                throw new RuntimeException("Missing or invalid 'explanation' field in MCQ response");
-            }
+        TaskDefinition definition = taskDefinitionRepository
+                .findBySkillIdAndTitle(skill.getId(), title)
+                .orElseGet(() -> {
+                    TaskDefinition def = new TaskDefinition();
+                    def.setSkill(skill);
+                    def.setTitle(title);
+                    def.setLatestVersion(0);
+                    return taskDefinitionRepository.save(def);
+                });
 
-            List<String> options = new ArrayList<>();
-            optionsNode.forEach(node -> options.add(node.asText()));
+        definition.setLatestVersion(definition.getLatestVersion() + 1);
+        taskDefinitionRepository.save(definition);
 
-            return McqTaskContent.builder()
-                    .question(questionNode.asText())
-                    .options(options)
-                    .correctOption(correctOptionNode.asInt())
-                    .explanation(explanationNode.asText())
-                    .build();
+        Task task = Task.builder()
+                .taskDefinition(definition)
+                .version(definition.getLatestVersion())
+                .title(title)
+                .description(description)
+                .type(TaskType.CODING)
+                .difficulty(difficulty)
+                .content(content)
+                .xpReward(xpReward)
+                .estimatedDurationInMinutes(duration)
+                .isPublished(true)
+                .build();
 
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException("Failed to parse MCQ content", e);
-        }
+        return taskRepository.save(task);
     }
 
     /**
@@ -245,4 +234,85 @@ public class DeepSeekContentGenerator implements ContentGeneratorService {
             throw new RuntimeException("Failed to create task", e);
         }
     }
+
+    private McqTaskContent parseMcqResponseToPojo(String response) {
+        try {
+            JsonNode json = objectMapper.readTree(response);
+
+            return objectMapper.treeToValue(json, McqTaskContent.class);
+
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException("Failed to parse MCQ content", e);
+        } catch (Exception e) {
+            log.error("Invalid MCQ JSON structure: {}", response, e);
+            throw new RuntimeException("Invalid fields in MCQ response", e);
+        }
+    }
+
+    /**
+     * Parses the AI response JSON into a list of JsonNodes, one for each challenge.
+     */
+    private List<JsonNode> parseCodingResponseToNodes(String response) {
+        try {
+            JsonNode root = objectMapper.readTree(response);
+            JsonNode challengesNode = root.path("challenges");
+
+            if (challengesNode.isMissingNode() || !challengesNode.isArray()) {
+                throw new RuntimeException("Missing or invalid 'challenges' array in AI response");
+            }
+
+            return StreamSupport.stream(challengesNode.spliterator(), false)
+                    .collect(Collectors.toList());
+
+        } catch (JsonProcessingException e) {
+            log.error("Failed to parse coding challenge JSON: {}", response, e);
+            throw new RuntimeException("Failed to parse AI coding response", e);
+        }
+    }
+
+    /**
+     * Calls the DeepSeek AI model with the provided prompt.
+     * This method sends a structured request to the AI model with system and user messages,
+     * ensuring the response is in valid JSON format without markdown formatting.
+     *
+     * @param prompt the prompt text to send to the AI model
+     * @return the cleaned JSON response from the AI model
+     * @throws RuntimeException if the API call fails or encounters an error
+     */
+    private String callDeepSeek(Prompt prompt) {
+        try {
+            log.debug("Calling DeepSeek API with prompt...");
+            ChatResponse response = chatModel.call(prompt);
+            String content = response.getResult().getOutput().getText();
+            log.debug("DeepSeek response: {}", content);
+            return cleanJsonResponse(content);
+
+        } catch (Exception e) {
+            log.error("Error calling DeepSeek API: {}", e.getMessage(), e);
+            throw new RuntimeException("Failed to generate task content", e);
+        }
+    }
+
+    /**
+     * Cleans the AI response by removing markdown code block markers.
+     * Handles responses that may be wrapped in markdown JSON code blocks
+     * (e.g., ```json ... ``` or ``` ... ```).
+     *
+     * @param response the raw response from the AI model
+     * @return the cleaned JSON string without markdown markers
+     */
+    private String cleanJsonResponse(String response) {
+        response = response.trim();
+        if (response.startsWith("```json")) {
+            response = response.substring(7);
+        }
+        if (response.startsWith("```")) {
+            response = response.substring(3);
+        }
+        if (response.endsWith("```")) {
+            response = response.substring(0, response.length() - 3);
+        }
+        return response.trim();
+    }
+
 }

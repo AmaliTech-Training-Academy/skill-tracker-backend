@@ -1,5 +1,6 @@
 package com.amalitech.task.service.model;
 
+import com.amalitech.task.service.model.enums.SubmissionStatus;
 import com.amalitech.task.service.model.submission.SubmissionAnswer;
 import com.amalitech.task.service.model.feedback.SubmissionFeedback;
 
@@ -41,6 +42,10 @@ public class TaskSubmission {
     @Column(columnDefinition = "jsonb", nullable = false)
     private SubmissionAnswer answer;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private SubmissionStatus status;
+
     /**
      * Stores structured, polymorphic feedback JSON.
      */
@@ -58,4 +63,11 @@ public class TaskSubmission {
 
     @Column
     private LocalDateTime evaluatedAt;
+
+    @PrePersist
+    protected void onCreate() {
+        if (this.status == null) {
+            this.status = SubmissionStatus.PENDING;
+        }
+    }
 }

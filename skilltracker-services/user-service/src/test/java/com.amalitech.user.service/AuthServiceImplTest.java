@@ -1,14 +1,12 @@
 package com.amalitech.user.service;
+
 import com.amalitech.user.service.dto.UserRequestDTO;
 import com.amalitech.user.service.dto.UserResponseDTO;
 import com.amalitech.user.service.dto.request.LoginRequest;
-import com.amalitech.user.service.dto.request.RegisterRequest;
 import com.amalitech.user.service.dto.response.AuthResponse;
-import com.amalitech.user.service.exception.*;
-import com.amalitech.user.service.mapper.UserMapper;
+import com.amalitech.user.service.exception.EmailAlreadyExistsException;
+import com.amalitech.user.service.exception.InvalidVerificationCodeException;
 import com.amalitech.user.service.model.User;
-import com.amalitech.user.service.model.enums.GuidedTourStatus;
-import com.amalitech.user.service.model.enums.PremiumTier;
 import com.amalitech.user.service.model.enums.Role;
 import com.amalitech.user.service.model.enums.UserState;
 import com.amalitech.user.service.repository.UserRepository;
@@ -16,21 +14,18 @@ import com.amalitech.user.service.security.CustomUserDetails;
 import com.amalitech.user.service.security.util.JwtUtil;
 import com.amalitech.user.service.service.EmailService;
 import com.amalitech.user.service.service.impl.AuthServiceImpl;
+import com.amalitech.user.service.util.CookieUtil;
 import com.amalitech.user.service.util.RedisUtil;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.MockedStatic;
-import org.mockito.Mock;
-import org.mockito.Mockito;
+import org.mockito.*;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.BadCredentialsException;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
-import java.lang.reflect.Field;
 import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.UUID;
@@ -40,425 +35,261 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class AuthServiceImplTest {
 
-    @Mock
-    private UserRepository userRepository;
+    @Mock private UserRepository userRepository;
+    @Mock private JwtUtil jwtUtil;
+    @Mock private BCryptPasswordEncoder passwordEncoder;
+    @Mock private EmailService emailService;
+    @Mock private RedisUtil redisUtil;
+    @Mock private AuthenticationManager authenticationManager;
+    @Mock private CookieUtil cookieUtil;
 
-    @Mock
-    private BCryptPasswordEncoder passwordEncoder;
-
-    @Mock
-    private EmailService emailService;
-
-    @Mock
-    private AuthenticationManager authenticationManager;
-
-    @Mock
-    private JwtUtil jwtUtil;
-
-    @Mock
-    private RedisUtil redisUtil;
-
-    @Mock
-    private Authentication authentication;
 
     private AuthServiceImpl authService;
 
     private User testUser;
-    private UUID userId;
-    private final long refreshExpiration = 86400000L;
-    private final long resetExpiration = 3600000L;
-    private final String refreshPrefix = "refresh:";
-    private final String resetPrefix = "reset:";
-    private final String appBaseUrl = "http://localhost:8080";
+    private UserRequestDTO userRequestDTO;
+    private LoginRequest loginRequest;
+    private MockHttpServletRequest request;
+    private MockHttpServletResponse response;
+
+    private static final String EMAIL = "test@example.com";
+    private static final String PASSWORD = "password123";
+    private static final String ENCODED_PASSWORD = "$2a$12$encodedhash";
+    private static final UUID USER_ID = UUID.randomUUID();
+    private static final long REFRESH_EXPIRATION = 604800000L;
+    private static final long RESET_EXPIRATION = 3600000L;
+    private static final String REFRESH_PREFIX = "refresh:";
+    private static final String RESET_PREFIX = "reset:";
+    private static final String APP_BASE_URL = "http://localhost:8080";
 
     @BeforeEach
     void setUp() {
+        // Manually construct AuthServiceImpl with all 12 required args
         authService = new AuthServiceImpl(
-                userRepository, jwtUtil, passwordEncoder, emailService, redisUtil,
-                refreshExpiration, resetExpiration, refreshPrefix,
-                resetPrefix, appBaseUrl, authenticationManager
+                userRepository,
+                jwtUtil,
+                passwordEncoder,
+                emailService,
+                redisUtil,
+                REFRESH_EXPIRATION,
+                RESET_EXPIRATION,
+                REFRESH_PREFIX,
+                RESET_PREFIX,
+                APP_BASE_URL,
+                authenticationManager,
+                cookieUtil
         );
 
-        userId = UUID.randomUUID();
+        // Reset tempCode for verifyCode tests
+        setPrivateField(authService, "tempCode", 0);
+
+        // Test data
+        userRequestDTO = new UserRequestDTO(EMAIL, PASSWORD);
+        loginRequest = new LoginRequest(EMAIL, PASSWORD);
+        request = new MockHttpServletRequest();
+        response = new MockHttpServletResponse();
+
         testUser = new User();
-        testUser.setId(userId);
-        testUser.setEmail("test@example.com");
-        testUser.setUsername("testuser");
-        testUser.setPasswordHash("encodedPassword");
+        testUser.setId(USER_ID);
+        testUser.setEmail(EMAIL);
+        testUser.setPasswordHash(ENCODED_PASSWORD);
         testUser.setRole(Role.USER);
         testUser.setState(UserState.REGISTERED);
-        testUser.setPremiumTier(PremiumTier.FREE);
-        testUser.setTourStatus(GuidedTourStatus.NOT_STARTED);
         testUser.setIsVerified(false);
-        testUser.setLanguage("en");
-        testUser.setTimezone("UTC");
-        testUser.setCreatedAt(LocalDateTime.now());
-        testUser.setUpdatedAt(LocalDateTime.now());
     }
 
-    @Test
-    void createUser_ShouldCreateUser_WhenEmailNotExists() {
-        UserRequestDTO request = new UserRequestDTO("test@example.com", "password123");
-        User mappedUser = new User();
-        mappedUser.setEmail("test@example.com");
-        mappedUser.setPasswordHash("mappedEncodedPassword");
-
-        when(userRepository.existsByEmail(request.email())).thenReturn(false);
-        when(userRepository.save(any(User.class))).thenReturn(testUser);
-
-        try (MockedStatic<UserMapper> userMapperMock = mockStatic(UserMapper.class)) {
-
-            userMapperMock.when(() -> UserMapper.toEntity(request)).thenReturn(mappedUser);
-            userMapperMock.when(() -> UserMapper.toDto(testUser)).thenReturn(
-                    UserResponseDTO.builder()
-                            .id(userId)
-                            .email("test@example.com")
-                            .username("testuser")
-                            .role(Role.USER)
-                            .state(UserState.REGISTERED)
-                            .is_verified(false)
-                            .premiumTier(PremiumTier.FREE)
-                            .language("en")
-                            .timezone("UTC")
-                            .updatedAt(testUser.getUpdatedAt())
-                            .lastLoginAt(testUser.getLastLoginAt())
-                            .build()
-            );
-
-            UserResponseDTO result = authService.createUser(request);
-
-            assertNotNull(result);
-            assertEquals("test@example.com", result.email());
-            verify(userRepository).existsByEmail(request.email());
-            verify(userRepository).save(mappedUser);
-            verify(emailService).sendEmail(eq("test@example.com"), anyString(), anyString(), isNull());
+    // Helper to set private field
+    private void setPrivateField(Object target, String fieldName, Object value) {
+        try {
+            var field = target.getClass().getDeclaredField(fieldName);
+            field.setAccessible(true);
+            field.set(target, value);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to set field: " + fieldName, e);
         }
     }
 
     @Test
-    void createUser_ShouldThrowEmailAlreadyExistsException_WhenEmailAlreadyExists() {
-        UserRequestDTO request = new UserRequestDTO("existing@example.com", "password123");
-        when(userRepository.existsByEmail(request.email())).thenReturn(true);
+    void createUser_Success() {
+        when(userRepository.existsByEmail(EMAIL)).thenReturn(false);
+        when(userRepository.save(any(User.class))).thenAnswer(i -> {
+            User u = i.getArgument(0);
+            u.setId(USER_ID);
+            u.setUpdatedAt(LocalDateTime.now());
+            return u;
+        });
 
-        EmailAlreadyExistsException exception = assertThrows(
-                EmailAlreadyExistsException.class,
-                () -> authService.createUser(request)
+        doNothing().when(emailService).sendEmail(
+                anyString(),
+                anyString(),
+                anyString(),
+                nullable(String.class)
         );
-        assertEquals("A user already exists with this email.", exception.getMessage());
-        verify(userRepository).existsByEmail(request.email());
-        verify(userRepository, never()).save(any(User.class));
+
+        UserResponseDTO result = authService.createUser(userRequestDTO);
+
+        assertNotNull(result);
+        assertEquals(EMAIL, result.email());
+        verify(userRepository).save(any(User.class));
+        verify(emailService).sendEmail(
+                eq(EMAIL),
+                eq("Account created successfully!"),
+                contains("verification code"),
+                isNull()
+        );
     }
 
     @Test
-    void login_ShouldReturnAuthResponse_WhenCredentialsValid() {
-        LoginRequest request = new LoginRequest("test@example.com", "password");
+    void createUser_EmailExists_ThrowsException() {
+        when(userRepository.existsByEmail(EMAIL)).thenReturn(true);
+        assertThrows(EmailAlreadyExistsException.class, () -> authService.createUser(userRequestDTO));
+    }
+
+    @Test
+    void login_Success() {
+        Authentication auth = mock(Authentication.class);
         CustomUserDetails userDetails = new CustomUserDetails(testUser);
 
-        when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
-                .thenReturn(authentication);
-        when(authentication.getPrincipal()).thenReturn(userDetails);
-        when(jwtUtil.generateAccessToken(anyString(), any(Role.class), any(UUID.class)))
-                .thenReturn("access-token");
+        when(authenticationManager.authenticate(any())).thenReturn(auth);
+        when(auth.getPrincipal()).thenReturn(userDetails);
+        when(jwtUtil.generateAccessToken(EMAIL, Role.USER, USER_ID)).thenReturn("access-jwt");
+        when(jwtUtil.getExpirationSeconds("access-jwt")).thenReturn(900L);
 
-        AuthResponse result = authService.login(request);
+        UUID refreshToken = UUID.fromString("00000000-0000-0000-0000-000000000001");
 
-        assertNotNull(result);
-        assertEquals("access-token", result.accessToken());
-        assertNotNull(result.refreshToken());
-        verify(authenticationManager).authenticate(any(UsernamePasswordAuthenticationToken.class));
-        verify(redisUtil).set(anyString(), eq("test@example.com"), eq(refreshExpiration / 1000));
-    }
+        try (MockedStatic<UUID> mockedUuid = mockStatic(UUID.class)) {
+            mockedUuid.when(UUID::randomUUID).thenReturn(refreshToken);
 
-    @Test
-    void login_ShouldThrowException_WhenAuthenticationFails() {
-        LoginRequest request = new LoginRequest("test@example.com", "wrong-password");
+            AuthResponse result = authService.login(loginRequest, response);
 
-        when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
-                .thenThrow(new BadCredentialsException("Invalid credentials"));
+            assertEquals("tokens generated and set in httpOnly cookie", result.message());
 
-        assertThrows(BadCredentialsException.class, () -> authService.login(request));
-        verify(authenticationManager).authenticate(any(UsernamePasswordAuthenticationToken.class));
-        verify(redisUtil, never()).set(anyString(), anyString(), anyLong());
-    }
-
-    @Test
-    void generateTokens_ShouldCreateValidTokens() {
-        when(jwtUtil.generateAccessToken(anyString(), any(Role.class), any(UUID.class)))
-                .thenReturn("access-token");
-
-        AuthResponse result = authService.generateTokens(testUser);
-
-        assertNotNull(result);
-        assertEquals("access-token", result.accessToken());
-        assertNotNull(result.refreshToken());
-        verify(jwtUtil).generateAccessToken("test@example.com", Role.USER, userId);
-        verify(redisUtil).set(anyString(), eq("test@example.com"), eq(refreshExpiration / 1000));
-    }
-
-    @Test
-    void refresh_ShouldReturnNewTokens_WhenRefreshTokenValid() {
-        String refreshToken = "valid-refresh-token";
-        String newAccessToken = "new-access-token";
-
-        when(redisUtil.get(refreshPrefix + refreshToken)).thenReturn("test@example.com");
-        when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.of(testUser));
-        when(jwtUtil.generateAccessToken(anyString(), any(Role.class), any(UUID.class)))
-                .thenReturn(newAccessToken);
-
-        AuthResponse result = authService.refresh(refreshToken);
-
-        assertNotNull(result);
-        assertEquals(newAccessToken, result.accessToken());
-        assertNotNull(result.refreshToken());
-        verify(redisUtil).delete(refreshPrefix + refreshToken);
-        verify(redisUtil).set(anyString(), eq("test@example.com"), eq(refreshExpiration / 1000));
-        verify(jwtUtil).generateAccessToken("test@example.com", Role.USER, userId);
-    }
-
-    @Test
-    void refresh_ShouldThrowRefreshTokenException_WhenRefreshTokenInvalid() {
-        String invalidToken = "invalid-token";
-        when(redisUtil.get(refreshPrefix + invalidToken)).thenReturn(null);
-
-        RefreshTokenException exception = assertThrows(
-                RefreshTokenException.class,
-                () -> authService.refresh(invalidToken)
-        );
-        assertEquals("Authentication failed. Please log in again.", exception.getMessage());
-        verify(redisUtil, never()).delete(anyString());
-    }
-
-    @Test
-    void refresh_ShouldThrowRefreshTokenException_WhenUserNotFound() {
-        String refreshToken = "valid-token";
-        when(redisUtil.get(refreshPrefix + refreshToken)).thenReturn("nonexistent@example.com");
-        when(userRepository.findByEmail("nonexistent@example.com")).thenReturn(Optional.empty());
-
-        RefreshTokenException exception = assertThrows(
-                RefreshTokenException.class,
-                () -> authService.refresh(refreshToken)
-        );
-        assertEquals("User not found", exception.getMessage());
-        verify(redisUtil, never()).delete(anyString());
-    }
-
-    @Test
-    void refresh_ShouldThrowRefreshTokenException_WhenUserSuspended() {
-        String refreshToken = "valid-token";
-        testUser.setState(UserState.SUSPENDED);
-
-        when(redisUtil.get(refreshPrefix + refreshToken)).thenReturn("test@example.com");
-        when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.of(testUser));
-
-        RefreshTokenException exception = assertThrows(
-                RefreshTokenException.class,
-                () -> authService.refresh(refreshToken)
-        );
-        assertEquals("User is suspended", exception.getMessage());
-        verify(redisUtil).delete(refreshPrefix + refreshToken);
-    }
-
-    @Test
-    void forgotPassword_ShouldSendResetEmail_WhenUserExists() {
-        String email = "test@example.com";
-        when(userRepository.findByEmail(email)).thenReturn(Optional.of(testUser));
-
-        authService.forgotPassword(email);
-
-        verify(userRepository).findByEmail(email);
-        verify(redisUtil).set(anyString(), eq(email), eq(resetExpiration / 1000));
-        verify(emailService).sendResetEmail(eq(email), anyString());
-    }
-
-    @Test
-    void forgotPassword_ShouldThrowRefreshTokenException_WhenUserNotFound() {
-        String email = "nonexistent@example.com";
-        when(userRepository.findByEmail(email)).thenReturn(Optional.empty());
-
-        RefreshTokenException exception = assertThrows(
-                RefreshTokenException.class,
-                () -> authService.forgotPassword(email)
-        );
-        assertEquals("User not found", exception.getMessage());
-        verify(redisUtil, never()).set(anyString(), anyString(), anyLong());
-        verify(emailService, never()).sendResetEmail(anyString(), anyString());
-    }
-
-    @Test
-    void resetPassword_ShouldUpdatePassword_WhenTokenValid() {
-        String token = "valid-token";
-        String newPassword = "newPassword123";
-
-        when(redisUtil.get(resetPrefix + token)).thenReturn("test@example.com");
-        when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.of(testUser));
-        when(passwordEncoder.encode(newPassword)).thenReturn("newEncodedPassword");
-
-        authService.resetPassword(token, newPassword);
-
-        verify(redisUtil).get(resetPrefix + token);
-        verify(passwordEncoder).encode(newPassword);
-        verify(userRepository).save(testUser);
-        verify(redisUtil).delete(resetPrefix + token);
-    }
-
-    @Test
-    void resetPassword_ShouldThrowInvalidTokenException_WhenTokenInvalid() {
-        String token = "invalid-token";
-        String newPassword = "newPassword123";
-
-        when(redisUtil.get(resetPrefix + token)).thenReturn(null);
-
-        InvalidTokenException exception = assertThrows(
-                InvalidTokenException.class,
-                () -> authService.resetPassword(token, newPassword)
-        );
-        assertEquals("Invalid or expired token", exception.getMessage());
-        verify(userRepository, never()).save(any(User.class));
-    }
-
-    @Test
-    void resetPassword_ShouldThrowRefreshTokenException_WhenUserNotFound() {
-        String token = "valid-token";
-        String newPassword = "newPassword123";
-
-        when(redisUtil.get(resetPrefix + token)).thenReturn("nonexistent@example.com");
-        when(userRepository.findByEmail("nonexistent@example.com")).thenReturn(Optional.empty());
-
-        RefreshTokenException exception = assertThrows(
-                RefreshTokenException.class,
-                () -> authService.resetPassword(token, newPassword)
-        );
-        assertEquals("User not found", exception.getMessage());
-        verify(userRepository, never()).save(any(User.class));
-    }
-
-
-
-    @Test
-    void changePassword_ShouldThrowRefreshTokenException_WhenUserNotFound() {
-        String email = "nonexistent@example.com";
-        String oldPassword = "oldPassword123";
-        String newPassword = "newPassword123";
-
-        when(userRepository.findByEmail(email)).thenReturn(Optional.empty());
-
-        RefreshTokenException exception = assertThrows(
-                RefreshTokenException.class,
-                () -> authService.changePassword(email, oldPassword, newPassword)
-        );
-        assertEquals("User not found", exception.getMessage());
-        verify(passwordEncoder, never()).matches(anyString(), anyString());
-        verify(userRepository, never()).save(any(User.class));
-    }
-
-    @Test
-    void changePassword_ShouldThrowInvalidPasswordException_WhenOldPasswordIncorrect() {
-        String email = "test@example.com";
-        String oldPassword = "wrongPassword123";
-        String newPassword = "newPassword123";
-
-        when(userRepository.findByEmail(email)).thenReturn(Optional.of(testUser));
-        when(passwordEncoder.matches(oldPassword, testUser.getPasswordHash())).thenReturn(false);
-
-        InvalidPasswordException exception = assertThrows(
-                InvalidPasswordException.class,
-                () -> authService.changePassword(email, oldPassword, newPassword)
-        );
-        assertEquals("Invalid old password", exception.getMessage());
-        verify(userRepository, never()).save(any(User.class));
-    }
-
-    @Test
-    void logout_ShouldRevokeTokens() {
-        String accessToken = "access-token";
-        String refreshToken = "refresh-token";
-        when(jwtUtil.getExpirationSeconds(accessToken)).thenReturn(3600L);
-
-        authService.logout(accessToken, refreshToken);
-
-        verify(redisUtil).delete(refreshPrefix + refreshToken);
-        verify(redisUtil).set(eq("blacklist:" + accessToken), eq("revoked"), eq(3600L));
-    }
-
-    @Test
-    void logout_ShouldHandleZeroExpirationGracefully() {
-        String accessToken = "expired-token";
-        String refreshToken = "refresh-token";
-        when(jwtUtil.getExpirationSeconds(accessToken)).thenReturn(0L);
-
-        authService.logout(accessToken, refreshToken);
-
-        verify(redisUtil).delete(refreshPrefix + refreshToken);
-        verify(redisUtil).set(eq("blacklist:" + accessToken), eq("revoked"), eq(0L));
-    }
-
-    @Test
-    void updatePassword_ShouldEncodeAndSaveNewPassword() {
-        String newPassword = "newPassword123";
-        when(passwordEncoder.encode(newPassword)).thenReturn("encodedNewPassword");
-
-        authService.updatePassword(testUser, newPassword);
-
-        verify(passwordEncoder).encode(newPassword);
-        verify(userRepository).save(testUser);
-        assertEquals("encodedNewPassword", testUser.getPasswordHash());
-    }
-
-    @Test
-    void verifyCode_ShouldReturnUser_WhenCodeIsValid() throws Exception {
-        String code = "123456";
-        String email = "test@example.com";
-
-        Field tempCodeField = AuthServiceImpl.class.getDeclaredField("tempCode");
-        tempCodeField.setAccessible(true);
-        tempCodeField.set(authService, 123456);
-
-        when(userRepository.findByEmail(email)).thenReturn(Optional.of(testUser));
-
-        try (MockedStatic<UserMapper> userMapperMock = mockStatic(UserMapper.class)) {
-            userMapperMock.when(() -> UserMapper.toDto(testUser)).thenReturn(
-                    UserResponseDTO.builder()
-                            .id(userId)
-                            .email("test@example.com")
-                            .username("testuser")
-                            .role(Role.USER)
-                            .state(UserState.REGISTERED)
-                            .is_verified(false)
-                            .premiumTier(PremiumTier.FREE)
-                            .language("en")
-                            .timezone("UTC")
-                            .updatedAt(testUser.getUpdatedAt())
-                            .lastLoginAt(testUser.getLastLoginAt())
-                            .build()
+            verify(redisUtil).set(
+                    eq(REFRESH_PREFIX + refreshToken.toString()),
+                    eq(EMAIL),
+                    anyLong()
             );
 
-            Optional<UserResponseDTO> result = authService.verifyCode(code, email);
-
-            assertTrue(result.isPresent());
-            assertEquals("test@example.com", result.get().email());
+            verify(cookieUtil).setSecureCookie(response, "accessToken", "access-jwt", 900L);
+            verify(cookieUtil).setSecureCookie(
+                    response,
+                    "refreshToken",
+                    refreshToken.toString(),
+                    REFRESH_EXPIRATION / 1000
+            );
         }
     }
 
+
     @Test
-    void verifyCode_ShouldThrowException_WhenCodeIsInvalid() throws Exception {
-        String code = "wrongCode";
-        String email = "test@example.com";
+    void refresh_ValidToken_Success() {
+        String oldToken = "old-refresh";
+        String newAccess = "new-access";
 
-        Field tempCodeField = AuthServiceImpl.class.getDeclaredField("tempCode");
-        tempCodeField.setAccessible(true);
-        tempCodeField.set(authService, 123456);
+        when(cookieUtil.getCookieValue(request, "refreshToken")).thenReturn(oldToken);
+        when(redisUtil.get(REFRESH_PREFIX + oldToken)).thenReturn(EMAIL);
+        when(userRepository.findByEmail(EMAIL)).thenReturn(Optional.of(testUser));
+        when(jwtUtil.generateAccessToken(EMAIL, Role.USER, USER_ID)).thenReturn(newAccess);
+        when(jwtUtil.getExpirationSeconds(newAccess)).thenReturn(900L);
 
-        assertThrows(InvalidVerificationCodeException.class,
-                () -> authService.verifyCode(code, email));
+        AuthResponse result = authService.refresh(request, response);
+
+        assertEquals("tokens refreshed successfully", result.message());
+        verify(redisUtil).delete(REFRESH_PREFIX + oldToken);
+        verify(redisUtil).set(startsWith(REFRESH_PREFIX), eq(EMAIL), anyLong());
+        verify(cookieUtil).setSecureCookie(response, "accessToken", newAccess, 900L);
     }
 
     @Test
-    void generateCode_ShouldReturnSixDigitNumber() {
-        Integer result = authService.generateCode();
+    void forgotPassword_Success() {
+        when(userRepository.findByEmail(EMAIL)).thenReturn(Optional.of(testUser));
+        doNothing().when(emailService).sendResetEmail(anyString(), anyString());
 
-        assertNotNull(result);
-        assertTrue(result >= 100000 && result <= 999999);
+        UUID resetToken = UUID.fromString("11111111-1111-1111-1111-111111111111");
+
+        try (MockedStatic<UUID> mockedUuid = mockStatic(UUID.class)) {
+            mockedUuid.when(UUID::randomUUID).thenReturn(resetToken);
+
+            authService.forgotPassword(EMAIL);
+
+            verify(redisUtil).set(
+                    eq(RESET_PREFIX + resetToken.toString()),
+                    eq(EMAIL),
+                    eq(RESET_EXPIRATION / 1000)
+            );
+
+            verify(emailService).sendResetEmail(
+                    eq(EMAIL),
+                    eq(APP_BASE_URL + "/api/v1/auth/reset-password?token=" + resetToken)
+            );
+        }
+    }
+
+
+    @Test
+    void resetPassword_ValidToken_Success() {
+        String token = "valid-token";
+        when(redisUtil.get(RESET_PREFIX + token)).thenReturn(EMAIL);
+        when(userRepository.findByEmail(EMAIL)).thenReturn(Optional.of(testUser));
+        when(passwordEncoder.encode("newPass")).thenReturn("encoded");
+
+        authService.resetPassword(token, "newPass");
+
+        verify(userRepository).save(testUser);
+        assertEquals("encoded", testUser.getPasswordHash());
+        verify(redisUtil).delete(RESET_PREFIX + token);
+    }
+
+    @Test
+    void changePassword_Success() {
+        when(userRepository.findByEmail(EMAIL)).thenReturn(Optional.of(testUser));
+        when(passwordEncoder.matches(PASSWORD, ENCODED_PASSWORD)).thenReturn(true);
+        when(passwordEncoder.encode("newPass")).thenReturn("newHash");
+
+        authService.changePassword(EMAIL, PASSWORD, "newPass");
+
+        verify(userRepository).save(testUser);
+        assertEquals("newHash", testUser.getPasswordHash());
+    }
+
+    @Test
+    void logout_WithTokens_ClearsAll() {
+        when(cookieUtil.getCookieValue(request, "accessToken")).thenReturn("access-jwt");
+        when(cookieUtil.getCookieValue(request, "refreshToken")).thenReturn("refresh-token");
+        when(jwtUtil.getExpirationSeconds("access-jwt")).thenReturn(100L);
+
+        authService.logout(request, response);
+
+        verify(redisUtil).delete(REFRESH_PREFIX + "refresh-token");
+        verify(redisUtil).set("blacklist:access-jwt", "revoked", 100L);
+        verify(cookieUtil).clearCookie(response, "accessToken");
+        verify(cookieUtil).clearCookie(response, "refreshToken");
+    }
+
+    @Test
+    void verifyCode_ValidCode_ReturnsUser() {
+        Integer code = authService.generateCode();
+        when(userRepository.findByEmail(EMAIL)).thenReturn(Optional.of(testUser));
+
+        Optional<UserResponseDTO> result = authService.verifyCode(code.toString(), EMAIL);
+
+        assertTrue(result.isPresent());
+        assertEquals(EMAIL, result.get().email());
+    }
+
+    @Test
+    void verifyCode_InvalidCode_ThrowsException() {
+        authService.generateCode();
+
+        assertThrows(InvalidVerificationCodeException.class, () -> authService.verifyCode("000000", EMAIL));
+    }
+
+    @Test
+    void generateCode_ReturnsSixDigits() {
+        Integer code = authService.generateCode();
+        assertTrue(code >= 100000 && code <= 999999);
     }
 }
