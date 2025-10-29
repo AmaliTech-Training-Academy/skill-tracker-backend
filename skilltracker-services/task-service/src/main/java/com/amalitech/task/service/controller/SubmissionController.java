@@ -54,4 +54,22 @@ public class SubmissionController {
                 .status(HttpStatus.ACCEPTED)
                 .body(apiResponse);
     }
+
+    @GetMapping("/{id}")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ApiResponse<TaskSubmissionDTO>> getSubmission(
+            @PathVariable("id") UUID id
+    ) {
+        log.info("Fetching submission by ID: {}", id);
+
+        TaskSubmissionDTO submissionDTO = submissionService.getSubmissionById(id);
+
+        ApiResponse<TaskSubmissionDTO> response = ApiResponse.success(
+                "Submission retrieved successfully.",
+                submissionDTO,
+                null
+        );
+
+        return ResponseEntity.ok(response);
+    }
 }

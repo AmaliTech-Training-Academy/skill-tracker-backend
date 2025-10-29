@@ -10,6 +10,7 @@ import com.amalitech.task.service.mapper.SubmissionMapper;
 import com.amalitech.task.service.model.Task;
 import com.amalitech.task.service.model.TaskSubmission;
 import com.amalitech.task.service.model.enums.SubmissionStatus;
+import com.amalitech.task.service.model.feedback.impl.CodingSubmissionFeedback;
 import com.amalitech.task.service.repository.TaskRepository;
 import com.amalitech.task.service.repository.TaskSubmissionRepository;
 import com.amalitech.task.service.service.SubmissionService;
@@ -19,7 +20,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -66,6 +69,7 @@ public class SubmissionServiceImpl implements SubmissionService {
                 .orElseThrow(() -> new ResourceNotFoundException("Submission not found: " + event.getSubmissionId()));
 
         existingSubmission.setScoreEarned(event.getScore());
+        existingSubmission.setIsCorrect(event.isCorrect());
         existingSubmission.setEvaluatedAt(LocalDateTime.now());
 
         try {
@@ -76,12 +80,42 @@ public class SubmissionServiceImpl implements SubmissionService {
             existingSubmission.setStatus(SubmissionStatus.COMPLETED);
         }
 
+        if ("CODING".equals(event.getFeedbackType())) {
+            CodingSubmissionFeedback feedback = new CodingSubmissionFeedback();
+            feedback.setAllPassed(event.isCorrect());
+            feedback.setTestCasesPassed(event.isCorrect() ? (event.getTestCaseResults() != null ? event.getTestCaseResults().size() : 0) : 0);
+            feedback.setTestCasesTotal(event.getTestCaseResults() != null ? event.getTestCaseResults().size() : 0);
+            
+            if (event.getTestCaseResults() != null && !event.getTestCaseResults().isEmpty()) {
+                List<CodingSubmissionFeedback.TestCaseResult> testResults = event.getTestCaseResults().stream()
+                        .map(result -> {
+                            CodingSubmissionFeedback.TestCaseResult tcr = new CodingSubmissionFeedback.TestCaseResult();
+                            tcr.setPassed(result.contains("PASSED") || result.contains("Accepted"));
+                            tcr.setExpected(result);
+                            tcr.setActual(result);
+                            return tcr;
+                        })
+                        .collect(Collectors.toList());
+                feedback.setTestCaseResults(testResults);
+            }
+            
+            feedback.setStdout(event.getOverallFeedback());
+            existingSubmission.setFeedback(feedback);
+        }
+
         TaskSubmission updatedSubmission = submissionRepository.save(existingSubmission);
 
-        // We can publish *another* event, e.g., "submission.processed"
-        // for a WebSocket service to pick up.
-        // eventProducer.publishSubmissionProcessed(submissionMapper.toDTO(updatedSubmission));
+        log.info("Submission {} updated with feedback and results.", updatedSubmission.getId());
+    }
 
-        log.info("Submission {} updated from event.", updatedSubmission.getId());
+    @Override
+    @Transactional(readOnly = true)
+    public TaskSubmissionDTO getSubmissionById(UUID submissionId) {
+        log.info("Fetching submission by ID: {}", submissionId);
+
+        TaskSubmission submission = submissionRepository.findById(submissionId)
+                .orElseThrow(() -> new ResourceNotFoundException("Submission not found: " + submissionId));
+
+        return submissionMapper.toDTO(submission);
     }
 }

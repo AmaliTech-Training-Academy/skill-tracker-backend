@@ -26,6 +26,14 @@ public interface SubmissionService {
     TaskSubmissionDTO createSubmission(SubmitAnswerRequest request, UUID userId);
 
     /**
+     * Retrieves a submission by ID with all feedback and results.
+     *
+     * @param submissionId The submission ID
+     * @return The submission DTO with feedback
+     */
+    TaskSubmissionDTO getSubmissionById(UUID submissionId);
+
+    /**
      * Updates a submission based on an event received from the feedback-service.
      * This is called by the RabbitMQ listener.
      */
