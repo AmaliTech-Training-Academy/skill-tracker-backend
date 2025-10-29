@@ -25,6 +25,7 @@ public class RabbitMQConfig {
     public static final String SUBMISSION_CREATED_QUEUE = "submission.created.q";
     public static final String SUBMISSION_CREATED_ROUTING_KEY = "submission.created";
 
+    public static final String SUBMISSION_EXECUTED_ROUTING_KEY = "submission.executed";
     public static final String SUBMISSION_EVALUATED_ROUTING_KEY = "submission.evaluated";
 
     /**
