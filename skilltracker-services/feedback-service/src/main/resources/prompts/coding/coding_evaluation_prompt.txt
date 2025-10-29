@@ -5,16 +5,16 @@ Skill: {skill}
 Difficulty: {difficulty}
 
 USER SUBMISSION:
-\{userCode}
+{userCode}
 
 CHALLENGE REQUIREMENTS:
-\{requirements}
+{requirements}
 
 TEST CASES:
-\{testCases}
+{testCases}
 
 EVALUATION CRITERIA:
-\{criteria}
+{criteria}
 
 TASK:
 Analyze the submitted code and provide a comprehensive evaluation in JSON format.
