@@ -36,12 +36,6 @@ public class WebClientConfig {
     @Value("${client.connect-timeout-ms:5000}")
     private int globalConnectTimeoutMs;
 
-    // --- Task Service Properties ---
-    @Value("${client.task-service.base-url}")
-    private String taskServiceBaseUrl;
-    @Value("${client.task-service.response-timeout-ms:10000}")
-    private int taskServiceResponseTimeoutMs;
-
     // --- Judge0 API Properties ---
     @Value("${client.judge0-api.base-url}")
     private String judge0ApiBaseUrl;
@@ -65,21 +59,6 @@ public class WebClientConfig {
         return HttpClient.create()
                 .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, globalConnectTimeoutMs)
                 .responseTimeout(Duration.ofMillis(responseTimeoutMs));
-    }
-
-    /**
-     * Creates the WebClient for communicating with our internal Task Service.
-     */
-    @Bean("taskServiceWebClient")
-    public WebClient taskServiceWebClient(WebClient.Builder builder) {
-        HttpClient httpClient = createHttpClient(taskServiceResponseTimeoutMs);
-
-        return builder
-                .baseUrl(taskServiceBaseUrl)
-                .clientConnector(new ReactorClientHttpConnector(httpClient))
-                .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-                .defaultHeader(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
-                .build();
     }
 
     /**

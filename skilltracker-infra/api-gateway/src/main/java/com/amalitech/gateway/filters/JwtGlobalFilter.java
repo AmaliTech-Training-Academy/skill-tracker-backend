@@ -49,6 +49,9 @@ public class JwtGlobalFilter implements GlobalFilter, Ordered {
 
     public JwtGlobalFilter(ReactiveJwtDecoder jwtDecoder) {
         this.jwtDecoder = jwtDecoder;
+        log.info("========================================");
+        log.info("🚀 JwtGlobalFilter BEAN CREATED");
+        log.info("========================================");
     }
 
     /**
@@ -69,8 +72,14 @@ public class JwtGlobalFilter implements GlobalFilter, Ordered {
      */
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
+
+        log.info("🔥🔥🔥 JwtGlobalFilter EXECUTING 🔥🔥🔥");
+
         ServerHttpRequest request = exchange.getRequest();
         String path = request.getPath().value();
+
+        log.info("Path: {}", path);
+        log.info("Cookies: {}", request.getCookies());
 
         if (isWhitelisted(path)) {
             log.trace("Path is whitelisted, skipping JWT validation: {}", path);
@@ -184,6 +193,6 @@ public class JwtGlobalFilter implements GlobalFilter, Ordered {
      */
     @Override
     public int getOrder() {
-        return -1;
+        return Ordered.HIGHEST_PRECEDENCE;
     }
 }
