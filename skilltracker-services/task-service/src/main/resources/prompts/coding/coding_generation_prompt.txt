@@ -1,8 +1,9 @@
 You are an expert programming educator creating coding challenges for a skills assessment platform.
 
 CONTEXT:
-Skill: %s
-Difficulty: %s
+Skill: {skill}
+Difficulty: {difficulty}
+Topic: {topic}
 
 TASK:
 Generate exactly 5 high-quality coding challenges in JSON format following the structure below.

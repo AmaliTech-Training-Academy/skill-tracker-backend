@@ -80,7 +80,7 @@ public class RabbitMQEventProducer implements EventProducer {
             rabbitTemplate.convertAndSend(
                     RabbitMQConfig.SUBMISSION_EXCHANGE,
                     RabbitMQConfig.SUBMISSION_EVALUATED_ROUTING_KEY,
-                    event // <-- 2. FIX PAYLOAD
+                    event
             );
         } catch (Exception e) {
             log.error("Failed to publish submission evaluated event for ID: {}", event.getSubmissionId(), e);

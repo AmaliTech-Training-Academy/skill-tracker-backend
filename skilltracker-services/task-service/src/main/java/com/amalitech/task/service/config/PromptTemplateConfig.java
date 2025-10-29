@@ -15,4 +15,11 @@ public class PromptTemplateConfig {
     ) {
         return new PromptTemplate(codingPromptResource);
     }
+
+    @Bean
+    public PromptTemplate codingEvaluationPromptTemplate(
+            @Value("classpath:prompts/coding/coding_evaluation_prompt.txt") Resource codingEvaluationPromptResource
+    ) {
+        return new PromptTemplate(codingEvaluationPromptResource);
+    }
 }

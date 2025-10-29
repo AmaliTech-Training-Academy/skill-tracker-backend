@@ -53,7 +53,7 @@ REQUIRED JSON STRUCTURE:
       "timeComplexity": "O(n)",
       "spaceComplexity": "O(1)",
       "analysis": "Explanation of complexity and optimizations",
-      "criteriaMetString": [
+      "criteriaMet": [
         {
           "criterion": "The specific criterion from requirements",
           "met": true,

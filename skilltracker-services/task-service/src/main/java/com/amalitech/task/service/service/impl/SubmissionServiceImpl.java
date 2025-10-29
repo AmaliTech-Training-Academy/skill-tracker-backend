@@ -65,7 +65,6 @@ public class SubmissionServiceImpl implements SubmissionService {
         TaskSubmission existingSubmission = submissionRepository.findById(event.getSubmissionId())
                 .orElseThrow(() -> new ResourceNotFoundException("Submission not found: " + event.getSubmissionId()));
 
-        //existingSubmission.setIsCorrect(event.);
         existingSubmission.setScoreEarned(event.getScore());
         existingSubmission.setEvaluatedAt(LocalDateTime.now());
 

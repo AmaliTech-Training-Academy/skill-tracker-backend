@@ -41,7 +41,7 @@ public class TaskController {
     ) {
         log.info("Fetching task by ID: {}", id);
 
-        TaskDTO taskDTO = taskService.getTaskById(id);
+        TaskDTO taskDTO = taskService.getTaskById(id);evak
 
         ApiResponse<TaskDTO> response = ApiResponse.success(
                 "Task retrieved successfully.",

@@ -24,7 +24,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
@@ -115,6 +114,32 @@ public class ContentGeneratorServiceImpl implements ContentGeneratorService {
                 .collect(Collectors.toList());
         content.setExamples(examples);
 
+        content.setStarterCode(challengeNode.path("starterCode").asText(null));
+
+        List<CodingTaskContent.TestCase> testCases = StreamSupport
+                .stream(challengeNode.path("testCases").spliterator(), false)
+                .map(node -> CodingTaskContent.TestCase.builder()
+                        .input(node.path("input").asText())
+                        .expectedOutput(node.path("expectedOutput").asText())
+                        .isHidden(node.path("isHidden").asBoolean(false))
+                        .description(node.path("description").asText(null))
+                        .build())
+                .collect(Collectors.toList());
+        content.setTestCases(testCases);
+
+        JsonNode evalCriteriaNode = challengeNode.path("evaluationCriteria");
+        if (!evalCriteriaNode.isMissingNode()) {
+            CodingTaskContent.EvaluationCriteria evaluationCriteria = CodingTaskContent.EvaluationCriteria.builder()
+                    .correctness(jsonArrayToStringList(evalCriteriaNode.path("correctness")))
+                    .efficiency(jsonArrayToStringList(evalCriteriaNode.path("efficiency")))
+                    .style(jsonArrayToStringList(evalCriteriaNode.path("style")))
+                    .build();
+            content.setEvaluationCriteria(evaluationCriteria);
+        }
+
+        List<String> hints = jsonArrayToStringList(challengeNode.path("hints"));
+        content.setHints(hints);
+
         TaskDefinition definition = getOrCreateTaskDefinition(skill, title);
 
         Task task = Task.builder()
@@ -175,7 +200,7 @@ public class ContentGeneratorServiceImpl implements ContentGeneratorService {
                 log.debug("Calling OpenAI API (attempt {}/{})", retryCount + 1, maxRetries);
 
                 ChatResponse response = chatModel.call(prompt);
-                String content = response.getResult().getOutput().getContent();
+                String content = response.getResult().getOutput().getText();
 
                 log.debug("OpenAI response received: {} characters", content.length());
 
@@ -200,7 +225,6 @@ public class ContentGeneratorServiceImpl implements ContentGeneratorService {
             }
         }
 
-        throw new RuntimeException("Unexpected error in OpenAI API call");
     }
 
     /**
@@ -229,13 +253,12 @@ public class ContentGeneratorServiceImpl implements ContentGeneratorService {
      * Cleans the AI response by removing markdown code block markers.
      * OpenAI sometimes wraps JSON in markdown code blocks.
      *
-     * @param response the raw response from OpenAI
+     * @param response the raw response from OpenAIyes
      * @return the cleaned JSON string
      */
     private String cleanJsonResponse(String response) {
         response = response.trim();
 
-        // Remove markdown JSON code blocks
         if (response.startsWith("```json")) {
             response = response.substring(7);
         } else if (response.startsWith("```")) {
@@ -247,5 +270,20 @@ public class ContentGeneratorServiceImpl implements ContentGeneratorService {
         }
 
         return response.trim();
+    }
+
+    /**
+     * Converts a JSON array node to a list of strings.
+     *
+     * @param arrayNode the JSON array node
+     * @return list of strings, or empty list if node is missing/invalid
+     */
+    private List<String> jsonArrayToStringList(JsonNode arrayNode) {
+        if (arrayNode.isMissingNode() || !arrayNode.isArray()) {
+            return List.of();
+        }
+        return StreamSupport.stream(arrayNode.spliterator(), false)
+                .map(JsonNode::asText)
+                .collect(Collectors.toList());
     }
 }
