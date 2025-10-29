@@ -6,6 +6,7 @@ import com.amalitech.task.service.service.TaskService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -35,13 +36,13 @@ public class TaskController {
      * @return A ResponseEntity containing the TaskDTO wrapped in ApiResponse.
      */
     @GetMapping("/{id}")
-//    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<TaskDTO>> getTaskById(
             @PathVariable("id") UUID id
     ) {
         log.info("Fetching task by ID: {}", id);
 
-        TaskDTO taskDTO = taskService.getTaskById(id);evak
+        TaskDTO taskDTO = taskService.getTaskById(id);
 
         ApiResponse<TaskDTO> response = ApiResponse.success(
                 "Task retrieved successfully.",
