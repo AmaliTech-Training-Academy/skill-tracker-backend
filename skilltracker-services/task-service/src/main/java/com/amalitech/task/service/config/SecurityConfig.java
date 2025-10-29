@@ -4,6 +4,7 @@ import com.amalitech.common.security.filter.HeaderAuthenticationFilter;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -72,5 +73,19 @@ public class SecurityConfig {
                         UsernamePasswordAuthenticationFilter.class
                 )
                 .build();
+    }
+
+    /**
+     * Provides a no-op AuthenticationManager to prevent Spring Security
+     * from auto-configuring an in-memory user with generated password.
+     * 
+     * <p>This service uses HeaderAuthenticationFilter for authentication,
+     * not traditional AuthenticationManager-based authentication.</p>
+     *
+     * @return A pass-through authentication manager
+     */
+    @Bean
+    public AuthenticationManager authenticationManager() {
+        return authentication -> authentication;
     }
 }
