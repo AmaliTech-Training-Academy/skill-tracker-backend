@@ -48,5 +48,21 @@ public interface TaskRepository extends JpaRepository<Task, UUID> {
             @Param("isPublished") Boolean isPublished
     );
 
-    List<Task> findBySkillIdAndDifficultyAndType(UUID id, TaskDifficulty difficulty, TaskType neededType, boolean b, PageRequest of);
+    /**
+     * Finds tasks by skill, difficulty, and type.
+     */
+    @Query("SELECT t FROM Task t " +
+            "JOIN FETCH t.taskDefinition td " +
+            "WHERE td.skill.id = :skillId " +
+            "AND t.difficulty = :difficulty " +
+            "AND t.type = :type " +
+            "AND t.isPublished = :isPublished " +
+            "ORDER BY t.createdAt DESC")
+    List<Task> findBySkillIdAndDifficultyAndType(
+            @Param("skillId") UUID skillId,
+            @Param("difficulty") TaskDifficulty difficulty,
+            @Param("type") TaskType type,
+            @Param("isPublished") boolean isPublished,
+            Pageable pageable
+    );
 }
