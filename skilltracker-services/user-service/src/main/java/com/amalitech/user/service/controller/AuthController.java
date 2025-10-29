@@ -50,6 +50,14 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.success("Verification is Successful", user, null));
     }
 
+    @PostMapping("/resend-verification")
+    public ResponseEntity<ApiResponse<String>> resendVerification(
+            @RequestParam("email") String email
+    ) {
+        authService.sendVerificationCode(email);
+        return ResponseEntity.ok(ApiResponse.success("Verification sent", null, null)) ;
+    }
+
         /** Authenticates the user and returns an access token */
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<AuthResponse>> login(@Valid @RequestBody LoginRequest request, HttpServletResponse response) {

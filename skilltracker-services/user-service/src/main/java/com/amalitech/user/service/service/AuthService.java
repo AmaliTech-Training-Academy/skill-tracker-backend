@@ -95,4 +95,5 @@ public interface AuthService {
 
     UserResponseDTO createUser(@Valid UserRequestDTO userdto);
     Optional<UserResponseDTO> verifyCode(String code, String email);
+    void sendVerificationCode(String toEmail);
 }
