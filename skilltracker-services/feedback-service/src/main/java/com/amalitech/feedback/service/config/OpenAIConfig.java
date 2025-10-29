@@ -9,9 +9,10 @@ import org.springframework.context.annotation.Configuration;
 /**
  * Configuration for OpenAI API integration with custom headers.
  * 
- * This configuration customizes the OpenAI API client to use X-Api-Key header
- * instead of the standard Authorization: Bearer header, as required by the
- * AmaliTech AI proxy gateway.
+ * This configuration customizes the OpenAI API client for the AmaliTech AI proxy gateway
+ * which requires:
+ * - X-Api-Key header (instead of Authorization: Bearer)
+ * - Provider header to specify AI provider (openai or anthropic)
  */
 @Configuration
 public class OpenAIConfig {
@@ -20,7 +21,7 @@ public class OpenAIConfig {
     private String apiKey;
 
     /**
-     * Customizes RestClient to add X-Api-Key header instead of Authorization.
+     * Customizes RestClient to add required headers for AmaliTech AI proxy.
      * This interceptor applies to all RestClient instances created by Spring AI.
      */
     @Bean
@@ -30,6 +31,7 @@ public class OpenAIConfig {
                 .requestInterceptor((request, body, execution) -> {
                     request.getHeaders().remove("Authorization");
                     request.getHeaders().set("X-Api-Key", apiKey);
+                    request.getHeaders().set("Provider", "openai");
                     return execution.execute(request, body);
                 });
     }
