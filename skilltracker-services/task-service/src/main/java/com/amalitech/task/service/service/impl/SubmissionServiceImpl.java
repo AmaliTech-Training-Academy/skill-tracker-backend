@@ -71,7 +71,7 @@ public class SubmissionServiceImpl implements SubmissionService {
         existingSubmission.setScoreEarned(event.getScore());
         existingSubmission.setIsCorrect(event.isCorrect());
         existingSubmission.setEvaluatedAt(LocalDateTime.now());
-
+        
         try {
             SubmissionStatus status = SubmissionStatus.valueOf(event.getStatus());
             existingSubmission.setStatus(status);
