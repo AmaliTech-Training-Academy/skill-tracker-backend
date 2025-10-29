@@ -299,6 +299,14 @@ public class AuthServiceImpl implements AuthService {
         throw new InvalidVerificationCodeException("Invalid verification code");
     }
 
+    @Override
+    public void sendVerificationCode(String toEmail) {
+        notifyUser(
+                toEmail,
+                "SkillBoost Verification Code",
+                "Your verification code is: " + generateCode());
+    }
+
     public void notifyUser(String toEmail, String subject, String message) {
         emailService.sendEmail(
                 toEmail,
