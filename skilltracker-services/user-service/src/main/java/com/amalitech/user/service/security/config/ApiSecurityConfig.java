@@ -63,7 +63,17 @@ public class ApiSecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/v1/auth/**").permitAll()
+                        .requestMatchers(
+                                "/api/v1/auth/register",
+                                "/api/v1/auth/login",
+                                "/api/v1/auth/token/refresh",
+                                "/api/v1/auth/password/forgot",
+                                "/api/v1/auth/password/reset",
+                                "/api/v1/auth/verify",
+                                "/error",
+                                "/health",
+                                "/actuator/health"
+                        ).permitAll()
                         .requestMatchers("/api/v1/users/**").hasAuthority("USER")
                         .anyRequest().authenticated()
                 )
