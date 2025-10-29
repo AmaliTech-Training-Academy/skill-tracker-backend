@@ -1,5 +1,6 @@
-package com.amalitech.feedback.service.dto.client.submission;
+package com.amalitech.feedback.service.dto.client.submission.impl;
 
+import com.amalitech.feedback.service.dto.client.submission.SubmissionFeedback;
 import lombok.Builder;
 import lombok.Data;
 
@@ -10,14 +11,12 @@ import lombok.Data;
 @Data
 @Builder
 public class CodingSubmissionFeedback implements SubmissionFeedback {
-    // Execution Metrics
     private int passedTests;
     private int totalTests;
     private double executionTimeMs;
     private int memoryUsedKb;
     private String statusDescription; // e.g., "Accepted", "Wrong Answer"
 
-    // AI Feedback
     private String correctnessFeedback;
     private String efficiencyFeedback;
     private String styleFeedback;

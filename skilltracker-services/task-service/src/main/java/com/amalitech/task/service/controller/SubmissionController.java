@@ -17,6 +17,14 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
 
+/**
+ * REST controller for handling user task submissions and retrieval of submission results
+ * <p>
+ * This component is responsible for receiving user answers to AI-generated challenges,
+ * initiating the evaluation process, and providing status updates or final results.
+ * It enforces authentication via the {@code @PreAuthorize} annotation, relying on the
+ * upstream authentication filter to populate the user principal.
+ */
 @RestController
 @RequestMapping("/api/v1/submissions")
 @RequiredArgsConstructor
@@ -25,6 +33,20 @@ public class SubmissionController {
 
     private final SubmissionService submissionService;
 
+    /**
+     * Accepts a user's answer to a SkillBoost challenge and initiates the AI evaluation process.
+     * <p>
+     * This endpoint requires an authenticated user and uses the {@code @AuthenticationPrincipal}
+     * to extract the user's ID for linking the submission. The response uses HTTP 202 ACCEPTED
+     * status, indicating that the submission has been successfully received and evaluation
+     * will occur asynchronously.
+     *
+     * @param userIdPrincipal The authenticated user's ID string, derived from the security principal.
+     * @param request The {@link SubmitAnswerRequest} containing the task ID and the user's answer.
+     * @return A {@link ResponseEntity} containing a {@link ApiResponse} with the newly created
+     * submission ID and its initial status (e.g., PENDING).
+     * @throws IllegalArgumentException if the user ID principal cannot be parsed into a UUID.
+     */
     @PostMapping
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<SubmissionResponse>> submitTask(
@@ -55,6 +77,18 @@ public class SubmissionController {
                 .body(apiResponse);
     }
 
+    /**
+     * Retrieves the details and current status of a specific user submission by its ID.
+     * <p>
+     * This endpoint is crucial for the client to poll for evaluation results (e.g., grades, AI feedback)
+     * once the submission process is complete. Authorization logic (not shown, but typically in the
+     * service layer) must ensure the user can only view their own submissions or submissions they are
+     * authorized to view (e.g., team managers).
+     *
+     * @param id The UUID of the submission to retrieve.
+     * @return A {@link ResponseEntity} containing a {@link ApiResponse} with the full
+     * {@link TaskSubmissionDTO}, including evaluation results if available.
+     */
     @GetMapping("/{id}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<TaskSubmissionDTO>> getSubmission(

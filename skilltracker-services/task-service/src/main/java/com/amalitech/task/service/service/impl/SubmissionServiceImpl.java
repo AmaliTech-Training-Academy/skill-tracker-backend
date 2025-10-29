@@ -14,6 +14,7 @@ import com.amalitech.task.service.model.feedback.impl.CodingSubmissionFeedback;
 import com.amalitech.task.service.repository.TaskRepository;
 import com.amalitech.task.service.repository.TaskSubmissionRepository;
 import com.amalitech.task.service.service.SubmissionService;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -24,6 +25,14 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+/**
+ * Implementation of the {@link SubmissionService} interface, handling the business logic
+ * for creating, updating, and retrieving user task submissions.
+ * <p>
+ * This service is responsible for the critical transactional logic of the Task Service:
+ * persisting new submissions and integrating asynchronous evaluation results back into the
+ * persistence layer. It serves as a command/query gateway for submission data.
+ */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -34,6 +43,19 @@ public class SubmissionServiceImpl implements SubmissionService {
     private final EventProducer eventProducer;
     private final SubmissionMapper submissionMapper;
 
+    /**
+     * Creates a new task submission record in the database and publishes a creation event
+     * to the message broker to initiate the asynchronous AI evaluation process.
+     * <p>
+     * This method ensures transactional integrity: it verifies the {@link Task} existence,
+     * persists the {@link TaskSubmission} in a PENDING state, and then publishes the
+     * {@link SubmissionCreatedEvent} for the downstream Evaluation Service to consume.
+     *
+     * @param request The {@link SubmitAnswerRequest} containing the task ID and user's answer.
+     * @param userId The ID of the authenticated user submitting the answer.
+     * @return A {@link TaskSubmissionDTO} representing the newly created submission.
+     * @throws ResourceNotFoundException if the specified task does not exist.
+     */
     @Override
     @Transactional
     public TaskSubmissionDTO createSubmission(SubmitAnswerRequest request, UUID userId) {
@@ -60,6 +82,18 @@ public class SubmissionServiceImpl implements SubmissionService {
         return submissionMapper.toDTO(savedSubmission);
     }
 
+    /**
+     * Updates an existing submission record using the results received from the
+     * asynchronous Evaluation Service via the {@link SubmissionEvaluatedEvent}.
+     * <p>
+     * This method finds the submission, updates the score, correctness, evaluation time,
+     * status, and dynamically constructs the appropriate polymorphic feedback (e.g.,
+     * {@link CodingSubmissionFeedback}) based on the event's payload. It is typically
+     * called by a message listener.
+     *
+     * @param event The {@link SubmissionEvaluatedEvent} containing the evaluation results.
+     * @throws ResourceNotFoundException if the submission ID in the event does not match an existing record.
+     */
     @Override
     @Transactional
     public void updateSubmissionFromEvent(SubmissionEvaluatedEvent event) {
@@ -71,7 +105,7 @@ public class SubmissionServiceImpl implements SubmissionService {
         existingSubmission.setScoreEarned(event.getScore());
         existingSubmission.setIsCorrect(event.isCorrect());
         existingSubmission.setEvaluatedAt(LocalDateTime.now());
-        
+
         try {
             SubmissionStatus status = SubmissionStatus.valueOf(event.getStatus());
             existingSubmission.setStatus(status);
@@ -83,17 +117,17 @@ public class SubmissionServiceImpl implements SubmissionService {
         if ("CODING".equals(event.getFeedbackType())) {
             CodingSubmissionFeedback feedback = new CodingSubmissionFeedback();
             feedback.setAllPassed(event.isCorrect());
-            
-            int passedCount = event.getTestResults() != null 
-                ? (int) event.getTestResults().stream().filter(SubmissionEvaluatedEvent.TestResultData::isPassed).count()
-                : 0;
+
+            int passedCount = event.getTestResults() != null
+                    ? (int) event.getTestResults().stream().filter(SubmissionEvaluatedEvent.TestResultData::isPassed).count()
+                    : 0;
             int totalCount = event.getTestResults() != null ? event.getTestResults().size() : 0;
-            
+
             feedback.setTestCasesPassed(passedCount);
             feedback.setTestCasesTotal(totalCount);
             feedback.setStdout(event.getStdout());
             feedback.setStderr(event.getStderr());
-            
+
             if (event.getTestResults() != null && !event.getTestResults().isEmpty()) {
                 List<CodingSubmissionFeedback.TestCaseResult> testResults = event.getTestResults().stream()
                         .map(tr -> {
@@ -107,11 +141,11 @@ public class SubmissionServiceImpl implements SubmissionService {
                         .collect(Collectors.toList());
                 feedback.setTestCaseResults(testResults);
             }
-            
+
             if (event.getOverallFeedback() != null) {
                 feedback.setLintingReport(event.getOverallFeedback());
             }
-            
+
             existingSubmission.setFeedback(feedback);
         }
 
@@ -120,6 +154,16 @@ public class SubmissionServiceImpl implements SubmissionService {
         log.info("Submission {} updated with feedback and results.", updatedSubmission.getId());
     }
 
+    /**
+     * Retrieves a submission record by its unique identifier and converts it to a DTO.
+     * <p>
+     * This method is a read-only transaction, primarily used by the REST controller
+     * to fulfill user requests for checking the status or final result of a submission.
+     *
+     * @param submissionId The UUID of the submission to retrieve.
+     * @return The retrieved {@link TaskSubmissionDTO}.
+     * @throws ResourceNotFoundException if the submission ID is not found.
+     */
     @Override
     @Transactional(readOnly = true)
     public TaskSubmissionDTO getSubmissionById(UUID submissionId) {

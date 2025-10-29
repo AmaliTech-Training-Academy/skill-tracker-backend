@@ -18,11 +18,6 @@ public class MCQTaskEvaluator implements TaskEvaluator {
     public Mono<SubmissionEvaluatedEvent> evaluate(SubmissionCreatedEvent event) {
         log.warn("MCQ evaluation not yet implemented for submission: {}", event.getSubmissionId());
         
-        // TODO: Implement MCQ evaluation logic
-        // 1. Compare selected answer with correct answer
-        // 2. Calculate score
-        // 3. Optionally generate AI explanation for wrong answers
-        
         return Mono.just(SubmissionEvaluatedEvent.builder()
                 .submissionId(event.getSubmissionId())
                 .userId(event.getUserId())

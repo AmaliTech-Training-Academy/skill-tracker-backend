@@ -1,5 +1,6 @@
 package com.amalitech.feedback.service.dto.client.submission;
 
+import com.amalitech.feedback.service.dto.client.submission.impl.CodingSubmissionAnswer;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 

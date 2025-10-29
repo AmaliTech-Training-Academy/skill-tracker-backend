@@ -5,7 +5,7 @@ import com.amalitech.common.event.events.SubmissionEvaluatedEvent;
 import com.amalitech.feedback.service.dto.client.TaskDTO;
 import com.amalitech.feedback.service.dto.client.request.Judge0SubmissionRequest;
 import com.amalitech.feedback.service.dto.client.response.Judge0SubmissionResponse;
-import com.amalitech.feedback.service.dto.client.submission.CodingSubmissionFeedback;
+import com.amalitech.feedback.service.dto.client.submission.impl.CodingSubmissionFeedback;
 import com.amalitech.feedback.service.service.AIFeedbackClient;
 import com.amalitech.feedback.service.service.Judge0Client;
 import lombok.RequiredArgsConstructor;
@@ -15,7 +15,6 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * Evaluator for CODING tasks.

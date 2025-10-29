@@ -3,7 +3,6 @@ You are an expert programming educator creating coding challenges for a skills a
 CONTEXT:
 Skill: {skill}
 Difficulty: {difficulty}
-Topic: {topic}
 
 TASK:
 Generate exactly 5 high-quality coding challenges in JSON format following the structure below.
@@ -185,4 +184,3 @@ FINAL VALIDATION CHECKLIST:
 ☐ No extraneous text outside the JSON object
 
 Generate the 5 coding challenges now.
-```

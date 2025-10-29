@@ -5,9 +5,10 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
@@ -17,51 +18,34 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * A servlet filter that extracts user authentication information from HTTP headers
- * and populates the Spring Security context.
- *
- * <p>This filter is designed for microservice architectures where the API Gateway
- * handles JWT validation and forwards authenticated user information via headers.
- * It reads the following headers:
- * <ul>
- *   <li><strong>X-User-Id</strong>: The authenticated user's unique identifier</li>
- *   <li><strong>X-User-Roles</strong>: Comma-separated list of user roles</li>
- * </ul>
- *
- * <p>The filter creates a {@link UsernamePasswordAuthenticationToken} and sets it
- * in the {@link SecurityContextHolder}, making the user information available to
- * downstream security checks and business logic.
- *
- * <p><strong>Security Note:</strong> This filter should only be used in services
- * behind a trusted API Gateway that validates JWTs. Direct exposure to external
- * requests would be a security vulnerability as headers can be easily spoofed.
- *
- * @see OncePerRequestFilter
- * @see UsernamePasswordAuthenticationToken
+ * Custom Spring Security Filter for handling delegated authentication in a microservices environment.
+ * <p>
+ * This filter operates under the assumption that an upstream service (e.g., an API Gateway)
+ * has already validated the user's token (JWT/OAuth2) and propagated the essential user identity
+ * and authorization data via custom HTTP headers. It extracts the 'X-User-Id' and 'X-User-Roles'
+ * headers and constructs a stateless {@link Authentication} object to populate the
+ * {@link SecurityContextHolder}.
+ * <p>
+ * NOTE: This mechanism is inherently vulnerable to header forgery if the service is not
+ * strictly protected via internal network policies (Kubernetes NetworkPolicy, etc.).
+ * @see org.springframework.web.filter.OncePerRequestFilter
  */
+@Component
 public class HeaderAuthenticationFilter extends OncePerRequestFilter {
 
     /**
-     * Processes each HTTP request to extract authentication information from headers
-     * and populate the Spring Security context.
+     * Performs the internal filtering logic, executed once per request.
+     * <p>
+     * It extracts the user ID and roles from custom headers. If a user ID is present,
+     * it splits the roles string (comma-separated), converts them into Spring
+     * authorities, and sets the resulting stateless {@link Authentication} object
+     * onto the current request's Security Context.
      *
-     * <p>The filter performs the following operations:
-     * <ol>
-     *   <li>Extracts the user ID from the X-User-Id header</li>
-     *   <li>Extracts and parses roles from the X-User-Roles header (comma-separated)</li>
-     *   <li>Creates an {@link Authentication} object with the extracted information</li>
-     *   <li>Sets the authentication in the {@link SecurityContextHolder}</li>
-     *   <li>Proceeds with the filter chain</li>
-     * </ol>
-     *
-     * <p>If the X-User-Id header is missing or empty, no authentication is set,
-     * and the request proceeds unauthenticated.
-     *
-     * @param request the HTTP request containing potential authentication headers
-     * @param response the HTTP response
-     * @param filterChain the filter chain to continue processing the request
-     * @throws ServletException if an error occurs during request processing
-     * @throws IOException if an I/O error occurs during request processing
+     * @param request The servlet request we are processing.
+     * @param response The servlet response we are creating.
+     * @param filterChain The filter chain we are processing.
+     * @throws ServletException If an exception occurs that interferes with the filter's normal operation.
+     * @throws IOException If an input or output exception occurs.
      */
     @Override
     protected void doFilterInternal(HttpServletRequest request,
@@ -76,7 +60,7 @@ public class HeaderAuthenticationFilter extends OncePerRequestFilter {
             List<SimpleGrantedAuthority> authorities;
             if (rolesHeader != null && !rolesHeader.isEmpty()) {
                 authorities = Arrays.stream(rolesHeader.split(","))
-                        .map(SimpleGrantedAuthority::new)
+                        .map(role -> new SimpleGrantedAuthority(role.trim()))
                         .collect(Collectors.toList());
             } else {
                 authorities = Collections.emptyList();

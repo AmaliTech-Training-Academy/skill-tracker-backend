@@ -1,5 +1,6 @@
-package com.amalitech.feedback.service.dto.client.submission;
+package com.amalitech.feedback.service.dto.client.submission.impl;
 
+import com.amalitech.feedback.service.dto.client.submission.SubmissionAnswer;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;

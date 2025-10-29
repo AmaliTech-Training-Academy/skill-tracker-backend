@@ -21,11 +21,6 @@ public class CodingTaskContent implements TaskContent {
     private List<Example> examples;
     private String constraints;
 
-    // TODO: The DevOps team needs the REAL test cases.
-    // We must update this DTO when the task-service adds a
-    // 'private List<TestCase> testCases' field to its DTO.
-    // For now, we will assume 'examples' are the test cases.
-
     @Data
     @NoArgsConstructor
     @AllArgsConstructor

@@ -2,7 +2,7 @@ package com.amalitech.feedback.service.service;
 
 import com.amalitech.feedback.service.dto.client.TaskDTO;
 import com.amalitech.feedback.service.dto.client.response.Judge0SubmissionResponse;
-import com.amalitech.feedback.service.dto.client.submission.CodingSubmissionFeedback;
+import com.amalitech.feedback.service.dto.client.submission.impl.CodingSubmissionFeedback;
 import com.amalitech.feedback.service.dto.client.submission.DetailedEvaluationResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;

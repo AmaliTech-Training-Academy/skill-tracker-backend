@@ -61,8 +61,7 @@ public class ContentGeneratorServiceImpl implements ContentGeneratorService {
 
         Map<String, Object> promptParameters = Map.of(
                 "skill", skill.getName(),
-                "difficulty", difficulty.name(),
-                "topic", topic
+                "difficulty", difficulty.name()
         );
 
         Prompt prompt = codingPromptTemplate.create(promptParameters);
