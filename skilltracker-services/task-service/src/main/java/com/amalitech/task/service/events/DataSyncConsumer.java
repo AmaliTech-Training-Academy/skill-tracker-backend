@@ -13,6 +13,15 @@ import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * Service component responsible for consuming asynchronous events from the message queue (RabbitMQ)
+ * to maintain a synchronized, localized read-model (view) of essential data (Users and Skills)
+ * required by the Task Service.
+ * <p>
+ * This pattern helps decouple services and allows the Task Service to query data locally
+ * without making synchronous REST calls to the source services (e.g., User Service).
+ * The transactions ensure data consistency during the write operation.
+ */
 @Service
 @Slf4j
 @RequiredArgsConstructor
@@ -22,8 +31,13 @@ public class DataSyncConsumer {
     private final SkillViewRepository skillViewRepository;
 
     /**
-     * Listens for user-related events (from user-service).
-     * This queue name must match the binding in your RabbitMQConfig.
+     * Listens for user-related events (e.g., USER_CREATED, USER_UPDATED) and updates the
+     * local {@link UserView} data store.
+     * <p>
+     * The method is bound to the {@code user.events.task_service.q} queue and executes
+     * within a transaction to ensure that the user view is persisted atomically.
+     *
+     * @param userEvent The {@link UserEventDTO} containing the user data to be synchronized.
      */
     @RabbitListener(queues = "user.events.task_service.q")
     @Transactional
@@ -46,7 +60,13 @@ public class DataSyncConsumer {
     }
 
     /**
-     * Listens for skill-related events (from user-service).
+     * Listens for skill-related events (e.g., SKILL_CREATED, SKILL_UPDATED) and updates the
+     * local {@link SkillView} data store.
+     * <p>
+     * The method is bound to the {@code skill.events.task_service.q} queue and executes
+     * within a transaction to ensure the skill view is persisted atomically.
+     *
+     * @param skillEvent The {@link SkillEventDTO} containing the skill data to be synchronized.
      */
     @RabbitListener(queues = "skill.events.task_service.q")
     @Transactional

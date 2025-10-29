@@ -7,6 +7,14 @@ import org.hibernate.annotations.CreationTimestamp;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+/**
+ * JPA Entity representing a prerequisite relationship between two tasks within the SkillBoost platform.
+ * <p>
+ * This entity defines a directed dependency: the task identified by {@code task_id}
+ * requires the task identified by {@code prerequisite_task_id} to be completed first.
+ * It ensures the platform can enforce a structured, sequential learning path. The unique
+ * constraint prevents redundant prerequisite entries between the same two tasks.
+ */
 @Entity
 @Table(name = "task_prerequisites",
         uniqueConstraints = @UniqueConstraint(columnNames = {"task_id", "prerequisite_task_id"}),
@@ -17,7 +25,6 @@ import java.util.UUID;
 @AllArgsConstructor
 @Builder
 public class TaskPrerequisite {
-
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;

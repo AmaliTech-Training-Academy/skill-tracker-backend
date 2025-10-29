@@ -6,20 +6,26 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.Resource;
 
+/**
+ * Configuration class for creating Spring AI {@link PromptTemplate} beans.
+ * <p>
+ * This class defines beans that load prompt templates from external resources
+ * (e.g., classpath files) to be used by AI services within the application.
+ */
 @Configuration
 public class PromptTemplateConfig {
-    @Value("classpath:prompts/mcq/mcq_prompt.txt")
-    private Resource mcqPromptResource;
 
     /**
-     * Creates a Spring AI PromptTemplate bean from the resource file.
-     * This bean can now be safely injected into any service.
+     * Creates a {@link PromptTemplate} bean specifically for coding generation tasks.
+     * <p>
+     * This bean loads its template content from the classpath resource specified by the
+     * {@code @Value} annotation ({@code "classpath:prompts/coding/coding_generation_prompt.txt"}).
+     *
+     * @param codingPromptResource The {@link Resource} injected by Spring, pointing to the
+     * prompt text file on the classpath.
+     * @return A {@link PromptTemplate} instance initialized with the content of the
+     * provided resource.
      */
-    @Bean
-    public PromptTemplate mcqPromptTemplate() {
-        return new PromptTemplate(mcqPromptResource);
-    }
-
     @Bean
     public PromptTemplate codingPromptTemplate(
             @Value("classpath:prompts/coding/coding_generation_prompt.txt") Resource codingPromptResource

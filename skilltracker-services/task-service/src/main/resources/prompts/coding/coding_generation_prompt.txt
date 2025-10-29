@@ -1,0 +1,186 @@
+You are an expert programming educator creating coding challenges for a skills assessment platform.
+
+CONTEXT:
+Skill: {skill}
+Difficulty: {difficulty}
+
+TASK:
+Generate exactly 5 high-quality coding challenges in JSON format following the structure below.
+
+REQUIRED JSON STRUCTURE:
+{
+  "challenges": [
+    {
+      "title": "Descriptive challenge title (max 70 chars)",
+      "description": "Clear problem statement explaining what needs to be built (2-4 sentences)",
+      "detailedRequirements": "Comprehensive requirements with examples and edge cases to consider",
+      "starterCode": "Initial code template with function signature and basic structure",
+      "testCases": [
+        {
+          "input": "Test input (string, array, or object as appropriate)",
+          "expectedOutput": "Expected result",
+          "isHidden": false,
+          "description": "What this test case validates"
+        }
+      ],
+      "evaluationCriteria": {
+        "correctness": [
+          "Criterion 1: Specific correctness requirement",
+          "Criterion 2: Another correctness requirement",
+          "Criterion 3: Edge case handling"
+        ],
+        "efficiency": [
+          "Criterion 1: Time complexity requirement",
+          "Criterion 2: Space complexity consideration",
+          "Criterion 3: Optimization expectation"
+        ],
+        "style": [
+          "Criterion 1: Code organization requirement",
+          "Criterion 2: Naming convention expectation",
+          "Criterion 3: Documentation/readability requirement"
+        ]
+      },
+      "hints": [
+        "Hint 1: Helpful pointer without giving away the solution",
+        "Hint 2: Another strategic hint"
+      ],
+      "estimatedDuration": 15,
+      "maxXP": 10,
+      "difficulty": "BEGINNER"
+    }
+  ]
+}
+
+CRITICAL REQUIREMENTS - NON-NEGOTIABLE:
+1. Generate EXACTLY 5 coding challenges (Total: 50 XP)
+2. Each challenge MUST award maxXP of 10
+3. estimatedDuration should be realistic: 10-20 minutes per challenge
+4. Include 4-6 test cases per challenge (mix of visible and hidden)
+5. At least 2 test cases must have isHidden: true (for evaluation integrity)
+6. All 5 challenges MUST cover DIFFERENT concepts/problem types
+7. ALL challenges MUST match the specified difficulty level
+8. Each challenge must have 3+ criteria for EACH evaluation category
+
+DIFFICULTY LEVEL DEFINITIONS:
+
+BEGINNER:
+- Single algorithm or data structure
+- Clear input/output with minimal edge cases
+- Time complexity: O(n) or O(n²) acceptable
+- Examples: string manipulation, basic array operations, simple loops, basic conditionals
+- No advanced patterns required
+- Focus on fundamental programming constructs
+
+INTERMEDIATE:
+- Multiple algorithms or data structures combined
+- Moderate complexity with several edge cases
+- Time complexity: O(n log n) or better expected
+- Examples: sorting variations, hash maps, recursion, two-pointer techniques, stack/queue usage
+- Requires problem decomposition
+- Common algorithmic patterns
+
+ADVANCED:
+- Complex algorithms and optimized data structures
+- Numerous edge cases and constraints
+- Time complexity: O(n) or better, sometimes O(log n)
+- Space optimization critical
+- Examples: dynamic programming, graph algorithms, advanced tree structures, bit manipulation
+- Multiple solution approaches with trade-offs
+- System design considerations
+
+CHALLENGE DESIGN STANDARDS:
+
+Problem Statement:
+- Clear, unambiguous description of the task
+- Specify input format, output format, and constraints explicitly
+- Include 1-2 example walkthroughs
+- Define edge cases to consider
+- Use realistic, relatable scenarios when possible
+
+Starter Code:
+- Provide function/method signature in the target language
+- Include parameter names that hint at their purpose
+- Add basic structure (class skeleton if needed)
+- Include TODO comments for guidance
+- Do NOT include solution logic
+
+Test Cases:
+- Cover happy path (normal expected inputs)
+- Cover edge cases (empty, null, boundary values)
+- Cover error conditions if applicable
+- Mix simple and complex inputs
+- Visible tests (2-3): Help user understand requirements
+- Hidden tests (2-3): Validate comprehensive solution
+- Each test must have clear description of what it validates
+
+Evaluation Criteria:
+
+CORRECTNESS (50% weight):
+- Does the solution pass all test cases?
+- Are edge cases handled properly?
+- Is the output format exactly as specified?
+- Are error conditions managed appropriately?
+- Does it work for boundary values?
+
+EFFICIENCY (30% weight):
+- What is the time complexity? (specify expected: O(n), O(n log n), etc.)
+- What is the space complexity?
+- Are there unnecessary loops or redundant operations?
+- Is the algorithm choice optimal for the problem?
+- Are built-in optimized methods used where appropriate?
+
+STYLE (20% weight):
+- Are variables and functions named descriptively?
+- Is the code properly formatted and readable?
+- Are there appropriate comments for complex logic?
+- Is the code organized logically?
+- Are best practices followed (DRY, single responsibility, etc.)?
+
+Hints:
+- Provide 2-3 strategic hints that guide thinking
+- Don't give away the solution directly
+- Point toward data structures or algorithms to consider
+- Suggest approaches without implementation details
+
+DIVERSITY & COVERAGE:
+- Each challenge MUST test a DIFFERENT programming concept
+- Vary problem types across the set:
+  * Data structure manipulation (arrays, objects, strings)
+  * Algorithm implementation (searching, sorting, recursion)
+  * Logic and problem-solving
+  * Data transformation
+  * Edge case handling
+- If specific topic provided, explore 5 different aspects within it
+- If topic is broad, cover 5 fundamental areas of the skill
+
+LANGUAGE CONSIDERATIONS:
+- If language-specific skill: Use idioms and features of that language
+- If language-agnostic: Design problems that work across languages
+- Ensure starter code matches the language conventions
+- Test cases should use appropriate data types for the language
+
+OUTPUT REQUIREMENTS:
+- Return ONLY valid, parseable JSON
+- NO markdown code fences (```)
+- NO explanatory text before or after the JSON
+- NO comments or trailing commas
+- Use double quotes for all strings
+- Properly escape special characters in code strings
+- Use \n for line breaks in multi-line code
+- Ensure clean formatting for readability
+
+FINAL VALIDATION CHECKLIST:
+☐ Exactly 5 challenges in the array
+☐ Every challenge has all required fields
+☐ Every maxXP is 10
+☐ Every challenge has 4-6 test cases
+☐ At least 2 hidden test cases per challenge
+☐ Every challenge has 3+ criteria in each evaluation category
+☐ All 5 challenges match the specified difficulty level
+☐ All 5 challenges test different concepts
+☐ Starter code is functional (no syntax errors)
+☐ Test cases are well-designed and comprehensive
+☐ JSON is valid with no syntax errors
+☐ No extraneous text outside the JSON object
+
+Generate the 5 coding challenges now.

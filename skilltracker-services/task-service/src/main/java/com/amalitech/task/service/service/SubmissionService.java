@@ -1,13 +1,17 @@
+
 package com.amalitech.task.service.service;
 
+import com.amalitech.task.service.dto.TaskSubmissionDTO;
 import com.amalitech.task.service.dto.request.SubmitAnswerRequest;
-import com.amalitech.task.service.model.TaskSubmission;
+import com.amalitech.common.event.events.SubmissionEvaluatedEvent;
 
 import java.util.UUID;
 
 /**
  * Service interface for managing TaskSubmissions.
  * Handles creation (user-facing) and updates (internal, from evaluation-service).
+ *
+ * This interface uses DTOs for all public contracts.
  */
 public interface SubmissionService {
 
@@ -17,17 +21,21 @@ public interface SubmissionService {
      *
      * @param request The user's answer submission
      * @param userId  The ID of the user submitting the answer
-     * @return The newly created TaskSubmission entity with PENDING status
+     * @return The DTO of the newly created TaskSubmission
      */
-    TaskSubmission createSubmission(SubmitAnswerRequest request, UUID userId);
+    TaskSubmissionDTO createSubmission(SubmitAnswerRequest request, UUID userId);
 
     /**
-     * Updates an existing submission with results from the evaluation-service.
-     * This method is intended for internal service-to-service communication.
+     * Retrieves a submission by ID with all feedback and results.
      *
-     * @param submissionId     The ID of the submission to update
-     * @param evaluationResult A DTO or TaskSubmission object containing the feedback, score, and status
-     * @return The updated TaskSubmission entity with COMPLETED or ERROR status
+     * @param submissionId The submission ID
+     * @return The submission DTO with feedback
      */
-    TaskSubmission updateSubmission(UUID submissionId, TaskSubmission evaluationResult);
+    TaskSubmissionDTO getSubmissionById(UUID submissionId);
+
+    /**
+     * Updates a submission based on an event received from the feedback-service.
+     * This is called by the RabbitMQ listener.
+     */
+    void updateSubmissionFromEvent(SubmissionEvaluatedEvent event);
 }

@@ -11,9 +11,11 @@ import lombok.NoArgsConstructor;
 import java.util.UUID;
 
 /**
- * Data Transfer Object (DTO) representing a Task.
- * This class is used to expose task-related information
- * to clients (e.g., REST responses) without exposing internal entities.
+ * Data Transfer Object (DTO) representing a single learning task or challenge.
+ * <p>
+ * This class is used to expose comprehensive task-related information to
+ * clients (e.g., the front-end application or partner services via REST responses).
+ * It acts as a standardized projection of the internal Task entity.
  */
 @Data
 @Builder
@@ -31,4 +33,3 @@ public class TaskDTO {
     private String skillName;
     private Integer version;
 }
-

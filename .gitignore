@@ -71,8 +71,9 @@ replay_pid*
 skilltracker-services/task-service/src/main/java/com/amalitech/task/service/seed/
 
 skilltracker-services/task-service/src/main/java/com/amalitech/task/service/controller/McqTestController.java
-skilltracker-services/task-service/src/main/java/com/amalitech/task/service/controller/SubmissionController.java
 
-
+# AI agent documentation (local only)
+/docs/
+AGENTS.md
 
 # application.properties
