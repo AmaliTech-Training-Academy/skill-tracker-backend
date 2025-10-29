@@ -8,10 +8,12 @@ import com.amalitech.task.service.exception.ResourceNotFoundException;
 import com.amalitech.task.service.mapper.TaskMapper;
 import com.amalitech.task.service.model.Task;
 import com.amalitech.task.service.model.enums.TaskDifficulty;
+import com.amalitech.task.service.model.enums.TaskType;
 import com.amalitech.task.service.model.view.SkillView;
-import com.amalitech.task.service.repository.*;
+import com.amalitech.task.service.repository.SkillViewRepository;
+import com.amalitech.task.service.repository.TaskRepository;
+import com.amalitech.task.service.repository.TaskSubmissionRepository;
 import com.amalitech.task.service.service.TaskService;
-
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
@@ -145,9 +147,12 @@ public class TaskServiceImpl implements TaskService {
     private List<Task> getOrGenerateTasksForSkillAndDifficulty(
             SkillView skill, TaskDifficulty difficulty, int limit) {
 
-        List<Task> cachedTasks = taskRepository.findBySkillAndDifficulty(
+        TaskType neededType = TaskType.CODING;
+
+        List<Task> cachedTasks = taskRepository.findBySkillIdAndDifficultyAndType(
                 skill.getId(),
                 difficulty,
+                neededType, // Filter by type
                 true,
                 PageRequest.of(0, limit)
         );
@@ -164,7 +169,8 @@ public class TaskServiceImpl implements TaskService {
         BatchGenerationRequest request = new BatchGenerationRequest(
                 skill.getName(),
                 difficulty,
-                minTasksPerDifficulty
+                minTasksPerDifficulty,
+                neededType
         );
 
         taskEventProducer.requestBatchTaskGeneration(request);

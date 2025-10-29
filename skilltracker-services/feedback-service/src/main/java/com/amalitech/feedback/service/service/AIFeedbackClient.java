@@ -26,7 +26,7 @@ public class AIFeedbackClient {
     private final WebClient deepseekApiClient;
     private final ObjectMapper objectMapper;
 
-    @Value("${client.deepseek-api.model:deepseek-chat}") // Add this to application.properties
+    @Value("${client.deepseek-api.model:deepseek-chat}")
     private String aiModel;
 
     public AIFeedbackClient(
