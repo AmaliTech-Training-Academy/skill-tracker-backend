@@ -83,23 +83,35 @@ public class SubmissionServiceImpl implements SubmissionService {
         if ("CODING".equals(event.getFeedbackType())) {
             CodingSubmissionFeedback feedback = new CodingSubmissionFeedback();
             feedback.setAllPassed(event.isCorrect());
-            feedback.setTestCasesPassed(event.isCorrect() ? (event.getTestCaseResults() != null ? event.getTestCaseResults().size() : 0) : 0);
-            feedback.setTestCasesTotal(event.getTestCaseResults() != null ? event.getTestCaseResults().size() : 0);
             
-            if (event.getTestCaseResults() != null && !event.getTestCaseResults().isEmpty()) {
-                List<CodingSubmissionFeedback.TestCaseResult> testResults = event.getTestCaseResults().stream()
-                        .map(result -> {
+            int passedCount = event.getTestResults() != null 
+                ? (int) event.getTestResults().stream().filter(SubmissionEvaluatedEvent.TestResultData::isPassed).count()
+                : 0;
+            int totalCount = event.getTestResults() != null ? event.getTestResults().size() : 0;
+            
+            feedback.setTestCasesPassed(passedCount);
+            feedback.setTestCasesTotal(totalCount);
+            feedback.setStdout(event.getStdout());
+            feedback.setStderr(event.getStderr());
+            
+            if (event.getTestResults() != null && !event.getTestResults().isEmpty()) {
+                List<CodingSubmissionFeedback.TestCaseResult> testResults = event.getTestResults().stream()
+                        .map(tr -> {
                             CodingSubmissionFeedback.TestCaseResult tcr = new CodingSubmissionFeedback.TestCaseResult();
-                            tcr.setPassed(result.contains("PASSED") || result.contains("Accepted"));
-                            tcr.setExpected(result);
-                            tcr.setActual(result);
+                            tcr.setPassed(tr.isPassed());
+                            tcr.setExpected(tr.getExpectedOutput());
+                            tcr.setActual(tr.getActualOutput());
+                            tcr.setExecutionTimeMs(tr.getExecutionTimeMs() != null ? tr.getExecutionTimeMs() : 0);
                             return tcr;
                         })
                         .collect(Collectors.toList());
                 feedback.setTestCaseResults(testResults);
             }
             
-            feedback.setStdout(event.getOverallFeedback());
+            if (event.getOverallFeedback() != null) {
+                feedback.setLintingReport(event.getOverallFeedback());
+            }
+            
             existingSubmission.setFeedback(feedback);
         }
 

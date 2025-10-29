@@ -108,7 +108,26 @@ public class CodingTaskEvaluator implements TaskEvaluator {
                 aiFeedback.getOverallSuggestion()
         );
 
-        List<String> testCaseResults = buildTestCaseResults(results);
+        Judge0SubmissionResponse firstResult = results.isEmpty() ? null : results.get(0);
+        String stdout = firstResult != null ? firstResult.getStdout() : null;
+        String stderr = firstResult != null ? firstResult.getStderr() : null;
+
+        List<SubmissionEvaluatedEvent.TestResultData> structuredTestResults = buildStructuredTestResults(
+                event.getTestCases(), 
+                results
+        );
+
+        double avgTime = results.stream()
+                .filter(r -> r.getTime() != null)
+                .mapToDouble(Judge0SubmissionResponse::getTime)
+                .average()
+                .orElse(0.0) * 1000;
+
+        int avgMemory = (int) results.stream()
+                .filter(r -> r.getMemory() != null)
+                .mapToInt(Judge0SubmissionResponse::getMemory)
+                .average()
+                .orElse(0.0);
 
         return SubmissionEvaluatedEvent.builder()
                 .submissionId(event.getSubmissionId())
@@ -118,7 +137,11 @@ public class CodingTaskEvaluator implements TaskEvaluator {
                 .isCorrect(isCorrect)
                 .feedbackType("CODING")
                 .overallFeedback(overallFeedback)
-                .testCaseResults(testCaseResults)
+                .stdout(stdout)
+                .stderr(stderr)
+                .testResults(structuredTestResults)
+                .avgExecutionTimeMs(avgTime)
+                .avgMemoryUsedKb(avgMemory)
                 .build();
     }
 
@@ -141,7 +164,27 @@ public class CodingTaskEvaluator implements TaskEvaluator {
                 : (isCorrect ? "All Tests Passed" : "Tests Failed");
 
         String overallFeedback = "Status: " + statusDescription + ". AI feedback unavailable.";
-        List<String> testCaseResults = buildTestCaseResults(results);
+        
+        Judge0SubmissionResponse firstResult = results.isEmpty() ? null : results.get(0);
+        String stdout = firstResult != null ? firstResult.getStdout() : null;
+        String stderr = firstResult != null ? firstResult.getStderr() : null;
+
+        List<SubmissionEvaluatedEvent.TestResultData> structuredTestResults = buildStructuredTestResults(
+                event.getTestCases(), 
+                results
+        );
+
+        double avgTime = results.stream()
+                .filter(r -> r.getTime() != null)
+                .mapToDouble(Judge0SubmissionResponse::getTime)
+                .average()
+                .orElse(0.0) * 1000;
+
+        int avgMemory = (int) results.stream()
+                .filter(r -> r.getMemory() != null)
+                .mapToInt(Judge0SubmissionResponse::getMemory)
+                .average()
+                .orElse(0.0);
 
         return SubmissionEvaluatedEvent.builder()
                 .submissionId(event.getSubmissionId())
@@ -151,22 +194,46 @@ public class CodingTaskEvaluator implements TaskEvaluator {
                 .isCorrect(isCorrect)
                 .feedbackType("CODING")
                 .overallFeedback(overallFeedback)
-                .testCaseResults(testCaseResults)
+                .stdout(stdout)
+                .stderr(stderr)
+                .testResults(structuredTestResults)
+                .avgExecutionTimeMs(avgTime)
+                .avgMemoryUsedKb(avgMemory)
                 .build();
     }
 
     /**
-     * Builds test case result descriptions.
+     * Builds structured test case results with detailed information.
      */
-    private List<String> buildTestCaseResults(List<Judge0SubmissionResponse> results) {
-        return results.stream()
-                .map(r -> {
-                    if (r.getStatus() != null) {
-                        return "Test: " + r.getStatus().getDescription();
-                    }
-                    return "Test: Error";
-                })
-                .collect(Collectors.toList());
+    private List<SubmissionEvaluatedEvent.TestResultData> buildStructuredTestResults(
+            List<SubmissionCreatedEvent.TestCaseData> testCases,
+            List<Judge0SubmissionResponse> results
+    ) {
+        List<SubmissionEvaluatedEvent.TestResultData> structuredResults = new java.util.ArrayList<>();
+        
+        for (int i = 0; i < results.size(); i++) {
+            Judge0SubmissionResponse result = results.get(i);
+            SubmissionCreatedEvent.TestCaseData testCase = i < testCases.size() ? testCases.get(i) : null;
+            
+            boolean passed = result.getStatus() != null && result.getStatus().getId() == 3;
+            String statusDesc = result.getStatus() != null ? result.getStatus().getDescription() : "Unknown";
+            Long execTime = result.getTime() != null ? (long)(result.getTime() * 1000) : null;
+            Integer memory = result.getMemory();
+            
+            SubmissionEvaluatedEvent.TestResultData testResult = SubmissionEvaluatedEvent.TestResultData.builder()
+                    .passed(passed)
+                    .input(testCase != null ? testCase.getInput() : "")
+                    .expectedOutput(testCase != null ? testCase.getExpectedOutput() : "")
+                    .actualOutput(result.getStdout() != null ? result.getStdout() : "")
+                    .executionTimeMs(execTime)
+                    .memoryUsedKb(memory)
+                    .statusDescription(statusDesc)
+                    .build();
+            
+            structuredResults.add(testResult);
+        }
+        
+        return structuredResults;
     }
 
     /**
