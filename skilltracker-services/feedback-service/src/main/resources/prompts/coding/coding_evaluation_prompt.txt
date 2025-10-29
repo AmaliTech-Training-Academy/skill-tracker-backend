@@ -5,47 +5,47 @@ Skill: {skill}
 Difficulty: {difficulty}
 
 USER SUBMISSION:
-{userCode}
+\{userCode}
 
 CHALLENGE REQUIREMENTS:
-{requirements}
+\{requirements}
 
 TEST CASES:
-{testCases}
+\{testCases}
 
 EVALUATION CRITERIA:
-{criteria}
+\{criteria}
 
 TASK:
 Analyze the submitted code and provide a comprehensive evaluation in JSON format.
 
 REQUIRED JSON STRUCTURE:
-{
-  "evaluation": {
-    "correctness": {
+\{
+  "evaluation": \{
+    "correctness": \{
       "score": 25.0,
       "maxScore": 25.0,
       "percentage": 100,
       "feedback": "Detailed assessment of correctness",
       "testResults": [
-        {
+        \{
           "testCase": "Description of test",
           "passed": true,
           "input": "Input used",
           "expectedOutput": "Expected result",
           "actualOutput": "What the code produced",
           "feedback": "Specific feedback for this test"
-        }
+        \}
       ],
       "criteriaMet": [
-        {
+        \{
           "criterion": "The specific criterion from requirements",
           "met": true,
           "feedback": "Why it was or wasn't met"
-        }
+        \}
       ]
-    },
-    "efficiency": {
+    \},
+    "efficiency": \{
       "score": 15.0,
       "maxScore": 15.0,
       "percentage": 100,
@@ -54,14 +54,14 @@ REQUIRED JSON STRUCTURE:
       "spaceComplexity": "O(1)",
       "analysis": "Explanation of complexity and optimizations",
       "criteriaMet": [
-        {
+        \{
           "criterion": "The specific criterion from requirements",
           "met": true,
           "feedback": "Why it was or wasn't met"
-        }
+        \}
       ]
-    },
-    "style": {
+    \},
+    "style": \{
       "score": 10.0,
       "maxScore": 10.0,
       "percentage": 100,
@@ -75,14 +75,14 @@ REQUIRED JSON STRUCTURE:
         "Another suggestion"
       ],
       "criteriaMet": [
-        {
+        \{
           "criterion": "The specific criterion from requirements",
           "met": true,
           "feedback": "Why it was or wasn't met"
-        }
+        \}
       ]
-    },
-    "overall": {
+    \},
+    "overall": \{
       "totalScore": 50.0,
       "maxScore": 50.0,
       "percentage": 100,
@@ -98,9 +98,9 @@ REQUIRED JSON STRUCTURE:
         "Most important improvement 1",
         "Most important improvement 2"
       ]
-    }
-  }
-}
+    \}
+  \}
+\}
 
 SCORING SYSTEM:
 
