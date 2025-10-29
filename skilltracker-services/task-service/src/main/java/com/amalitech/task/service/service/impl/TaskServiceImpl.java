@@ -3,7 +3,7 @@ package com.amalitech.task.service.service.impl;
 import com.amalitech.task.service.dto.TaskAvailabilityDTO;
 import com.amalitech.task.service.dto.TaskDTO;
 import com.amalitech.task.service.dto.request.BatchGenerationRequest;
-import com.amalitech.task.service.events.TaskEventProducer;
+import com.amalitech.task.service.events.RabbitMQEventProducer;
 import com.amalitech.task.service.exception.ResourceNotFoundException;
 import com.amalitech.task.service.mapper.TaskMapper;
 import com.amalitech.task.service.model.Task;
@@ -37,7 +37,7 @@ public class TaskServiceImpl implements TaskService {
     private final TaskRepository taskRepository;
     private final SkillViewRepository skillViewRepository;
     private final TaskSubmissionRepository submissionRepository;
-    private final TaskEventProducer taskEventProducer;
+    private final RabbitMQEventProducer taskEventProducer;
     private final TaskMapper taskMapper;
 
     /**
@@ -50,7 +50,7 @@ public class TaskServiceImpl implements TaskService {
     public TaskServiceImpl(TaskRepository taskRepository,
                            SkillViewRepository skillViewRepository,
                            TaskSubmissionRepository submissionRepository,
-                           TaskEventProducer taskEventProducer,
+                           RabbitMQEventProducer taskEventProducer,
                            TaskMapper taskMapper
     ) {
         this.taskRepository = taskRepository;

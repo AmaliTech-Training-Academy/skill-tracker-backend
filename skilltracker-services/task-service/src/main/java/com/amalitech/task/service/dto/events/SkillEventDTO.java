@@ -7,5 +7,5 @@ public record SkillEventDTO(
         UUID id,
         String name,
         String description,
-        String eventType // e.g., "SKILL_CREATED", "SKILL_UPDATED"
+        String eventType
 ) implements Serializable {}

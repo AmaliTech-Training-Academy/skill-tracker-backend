@@ -139,10 +139,25 @@ public class JwtGlobalFilter implements GlobalFilter, Ordered {
      * @return a new {@link ServerHttpRequest} with added user information headers
      */
     private ServerHttpRequest enrichRequest(ServerHttpRequest request, Jwt jwt) {
+
         String userId = jwt.getClaim("userId");
+        if (userId == null) {
+            userId = jwt.getId();
+            log.warn("JWT is missing 'userId' claim, falling back to 'jti'. " +
+                    "Ensure user-service is deployed with the latest JwtUtil.");
+        }
 
         List<String> rolesList = jwt.getClaimAsStringList("roles");
-        String rolesHeader = String.join(",", rolesList != null ? rolesList : List.of());
+        String rolesHeader;
+
+        if (rolesList == null || rolesList.isEmpty()) {
+            String role = jwt.getClaimAsString("roles");
+            rolesHeader = (role != null) ? role : "";
+        } else {
+            rolesHeader = String.join(",", rolesList);
+        }
+
+        log.debug("Enriching request. X-User-Id: {}, X-User-Roles: {}", userId, rolesHeader);
 
         return request.mutate()
                 .header("X-User-Id", userId)

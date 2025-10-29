@@ -1,19 +1,21 @@
 package com.amalitech.task.service.events;
 
+import com.amalitech.common.event.events.SubmissionCreatedEvent;
+import com.amalitech.common.event.events.SubmissionEvaluatedEvent;
 import com.amalitech.task.service.config.RabbitMQConfig;
 import com.amalitech.task.service.dto.request.BatchGenerationRequest;
 import com.amalitech.task.service.dto.request.GenerateTaskRequest;
-import com.amalitech.task.service.model.TaskSubmission;
-
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Service;
 
 @Service
+@Primary
 @RequiredArgsConstructor
 @Slf4j
-public class TaskEventProducer {
+public class RabbitMQEventProducer implements EventProducer {
 
     private final RabbitTemplate rabbitTemplate;
 
@@ -53,16 +55,16 @@ public class TaskEventProducer {
      *
      * @param submission The TaskSubmission object to be evaluated.
      */
-    public void publishSubmissionCreated(TaskSubmission submission) {
+    public void publishSubmissionCreated(SubmissionCreatedEvent submission) {
         try {
-            log.info("Publishing submission created event: {}", submission.getId());
+            log.info("Publishing submission created event: {}", submission.getSubmissionId());
             rabbitTemplate.convertAndSend(
                     RabbitMQConfig.SUBMISSION_EXCHANGE,
                     RabbitMQConfig.SUBMISSION_CREATED_ROUTING_KEY,
                     submission
             );
         } catch (Exception e) {
-            log.error("Failed to publish submission created event for ID: {}", submission.getId(), e);
+            log.error("Failed to publish submission created event for ID: {}", submission.getSubmissionId(), e);
         }
     }
 
@@ -70,18 +72,18 @@ public class TaskEventProducer {
      * Publishes an event when a submission has been evaluated.
      * Consumed by: notification-service
      *
-     * @param submission The fully evaluated TaskSubmission object.
+     * @param event The fully evaluated SubmissionEvaluatedEvent.
      */
-    public void publishSubmissionEvaluated(TaskSubmission submission) {
+    public void publishSubmissionEvaluated(SubmissionEvaluatedEvent event) {
         try {
-            log.info("Publishing submission evaluated event: {}", submission.getId());
+            log.info("Publishing submission evaluated event: {}", event.getSubmissionId());
             rabbitTemplate.convertAndSend(
                     RabbitMQConfig.SUBMISSION_EXCHANGE,
                     RabbitMQConfig.SUBMISSION_EVALUATED_ROUTING_KEY,
-                    submission
+                    event // <-- 2. FIX PAYLOAD
             );
         } catch (Exception e) {
-            log.error("Failed to publish submission evaluated event for ID: {}", submission.getId(), e);
+            log.error("Failed to publish submission evaluated event for ID: {}", event.getSubmissionId(), e);
         }
     }
 }

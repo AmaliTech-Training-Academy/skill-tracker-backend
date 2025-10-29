@@ -1,6 +1,5 @@
 package com.amalitech.user.service.security.config;
 
-
 import com.amalitech.user.service.security.oauth.OAuth2SuccessHandler;
 import com.amalitech.user.service.security.oauth.oAuth2FailureHandler;
 import org.springframework.beans.factory.annotation.Value;
@@ -14,6 +13,7 @@ import org.springframework.security.web.savedrequest.NullRequestCache;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
 import java.util.List;
 
 @Configuration
@@ -60,5 +60,4 @@ public class WebSecurityConfig {
                 );
         return http.build();
     }
-
 }

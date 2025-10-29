@@ -3,8 +3,6 @@ package com.amalitech.task.service.model;
 import com.amalitech.task.service.model.content.TaskContent;
 import com.amalitech.task.service.model.enums.TaskDifficulty;
 import com.amalitech.task.service.model.enums.TaskType;
-
-import com.amalitech.task.service.model.view.SkillView;
 import io.hypersistence.utils.hibernate.type.json.JsonType;
 import jakarta.persistence.*;
 import lombok.*;
