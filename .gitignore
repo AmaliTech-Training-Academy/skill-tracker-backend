@@ -72,6 +72,4 @@ skilltracker-services/task-service/src/main/java/com/amalitech/task/service/seed
 
 skilltracker-services/task-service/src/main/java/com/amalitech/task/service/controller/McqTestController.java
 
-
-/docs/
 # application.properties
