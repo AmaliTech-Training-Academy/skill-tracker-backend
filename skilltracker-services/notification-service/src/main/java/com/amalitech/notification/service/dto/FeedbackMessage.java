@@ -6,6 +6,10 @@ import lombok.Data;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * DTO for sending final evaluation feedback to the client.
+ * This message is sent after the submission has been fully graded and feedback generated.
+ */
 @Data
 @Builder
 public class FeedbackMessage {
@@ -22,6 +26,9 @@ public class FeedbackMessage {
     private Double avgExecutionTimeMs;
     private Integer avgMemoryUsedKb;
 
+    /**
+     * Represents the result of a single test case execution, included as part of the feedback.
+     */
     @Data
     @Builder
     public static class TestResult {

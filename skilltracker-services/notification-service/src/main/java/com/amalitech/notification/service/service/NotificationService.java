@@ -11,6 +11,10 @@ import org.springframework.stereotype.Service;
 
 import java.util.stream.Collectors;
 
+/**
+ * Service responsible for sending real-time notifications to users via WebSockets.
+ * It transforms backend events into user-friendly DTOs and sends them to the appropriate user.
+ */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -18,6 +22,11 @@ public class NotificationService {
 
     private final SimpMessagingTemplate messagingTemplate;
 
+    /**
+     * Sends the results of a code execution to the user.
+     * This is triggered after a submission is run against test cases.
+     * @param event The event containing the detailed execution results.
+     */
     public void sendExecutionResults(SubmissionExecutedEvent event) {
         log.info("Sending execution results to user: {} for submission: {}", 
                 event.getUserId(), event.getSubmissionId());
@@ -54,6 +63,11 @@ public class NotificationService {
         log.info("Execution results sent successfully to user: {}", event.getUserId());
     }
 
+    /**
+     * Sends the final evaluation feedback to the user.
+     * This is triggered after a submission has been fully graded.
+     * @param event The event containing the score, feedback, and results.
+     */
     public void sendEvaluationFeedback(SubmissionEvaluatedEvent event) {
         log.info("Sending evaluation feedback to user: {} for submission: {}", 
                 event.getUserId(), event.getSubmissionId());

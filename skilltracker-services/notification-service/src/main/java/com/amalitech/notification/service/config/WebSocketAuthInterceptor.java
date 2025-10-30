@@ -12,9 +12,21 @@ import org.springframework.stereotype.Component;
 
 import java.security.Principal;
 
+/**
+ * A channel interceptor that associates the authenticated user with the WebSocket session.
+ * This is crucial for sending messages to specific users.
+ */
 @Component
 public class WebSocketAuthInterceptor implements ChannelInterceptor {
 
+    /**
+     * Intercepts messages before they are sent to a channel.
+     * If the message is a STOMP CONNECT command, it retrieves the authenticated user
+     * from the SecurityContext and sets it on the STOMP session.
+     * @param message The message being sent.
+     * @param channel The channel to which the message is being sent.
+     * @return The modified message, or the original message if no modification was needed.
+     */
     @Override
     public Message<?> preSend(Message<?> message, MessageChannel channel) {
         StompHeaderAccessor accessor = MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);

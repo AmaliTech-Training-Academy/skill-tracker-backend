@@ -6,6 +6,10 @@ import lombok.Data;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * DTO for sending real-time code execution results to the client.
+ * This message is sent when a user's submission has been executed against test cases.
+ */
 @Data
 @Builder
 public class ExecutionResultMessage {
@@ -20,6 +24,9 @@ public class ExecutionResultMessage {
     private Double avgExecutionTimeMs;
     private Integer avgMemoryUsedKb;
 
+    /**
+     * Represents the result of a single test case execution.
+     */
     @Data
     @Builder
     public static class TestResult {
@@ -32,3 +39,4 @@ public class ExecutionResultMessage {
         private String statusDescription;
     }
 }
+

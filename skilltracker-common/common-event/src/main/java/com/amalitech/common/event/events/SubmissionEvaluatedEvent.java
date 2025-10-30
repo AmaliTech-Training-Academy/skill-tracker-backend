@@ -22,99 +22,26 @@ public class SubmissionEvaluatedEvent {
      * Unique identifier of the evaluated submission.
      */
     private UUID submissionId;
-    
-    /**
-     * Unique identifier of the user who submitted the solution.
-     * Used for WebSocket routing and notifications.
-     */
-    private UUID userId;
-    
-    /**
-     * Evaluation status.
-     * Possible values: "COMPLETED", "ERROR"
-     */
-    private String status;
-    
-    /**
-     * Score achieved (0-100 scale).
-     */
-    private int score;
-    
-    /**
-     * Whether the submission is correct (all tests passed).
-     */
-    private boolean isCorrect;
 
-    /**
-     * Type of feedback provided.
-     * Possible values: "CODING", "ESSAY", "MCQ"
-     */
+    private UUID userId;
+    private String status;
+    private int score;
+    private boolean isCorrect;
     private String feedbackType;
-    
-    /**
-     * AI-generated overall feedback and suggestions.
-     * Contains comprehensive evaluation from the AI model.
-     */
     private String overallFeedback;
-    
-    /**
-     * Standard output from code execution (for CODING tasks).
-     * Contains the actual output produced by running the user's code.
-     */
     private String stdout;
-    
-    /**
-     * Standard error from code execution (for CODING tasks).
-     * Contains error messages, runtime errors, or compilation errors.
-     */
     private String stderr;
-    
-    /**
-     * Structured test case results with detailed information.
-     * Each result includes pass/fail status, inputs, outputs, and execution time.
-     */
     private List<TestResultData> testResults;
-    
-    /**
-     * Average execution time across all test cases in milliseconds.
-     */
     private Double avgExecutionTimeMs;
-    
-    /**
-     * Average memory usage across all test cases in kilobytes.
-     */
     private Integer avgMemoryUsedKb;
 
-    /**
-     * Detailed information about a single test case execution result.
-     */
     @Data
     @Builder
     public static class TestResultData {
-        
-        /**
-         * Whether this test case passed.
-         */
         private boolean passed;
-        
-        /**
-         * Input provided to the test case.
-         */
         private String input;
-        
-        /**
-         * Expected output for this test case.
-         */
         private String expectedOutput;
-        
-        /**
-         * Actual output produced by the user's code.
-         */
         private String actualOutput;
-        
-        /**
-         * Execution time for this specific test case in milliseconds.
-         */
         private Long executionTimeMs;
         
         /**

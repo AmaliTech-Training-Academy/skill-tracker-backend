@@ -10,6 +10,10 @@ import org.springframework.amqp.support.converter.MessageConverter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+/**
+ * Configures RabbitMQ exchanges, queues, and bindings for the notification service.
+ * This setup ensures that the service can consume submission-related events.
+ */
 @Configuration
 @EnableRabbit
 public class RabbitMQConfig {
@@ -20,21 +24,39 @@ public class RabbitMQConfig {
     public static final String EXECUTED_ROUTING_KEY = "submission.executed";
     public static final String EVALUATED_ROUTING_KEY = "submission.evaluated";
 
+    /**
+     * Creates the topic exchange for submission events.
+     * @return The TopicExchange bean.
+     */
     @Bean
     public TopicExchange submissionExchange() {
         return new TopicExchange(SUBMISSION_EXCHANGE);
     }
 
+    /**
+     * Creates the queue for consuming submission executed events.
+     * @return The Queue bean for executed events.
+     */
     @Bean
     public Queue executedQueue() {
         return new Queue(EXECUTED_QUEUE, true);
     }
 
+    /**
+     * Creates the queue for consuming submission evaluated events.
+     * @return The Queue bean for evaluated events.
+     */
     @Bean
     public Queue evaluatedQueue() {
         return new Queue(EVALUATED_QUEUE, true);
     }
 
+    /**
+     * Binds the executed queue to the submission exchange with the executed routing key.
+     * @param executedQueue The queue for executed events.
+     * @param submissionExchange The submission topic exchange.
+     * @return The Binding bean.
+     */
     @Bean
     public Binding executedBinding(Queue executedQueue, TopicExchange submissionExchange) {
         return BindingBuilder.bind(executedQueue)
@@ -42,6 +64,12 @@ public class RabbitMQConfig {
                 .with(EXECUTED_ROUTING_KEY);
     }
 
+    /**
+     * Binds the evaluated queue to the submission exchange with the evaluated routing key.
+     * @param evaluatedQueue The queue for evaluated events.
+     * @param submissionExchange The submission topic exchange.
+     * @return The Binding bean.
+     */
     @Bean
     public Binding evaluatedBinding(Queue evaluatedQueue, TopicExchange submissionExchange) {
         return BindingBuilder.bind(evaluatedQueue)
@@ -49,6 +77,10 @@ public class RabbitMQConfig {
                 .with(EVALUATED_ROUTING_KEY);
     }
 
+    /**
+     * Provides a message converter to serialize and deserialize messages to and from JSON.
+     * @return The Jackson2JsonMessageConverter bean.
+     */
     @Bean
     public MessageConverter jsonMessageConverter() {
         return new Jackson2JsonMessageConverter();

@@ -9,6 +9,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;
 
+/**
+ * Listens for submission-related events from RabbitMQ and triggers notifications.
+ */
 @Component
 @RequiredArgsConstructor
 @Slf4j
@@ -16,6 +19,12 @@ public class SubmissionEventListener {
 
     private final NotificationService notificationService;
 
+    /**
+     * Handles the SubmissionExecutedEvent.
+     * This method is triggered when a submission has been executed against test cases.
+     * It delegates the event to the NotificationService to send real-time results to the user.
+     * @param event The event containing the execution results.
+     */
     @RabbitListener(queues = RabbitMQConfig.EXECUTED_QUEUE)
     public void handleSubmissionExecuted(SubmissionExecutedEvent event) {
         log.info("Received SubmissionExecutedEvent for submission: {}", event.getSubmissionId());
@@ -30,6 +39,12 @@ public class SubmissionEventListener {
         }
     }
 
+    /**
+     * Handles the SubmissionEvaluatedEvent.
+     * This method is triggered when a submission has been fully evaluated and graded.
+     * It delegates the event to the NotificationService to send the final feedback to the user.
+     * @param event The event containing the evaluation feedback.
+     */
     @RabbitListener(queues = RabbitMQConfig.EVALUATED_QUEUE)
     public void handleSubmissionEvaluated(SubmissionEvaluatedEvent event) {
         log.info("Received SubmissionEvaluatedEvent for submission: {}", event.getSubmissionId());
