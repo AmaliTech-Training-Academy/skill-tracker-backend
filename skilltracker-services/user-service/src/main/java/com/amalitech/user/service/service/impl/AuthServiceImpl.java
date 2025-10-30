@@ -126,8 +126,11 @@ public class AuthServiceImpl implements AuthService {
 
         CustomUserDetails userDetails = (CustomUserDetails) auth.getPrincipal();
         User user = userDetails.getUser();
+        if (user.getIsVerified() == false) {
+            throw new UnverifiedUserException("User not verified");
+        }
+        generateTokens(user, response);
         UserResponseDTO userResponseDTO = UserMapper.toDto(user);
-
         return userResponseDTO;
     }
 
@@ -137,7 +140,7 @@ public class AuthServiceImpl implements AuthService {
      * @param user the user to generate tokens for
      * @return AuthTokens  access and rotated refresh tokens
      */
-    public AuthResponse generateTokens(User user, HttpServletResponse response) {
+    public void generateTokens(User user, HttpServletResponse response) {
         String accessToken = jwtUtil.generateAccessToken(user.getEmail(), user.getRole(), user.getId());
         String refreshToken = UUID.randomUUID().toString();
         redisUtil.set(refreshPrefix + refreshToken, user.getEmail(), refreshExpiration / 1000);
@@ -145,7 +148,6 @@ public class AuthServiceImpl implements AuthService {
                 jwtUtil.getExpirationSeconds(accessToken));
         cookieUtil.setSecureCookie(response, "refreshToken", refreshToken,
                 refreshExpiration / 1000);
-        return new AuthResponse("tokens generated and set in httpOnly cookie");
     }
 
     /**
