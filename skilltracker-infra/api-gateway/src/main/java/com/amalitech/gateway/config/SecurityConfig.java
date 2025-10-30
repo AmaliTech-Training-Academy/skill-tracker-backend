@@ -38,7 +38,13 @@ public class SecurityConfig {
                                 "/login/oauth2/**",
                                 "/error",
                                 "/health",
-                                "/actuator/health"
+                                "/actuator/health",
+
+                                "/swagger-ui.html",
+                                "/swagger-ui/**",
+                                "/v3/api-docs/**",
+                                "/swagger-resources/**",
+                                "/webjars/**"
                         ).permitAll()
                         .anyExchange().authenticated()
                 )

@@ -1,9 +1,9 @@
 package com.amalitech.task.service.config;
 
 import com.amalitech.common.security.filter.HeaderAuthenticationFilter;
-
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -42,6 +42,32 @@ public class SecurityConfig {
     }
 
     /**
+     * Security filter chain for API documentation endpoints.
+     * This must be ordered before the main security filter chain.
+     *
+     * @param http The HttpSecurity object to configure.
+     * @return The configured SecurityFilterChain for API docs.
+     * @throws Exception if configuration errors occur.
+     */
+    @Bean
+    @Order(1)
+    public SecurityFilterChain apiDocsSecurityFilterChain(HttpSecurity http) throws Exception {
+        return http
+                .securityMatcher(
+                        "/v3/api-docs/**",
+                        "/swagger-ui/**",
+                        "/swagger-ui.html",
+                        "/swagger-resources/**",
+                        "/webjars/**"
+                )
+                .csrf(AbstractHttpConfigurer::disable)
+                .authorizeHttpRequests(auth -> auth
+                        .anyRequest().permitAll()
+                )
+                .build();
+    }
+
+    /**
      * Defines the main security filter chain for HTTP requests.
      * <p>
      * It configures the service as stateless, disables CSRF, and enforces
@@ -55,6 +81,7 @@ public class SecurityConfig {
      * @throws Exception if configuration errors occur.
      */
     @Bean
+    @Order(2)
     public SecurityFilterChain securityFilterChain(
             HttpSecurity http,
             HeaderAuthenticationFilter headerAuthenticationFilter
