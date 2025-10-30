@@ -130,12 +130,6 @@
                 <artifactId>hypersistence-utils-hibernate-63</artifactId>
                 <version>3.8.3</version>
             </dependency>
-            <dependency>
-                <groupId>org.flywaydb</groupId>
-                <artifactId>flyway-core</artifactId>
-                <version>10.18.2</version>
-            </dependency>
-
 
             <!-- Spring AI BOM -->
             <dependency>
