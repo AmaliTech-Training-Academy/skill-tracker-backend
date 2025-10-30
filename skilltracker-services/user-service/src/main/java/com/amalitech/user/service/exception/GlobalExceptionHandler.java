@@ -53,6 +53,19 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
     }
 
+    @ExceptionHandler(UnverifiedUserException.class)
+    public ResponseEntity<ApiError> UnverifiedUserException(UnverifiedUserException ex, HttpServletRequest request) {
+        ApiError error = ApiError.of(
+                HttpStatus.CONFLICT.value(),
+                ex.getMessage(),
+                null,
+                request.getRequestURI(),
+                null,
+                getTraceId()
+        );
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
+    }
+
     @ExceptionHandler(UserNotFoundException.class)
     public ResponseEntity<ApiError> handleUserNotFound(UserNotFoundException ex, HttpServletRequest request) {
         ApiError error = ApiError.of(

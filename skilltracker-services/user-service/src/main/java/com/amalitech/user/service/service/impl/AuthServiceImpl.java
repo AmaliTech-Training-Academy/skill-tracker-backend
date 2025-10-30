@@ -126,6 +126,9 @@ public class AuthServiceImpl implements AuthService {
 
         CustomUserDetails userDetails = (CustomUserDetails) auth.getPrincipal();
         User user = userDetails.getUser();
+        if (user.getIsVerified() == false) {
+            throw new UnverifiedUserException("User not verified");
+        }
         UserResponseDTO userResponseDTO = UserMapper.toDto(user);
 
         return userResponseDTO;
