@@ -52,9 +52,9 @@ public class AuthController {
 
         /** Authenticates the user and returns an access token */
     @PostMapping("/login")
-    public ResponseEntity<ApiResponse<AuthResponse>> login(@Valid @RequestBody LoginRequest request, HttpServletResponse response) {
-        authService.login(request, response);
-        return ResponseEntity.ok(ApiResponse.success("Login successful.", null, null));
+    public ResponseEntity<ApiResponse<UserResponseDTO>> login(@Valid @RequestBody LoginRequest request, HttpServletResponse response) {
+        UserResponseDTO userResponseDTO = authService.login(request, response);
+        return ResponseEntity.ok(ApiResponse.success("Login successful.", userResponseDTO, null));
     }
 
     /** Refreshes the access token */
@@ -85,6 +85,7 @@ public class AuthController {
         authService.resetPassword(request.token(), request.password());
         return ResponseEntity.ok(ApiResponse.success("Password reset successfully", null, null));
     }
+
 
     /** Logout - revoke refresh token */
     @PostMapping("/logout")

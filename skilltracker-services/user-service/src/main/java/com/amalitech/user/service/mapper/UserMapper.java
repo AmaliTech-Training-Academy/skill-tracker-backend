@@ -45,12 +45,11 @@ public class UserMapper {
                 entity.getUsername(),
                 entity.getRole(),
                 entity.getState(),
+                entity.getTourStatus(),
                 entity.getIsVerified(),
                 entity.getPremiumTier(),
                 entity.getLanguage(),
-                entity.getTimezone(),
-                entity.getUpdatedAt(),
-                entity.getLastLoginAt()
+                entity.getTimezone()
         );
     }
 }

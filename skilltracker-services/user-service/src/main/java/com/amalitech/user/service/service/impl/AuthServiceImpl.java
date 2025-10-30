@@ -4,6 +4,7 @@ import com.amalitech.user.service.dto.UserRequestDTO;
 import com.amalitech.user.service.dto.UserResponseDTO;
 import com.amalitech.user.service.dto.request.LoginRequest;
 import com.amalitech.user.service.dto.response.AuthResponse;
+import com.amalitech.user.service.dto.response.UserDto;
 import com.amalitech.user.service.exception.*;
 import com.amalitech.user.service.mapper.UserMapper;
 import com.amalitech.user.service.model.*;
@@ -43,6 +44,7 @@ public class AuthServiceImpl implements AuthService {
     private final BCryptPasswordEncoder passwordEncoder;
     private final EmailService emailService;
     private final AuthenticationManager authenticationManager;
+    private final UserMapper userMapper;
     private final JwtUtil jwtUtil;
     private final RedisUtil redisUtil;
     private final long refreshExpiration;
@@ -66,7 +68,8 @@ public class AuthServiceImpl implements AuthService {
             @Value("${app.reset-token-prefix}") String resetPrefix,
             @Value("${app.base-url}") String appBaseUrl,
             AuthenticationManager authenticationManager,
-            CookieUtil cookieUtil
+            CookieUtil cookieUtil,
+            UserMapper userMapper
     ) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
@@ -81,6 +84,7 @@ public class AuthServiceImpl implements AuthService {
         this.appBaseUrl = appBaseUrl;
         this.tempCode = 0;
         this.cookieUtil = cookieUtil;
+        this.userMapper = userMapper;
     }
 
     /**
@@ -119,14 +123,15 @@ public class AuthServiceImpl implements AuthService {
      * @return AuthTokens containing the access and refresh tokens
      * @throws RuntimeException if credentials are invalid or account not verified
      */
-    public AuthResponse login(LoginRequest request, HttpServletResponse response) {
+    public UserResponseDTO login(LoginRequest request, HttpServletResponse response) {
         Authentication auth = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.email(), request.password()));
 
         CustomUserDetails userDetails = (CustomUserDetails) auth.getPrincipal();
         User user = userDetails.getUser();
+        UserResponseDTO userResponseDTO = UserMapper.toDto(user);
 
-        return generateTokens(user, response);
+        return userResponseDTO;
     }
 
     /**
