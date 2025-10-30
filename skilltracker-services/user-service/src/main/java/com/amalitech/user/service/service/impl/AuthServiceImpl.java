@@ -44,7 +44,6 @@ public class AuthServiceImpl implements AuthService {
     private final BCryptPasswordEncoder passwordEncoder;
     private final EmailService emailService;
     private final AuthenticationManager authenticationManager;
-    private final UserMapper userMapper;
     private final JwtUtil jwtUtil;
     private final RedisUtil redisUtil;
     private final long refreshExpiration;
@@ -68,8 +67,7 @@ public class AuthServiceImpl implements AuthService {
             @Value("${app.reset-token-prefix}") String resetPrefix,
             @Value("${app.base-url}") String appBaseUrl,
             AuthenticationManager authenticationManager,
-            CookieUtil cookieUtil,
-            UserMapper userMapper
+            CookieUtil cookieUtil
     ) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
@@ -84,7 +82,6 @@ public class AuthServiceImpl implements AuthService {
         this.appBaseUrl = appBaseUrl;
         this.tempCode = 0;
         this.cookieUtil = cookieUtil;
-        this.userMapper = userMapper;
     }
 
     /**
