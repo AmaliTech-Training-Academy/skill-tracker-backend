@@ -1,5 +1,6 @@
 package com.amalitech.user.service.dto;
 
+import com.amalitech.user.service.model.enums.GuidedTourStatus;
 import com.amalitech.user.service.model.enums.PremiumTier;
 import com.amalitech.user.service.model.enums.Role;
 import com.amalitech.user.service.model.enums.UserState;
@@ -14,10 +15,9 @@ public record UserResponseDTO(
         String username,
         Role role,
         UserState state,
+        GuidedTourStatus tourStatus,
         Boolean is_verified,
         PremiumTier premiumTier,
         String language,
-        String timezone,
-        LocalDateTime updatedAt,
-        LocalDateTime lastLoginAt
+        String timezone
 ) {}

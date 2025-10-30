@@ -35,7 +35,7 @@ public interface AuthService {
      * @param request the login request containing email and password
      * @return AuthResponse containing the access and refresh tokens
      */
-    AuthResponse login(LoginRequest request, HttpServletResponse response);
+    UserResponseDTO login(LoginRequest request, HttpServletResponse response);
 
     /**
      * Generate accessToken and RefreshTokens for the given user.

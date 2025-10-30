@@ -21,31 +21,31 @@ services:
 #    networks:
 #      - skilltracker-network
 
-  user-service:
-    build:
-      context: ../../
-      dockerfile: skilltracker-services/user-service/Dockerfile
-    image: skilltracker/user-service:latest
-    container_name: user-service
-    ports:
-      - "8084:8084"
-    environment:
-      SERVER_PORT: 8084
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-user:5432/${POSTGRES_DB}
-      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
-      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
-      SPRING_DATASOURCE_DRIVER_CLASS_NAME: org.postgresql.Driver
-      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8082/eureka/
-      SPRING_CLOUD_CONFIG_URI: http://config-server:8081
-      SPRING_RABBITMQ_HOST: rabbitmq-broker
-      SPRING_RABBITMQ_PORT: 5672
-      SPRING_RABBITMQ_USERNAME: ${RABBITMQ_USER}
-      SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
-    depends_on:
-      postgres-user:
-        condition: service_healthy
-    networks:
-      - skilltracker-network
+#  user-service:
+#    build:
+#      context: ../../
+#      dockerfile: skilltracker-services/user-service/Dockerfile
+#    image: skilltracker/user-service:latest
+#    container_name: user-service
+#    ports:
+#      - "8084:8084"
+#    environment:
+#      SERVER_PORT: 8084
+#      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-user:5432/${POSTGRES_DB}
+#      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
+#      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+#      SPRING_DATASOURCE_DRIVER_CLASS_NAME: org.postgresql.Driver
+#      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8082/eureka/
+#      SPRING_CLOUD_CONFIG_URI: http://config-server:8081
+#      SPRING_RABBITMQ_HOST: rabbitmq-broker
+#      SPRING_RABBITMQ_PORT: 5672
+#      SPRING_RABBITMQ_USERNAME: ${RABBITMQ_USER}
+#      SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
+#    depends_on:
+#      postgres-user:
+#        condition: service_healthy
+#    networks:
+#      - skilltracker-network
 
 networks:
   skilltracker-network:

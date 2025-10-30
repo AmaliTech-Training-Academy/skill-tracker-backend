@@ -2,6 +2,8 @@ package com.amalitech.task.service.repository;
 
 import com.amalitech.task.service.model.Task;
 import com.amalitech.task.service.model.enums.TaskDifficulty;
+import com.amalitech.task.service.model.enums.TaskType;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
@@ -44,5 +46,23 @@ public interface TaskRepository extends JpaRepository<Task, UUID> {
             @Param("skillId") UUID skillId,
             @Param("difficulty") TaskDifficulty difficulty,
             @Param("isPublished") Boolean isPublished
+    );
+
+    /**
+     * Finds tasks by skill, difficulty, and type.
+     */
+    @Query("SELECT t FROM Task t " +
+            "JOIN FETCH t.taskDefinition td " +
+            "WHERE td.skill.id = :skillId " +
+            "AND t.difficulty = :difficulty " +
+            "AND t.type = :type " +
+            "AND t.isPublished = :isPublished " +
+            "ORDER BY t.createdAt DESC")
+    List<Task> findBySkillIdAndDifficultyAndType(
+            @Param("skillId") UUID skillId,
+            @Param("difficulty") TaskDifficulty difficulty,
+            @Param("type") TaskType type,
+            @Param("isPublished") boolean isPublished,
+            Pageable pageable
     );
 }

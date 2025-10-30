@@ -49,6 +49,9 @@ public class JwtGlobalFilter implements GlobalFilter, Ordered {
 
     public JwtGlobalFilter(ReactiveJwtDecoder jwtDecoder) {
         this.jwtDecoder = jwtDecoder;
+        log.info("========================================");
+        log.info("🚀 JwtGlobalFilter BEAN CREATED");
+        log.info("========================================");
     }
 
     /**
@@ -69,8 +72,14 @@ public class JwtGlobalFilter implements GlobalFilter, Ordered {
      */
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
+
+        log.info("🔥🔥🔥 JwtGlobalFilter EXECUTING 🔥🔥🔥");
+
         ServerHttpRequest request = exchange.getRequest();
         String path = request.getPath().value();
+
+        log.info("Path: {}", path);
+        log.info("Cookies: {}", request.getCookies());
 
         if (isWhitelisted(path)) {
             log.trace("Path is whitelisted, skipping JWT validation: {}", path);
@@ -139,10 +148,25 @@ public class JwtGlobalFilter implements GlobalFilter, Ordered {
      * @return a new {@link ServerHttpRequest} with added user information headers
      */
     private ServerHttpRequest enrichRequest(ServerHttpRequest request, Jwt jwt) {
+
         String userId = jwt.getClaim("userId");
+        if (userId == null) {
+            userId = jwt.getId();
+            log.warn("JWT is missing 'userId' claim, falling back to 'jti'. " +
+                    "Ensure user-service is deployed with the latest JwtUtil.");
+        }
 
         List<String> rolesList = jwt.getClaimAsStringList("roles");
-        String rolesHeader = String.join(",", rolesList != null ? rolesList : List.of());
+        String rolesHeader;
+
+        if (rolesList == null || rolesList.isEmpty()) {
+            String role = jwt.getClaimAsString("roles");
+            rolesHeader = (role != null) ? role : "";
+        } else {
+            rolesHeader = String.join(",", rolesList);
+        }
+
+        log.debug("Enriching request. X-User-Id: {}, X-User-Roles: {}", userId, rolesHeader);
 
         return request.mutate()
                 .header("X-User-Id", userId)
@@ -169,6 +193,6 @@ public class JwtGlobalFilter implements GlobalFilter, Ordered {
      */
     @Override
     public int getOrder() {
-        return -1;
+        return Ordered.HIGHEST_PRECEDENCE;
     }
 }

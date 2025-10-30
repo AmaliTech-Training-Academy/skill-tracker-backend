@@ -9,6 +9,15 @@ import org.hibernate.annotations.UpdateTimestamp;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+/**
+ * JPA Entity representing the foundational definition or metadata for a type of task
+ * within the SkillBoost platform.
+ * <p>
+ * This entity stores immutable, high-level attributes of a task, acting as a container
+ * for all subsequent content versions (not shown here). It establishes a mandatory
+ * link to a {@link SkillView} and tracks the current, highest version number of the task content.
+ * It is essential for managing the lifecycle and categorization of all AI-generated challenges.
+ */
 @Entity
 @Table(name = "task_definitions")
 @Getter

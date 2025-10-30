@@ -7,20 +7,20 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.UUID;
-
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 public class CodingSubmissionAnswer implements SubmissionAnswer {
 
-    @NotBlank
+    @NotBlank(message = "Code cannot be blank.")
     private String code;
 
     /**
-     * Coding language preference.
-     * It tells the code evaluator which runtime to use.
+     * The Judge0 Language ID.
+     * This ID tells the code evaluator which runtime to use.
+     * e.g., 71 = Python, 62 = Java, 63 = JavaScript
+     * The client (frontend) is responsible for sending the correct ID.
      */
-    @NotNull
-    private UUID programmingLanguageId;
+    @NotNull(message = "Language ID is required.")
+    private Integer languageId;
 }
