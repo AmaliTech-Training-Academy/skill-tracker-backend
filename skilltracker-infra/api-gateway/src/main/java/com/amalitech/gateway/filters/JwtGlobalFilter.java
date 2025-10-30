@@ -49,9 +49,6 @@ public class JwtGlobalFilter implements GlobalFilter, Ordered {
 
     public JwtGlobalFilter(ReactiveJwtDecoder jwtDecoder) {
         this.jwtDecoder = jwtDecoder;
-        log.info("========================================");
-        log.info("🚀 JwtGlobalFilter BEAN CREATED");
-        log.info("========================================");
     }
 
     /**
@@ -73,20 +70,14 @@ public class JwtGlobalFilter implements GlobalFilter, Ordered {
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
 
-        log.info("🔥🔥🔥 JwtGlobalFilter EXECUTING 🔥🔥🔥");
-
         ServerHttpRequest request = exchange.getRequest();
         String path = request.getPath().value();
-
-        log.info("Path: {}", path);
-        log.info("Cookies: {}", request.getCookies());
 
         if (isWhitelisted(path)) {
             log.trace("Path is whitelisted, skipping JWT validation: {}", path);
             return chain.filter(exchange);
         }
-
-        log.debug("Path is not whitelisted, checking for JWT: {}", path);
+        
         String token = extractTokenFromCookie(request);
 
         if (token == null) {
@@ -97,10 +88,6 @@ public class JwtGlobalFilter implements GlobalFilter, Ordered {
         return this.jwtDecoder.decode(token)
                 .flatMap(jwt -> {
                     ServerHttpRequest enrichedRequest = enrichRequest(request, jwt);
-
-                    log.debug("Token validated successfully. User ID: {}, Roles: {}",
-                            jwt.getClaim("userId"),
-                            jwt.getClaimAsStringList("roles"));
 
                     return chain.filter(exchange.mutate().request(enrichedRequest).build());
                 })
