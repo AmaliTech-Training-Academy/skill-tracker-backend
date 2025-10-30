@@ -17,7 +17,6 @@ import org.springframework.context.annotation.Configuration;
 public class SwaggerConfig {
 
     /**
-     * Configures the OpenAPI documentation for the Skill Tracker Task Service.
      * Includes server information, API metadata, and license details.
      *
      * @return Configured OpenAPI object with API documentation settings
