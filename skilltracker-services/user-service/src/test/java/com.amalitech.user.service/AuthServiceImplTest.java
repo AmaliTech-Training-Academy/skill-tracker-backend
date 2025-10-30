@@ -67,7 +67,7 @@ class AuthServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        // Manually construct AuthServiceImpl with all 12 required args
+
         authService = new AuthServiceImpl(
                 userRepository,
                 jwtUtil,
@@ -83,10 +83,9 @@ class AuthServiceImplTest {
                 cookieUtil
         );
 
-        // Reset tempCode for verifyCode tests
+
         setPrivateField(authService, "tempCode", 0);
 
-        // Test data
         userRequestDTO = new UserRequestDTO(EMAIL, PASSWORD);
         loginRequest = new LoginRequest(EMAIL, PASSWORD);
         request = new MockHttpServletRequest();
@@ -155,33 +154,15 @@ class AuthServiceImplTest {
 
         when(authenticationManager.authenticate(any())).thenReturn(auth);
         when(auth.getPrincipal()).thenReturn(userDetails);
-        when(jwtUtil.generateAccessToken(EMAIL, Role.USER, USER_ID)).thenReturn("access-jwt");
-        when(jwtUtil.getExpirationSeconds("access-jwt")).thenReturn(900L);
 
-        UUID refreshToken = UUID.fromString("00000000-0000-0000-0000-000000000001");
+        UserResponseDTO result = authService.login(loginRequest, response);
 
-        try (MockedStatic<UUID> mockedUuid = mockStatic(UUID.class)) {
-            mockedUuid.when(UUID::randomUUID).thenReturn(refreshToken);
-
-            AuthResponse result = authService.login(loginRequest, response);
-
-            assertEquals("tokens generated and set in httpOnly cookie", result.message());
-
-            verify(redisUtil).set(
-                    eq(REFRESH_PREFIX + refreshToken.toString()),
-                    eq(EMAIL),
-                    anyLong()
-            );
-
-            verify(cookieUtil).setSecureCookie(response, "accessToken", "access-jwt", 900L);
-            verify(cookieUtil).setSecureCookie(
-                    response,
-                    "refreshToken",
-                    refreshToken.toString(),
-                    REFRESH_EXPIRATION / 1000
-            );
-        }
+        assertNotNull(result);
+        assertEquals(EMAIL, result.email());
+        assertEquals(Role.USER, result.role());
+        verify(authenticationManager).authenticate(any());
     }
+
 
 
     @Test
@@ -223,7 +204,7 @@ class AuthServiceImplTest {
 
             verify(emailService).sendResetEmail(
                     eq(EMAIL),
-                    eq(APP_BASE_URL + "/api/v1/auth/reset-password?token=" + resetToken)
+                    eq(APP_BASE_URL + "/api/v1/auth/password/reset?token=" + resetToken)
             );
         }
     }
