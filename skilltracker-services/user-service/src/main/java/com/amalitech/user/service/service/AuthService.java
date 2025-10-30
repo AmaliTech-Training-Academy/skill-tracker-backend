@@ -43,7 +43,7 @@ public interface AuthService {
      * @param user the user to generate tokens for
      * @return AuthResponse with access and refresh tokens
      */
-    AuthResponse generateTokens(User user, HttpServletResponse response);
+    void generateTokens(User user, HttpServletResponse response);
 
     /**
      * Refreshes the access token by validating and rotating the refresh token.
