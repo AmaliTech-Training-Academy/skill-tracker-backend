@@ -175,7 +175,7 @@ public class JwtGlobalFilter implements GlobalFilter, Ordered {
      * Returns the order of this filter in the filter chain.
      * A lower value indicates a higher priority.
      *
-     * @return -1, ensuring this filter runs early in the filter chain
+     * @return -2147483648, ensuring this filter runs early in the filter chain
      */
     @Override
     public int getOrder() {
