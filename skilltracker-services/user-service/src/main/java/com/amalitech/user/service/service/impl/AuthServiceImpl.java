@@ -292,7 +292,7 @@ public class AuthServiceImpl implements AuthService {
             return userRepository.findByEmail(email)
                     .map(UserMapper::toDto);
         }
-        throw new InvalidVerificationCodeException("Invalid verification code");
+        throw new InvalidVerificationCodeException("The one-time password (OTP) provided is either expired or does not match the generated code for this user.");
     }
 
     @Override
