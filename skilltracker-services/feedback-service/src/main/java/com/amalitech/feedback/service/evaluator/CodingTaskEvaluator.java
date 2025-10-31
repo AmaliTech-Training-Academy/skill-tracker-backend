@@ -2,6 +2,8 @@ package com.amalitech.feedback.service.evaluator;
 
 import com.amalitech.common.event.events.SubmissionCreatedEvent;
 import com.amalitech.common.event.events.SubmissionEvaluatedEvent;
+import com.amalitech.common.event.events.SubmissionExecutedEvent;
+import com.amalitech.feedback.service.config.RabbitMQConfig;
 import com.amalitech.feedback.service.dto.client.TaskDTO;
 import com.amalitech.feedback.service.dto.client.request.Judge0SubmissionRequest;
 import com.amalitech.feedback.service.dto.client.response.Judge0SubmissionResponse;
@@ -10,6 +12,7 @@ import com.amalitech.feedback.service.service.AIFeedbackClient;
 import com.amalitech.feedback.service.service.Judge0Client;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -27,12 +30,14 @@ public class CodingTaskEvaluator implements TaskEvaluator {
 
     private final Judge0Client judge0Client;
     private final AIFeedbackClient aiFeedbackClient;
+    private final RabbitTemplate rabbitTemplate;
 
     @Override
     public Mono<SubmissionEvaluatedEvent> evaluate(SubmissionCreatedEvent event) {
         log.info("Evaluating CODING task submission: {}", event.getSubmissionId());
         
         return runTestCases(event)
+                .doOnNext(data -> publishExecutionResults(event, data.results()))
                 .flatMap(data -> gradeAndProvideFeedback(data.event(), data.results()));
     }
 
@@ -243,6 +248,95 @@ public class CodingTaskEvaluator implements TaskEvaluator {
                 .id(event.getTaskId())
                 .description("Coding task for submission " + event.getSubmissionId())
                 .build();
+    }
+
+    /**
+     * Publishes execution results immediately (before AI evaluation).
+     * This provides fast feedback to users showing code output and test results.
+     */
+    private void publishExecutionResults(SubmissionCreatedEvent event, List<Judge0SubmissionResponse> results) {
+        log.info("Publishing immediate execution results for submission: {}", event.getSubmissionId());
+        
+        Judge0SubmissionResponse firstResult = results.isEmpty() ? null : results.get(0);
+        String stdout = firstResult != null ? firstResult.getStdout() : null;
+        String stderr = firstResult != null ? firstResult.getStderr() : null;
+        
+        int passedCount = (int) results.stream()
+                .filter(r -> r.getStatus() != null && r.getStatus().getId() == 3)
+                .count();
+        boolean allPassed = !results.isEmpty() && passedCount == results.size();
+        
+        List<SubmissionExecutedEvent.TestResultData> testResults = buildExecutedTestResults(
+                event.getTestCases(), 
+                results
+        );
+        
+        double avgTime = results.stream()
+                .filter(r -> r.getTime() != null)
+                .mapToDouble(Judge0SubmissionResponse::getTime)
+                .average()
+                .orElse(0.0) * 1000;
+        
+        int avgMemory = (int) results.stream()
+                .filter(r -> r.getMemory() != null)
+                .mapToInt(Judge0SubmissionResponse::getMemory)
+                .average()
+                .orElse(0.0);
+        
+        SubmissionExecutedEvent executedEvent = SubmissionExecutedEvent.builder()
+                .submissionId(event.getSubmissionId())
+                .userId(event.getUserId())
+                .stdout(stdout)
+                .stderr(stderr)
+                .testResults(testResults)
+                .allTestsPassed(allPassed)
+                .testsPassed(passedCount)
+                .testsTotal(results.size())
+                .avgExecutionTimeMs(avgTime)
+                .avgMemoryUsedKb(avgMemory)
+                .build();
+        
+        rabbitTemplate.convertAndSend(
+                RabbitMQConfig.SUBMISSION_EXCHANGE,
+                RabbitMQConfig.SUBMISSION_EXECUTED_ROUTING_KEY,
+                executedEvent
+        );
+        
+        log.info("Published execution results for submission: {}", event.getSubmissionId());
+    }
+
+    /**
+     * Builds structured test results for SubmissionExecutedEvent.
+     */
+    private List<SubmissionExecutedEvent.TestResultData> buildExecutedTestResults(
+            List<SubmissionCreatedEvent.TestCaseData> testCases,
+            List<Judge0SubmissionResponse> results
+    ) {
+        List<SubmissionExecutedEvent.TestResultData> structuredResults = new java.util.ArrayList<>();
+        
+        for (int i = 0; i < results.size(); i++) {
+            Judge0SubmissionResponse result = results.get(i);
+            SubmissionCreatedEvent.TestCaseData testCase = i < testCases.size() ? testCases.get(i) : null;
+            
+            boolean passed = result.getStatus() != null && result.getStatus().getId() == 3;
+            String statusDesc = result.getStatus() != null ? result.getStatus().getDescription() : "Unknown";
+            Long execTime = result.getTime() != null ? (long)(result.getTime() * 1000) : null;
+            Integer memory = result.getMemory();
+            
+            SubmissionExecutedEvent.TestResultData testResult = SubmissionExecutedEvent.TestResultData.builder()
+                    .passed(passed)
+                    .input(testCase != null ? testCase.getInput() : "")
+                    .expectedOutput(testCase != null ? testCase.getExpectedOutput() : "")
+                    .actualOutput(result.getStdout() != null ? result.getStdout() : "")
+                    .executionTimeMs(execTime)
+                    .memoryUsedKb(memory)
+                    .statusDescription(statusDesc)
+                    .build();
+            
+            structuredResults.add(testResult);
+        }
+        
+        return structuredResults;
     }
 
     /**

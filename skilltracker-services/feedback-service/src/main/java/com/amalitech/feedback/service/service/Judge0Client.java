@@ -35,7 +35,7 @@ public class Judge0Client {
                 .uri(uriBuilder -> uriBuilder
                         .path("/submissions")
                         .queryParam("base64_encoded", "false")
-                        .queryParam("wait", "true") // <-- The key: no polling needed
+                        .queryParam("wait", "true")
                         .build())
                 .bodyValue(request)
                 .retrieve()
