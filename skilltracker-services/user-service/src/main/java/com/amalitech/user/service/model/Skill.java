@@ -1,18 +1,19 @@
 package com.amalitech.user.service.model;
 
 import com.amalitech.user.service.model.enums.DifficultyLevel;
-
+import io.hypersistence.utils.hibernate.type.array.ListArrayType;
 import io.hypersistence.utils.hibernate.type.json.JsonType;
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
 import org.hibernate.annotations.Type;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.UUID;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Represents a defined skill within the system that users can possess.
@@ -47,9 +48,20 @@ public class Skill {
     @Column(columnDefinition = "TEXT")
     private String description;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "difficulty_level", nullable = false)
-    private DifficultyLevel difficultyLevel;
+    @Column(name = "category", length = 100)
+    private String category;
+
+    @Column(name = "icon_url", length = 1024)
+    private String iconUrl;
+
+    /**
+     * Defines the types of tasks this skill supports.
+     * e.g., ["MCQ", "ESSAY", "CODING", "VERBAL"]
+     * This is critical for the TaskGenerationService.
+     */
+    @Type(ListArrayType.class)
+    @Column(name = "supported_task_types", columnDefinition = "text[]")
+    private List<String> supportedTaskTypes = new ArrayList<>();
 
     @Type(JsonType.class)
     @Column(name = "level_xp_map", nullable = false, columnDefinition = "jsonb")

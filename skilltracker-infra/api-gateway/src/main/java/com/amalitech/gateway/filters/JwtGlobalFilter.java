@@ -74,10 +74,9 @@ public class JwtGlobalFilter implements GlobalFilter, Ordered {
         String path = request.getPath().value();
 
         if (isWhitelisted(path)) {
-            log.trace("Path is whitelisted, skipping JWT validation: {}", path);
             return chain.filter(exchange);
         }
-        
+
         String token = extractTokenFromCookie(request);
 
         if (token == null) {

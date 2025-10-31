@@ -1,16 +1,19 @@
 package com.amalitech.user.service.exception;
 
 import com.amalitech.common.security.dto.response.ApiError;
+
+import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.MDC;
+import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.server.ResponseStatusException;
 
-import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -115,7 +118,7 @@ public class GlobalExceptionHandler {
                 null,
                 getTraceId()
         );
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -150,17 +153,49 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(ex.getStatusCode()).body(error);
     }
 
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<ApiError> handleGeneralException(Exception ex, HttpServletRequest request) {
-        ex.printStackTrace();
+    @ExceptionHandler(NoSkillsFoundException.class)
+    public ResponseEntity<ApiError> handleNoSkillsFound(NoSkillsFoundException ex, HttpServletRequest request) {
         ApiError error = ApiError.of(
-                HttpStatus.INTERNAL_SERVER_ERROR.value(),
-                "An unexpected error occurred",
-                null,
+                HttpStatus.NOT_FOUND.value(),
+                "No skills found",
+                ex.getMessage(),
                 request.getRequestURI(),
                 null,
                 getTraceId()
         );
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+    }
+
+    @ExceptionHandler(OnboardingAlreadyCompletedException.class)
+    public ResponseEntity<ApiError> handleOnboardingAlreadyCompleted(
+            OnboardingAlreadyCompletedException ex, HttpServletRequest request
+    ) {
+        ApiError error = ApiError.of(
+                HttpStatus.CONFLICT.value(),
+                "Onboarding already completed",
+                ex.getMessage(),
+                request.getRequestURI(),
+                null,
+                getTraceId()
+        );
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
+    }
+
+    @ExceptionHandler(DataAccessException.class)
+    @ResponseStatus(HttpStatus.SERVICE_UNAVAILABLE)
+    public ResponseEntity<ApiError> handleDatabaseException(DataAccessException ex, HttpServletRequest request) { // Add request
+
+        ApiError error = ApiError.of(
+                HttpStatus.SERVICE_UNAVAILABLE.value(),
+                "Database unavailable. Please try again later.",
+                "A problem occurred while communicating with the database.",
+                request.getRequestURI(),
+                null,
+                getTraceId()
+        );
+
+        return ResponseEntity
+                .status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(error);
     }
 }
