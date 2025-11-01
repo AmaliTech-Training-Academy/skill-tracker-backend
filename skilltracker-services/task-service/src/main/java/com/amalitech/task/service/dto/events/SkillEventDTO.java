@@ -1,6 +1,7 @@
 package com.amalitech.task.service.dto.events;
 
 import java.io.Serializable;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -16,10 +17,12 @@ import java.util.UUID;
  * @param name A human-readable name of the skill or achievement related to the event (e.g., "Java Fundamentals").
  * @param description A brief explanation of the event or skill context.
  * @param eventType The specific type of the event (e.g., "SKILL_COMPLETED", "SKILL_STARTED", "SKILL_LEVEL_UP").
+ * @param supportedTaskTypes List of task types this skill supports (e.g., ["CODING", "MULTIPLE_CHOICE", "ESSAY"]).
  */
 public record SkillEventDTO(
         UUID id,
         String name,
         String description,
-        String eventType
+        String eventType,
+        List<String> supportedTaskTypes
 ) implements Serializable {}

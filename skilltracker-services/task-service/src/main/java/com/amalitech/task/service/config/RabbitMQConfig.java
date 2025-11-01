@@ -40,6 +40,9 @@ public class RabbitMQConfig {
     public static final String SKILL_EVENTS_QUEUE = "skill.events.task_service.q";
     public static final String SKILL_EVENTS_ROUTING_KEY = "skill.#";
 
+    public static final String ONBOARDING_COMPLETED_QUEUE = "user.onboarding.task_service.q";
+    public static final String ONBOARDING_COMPLETED_ROUTING_KEY = "user.onboarding.completed";
+
 
     /**
      * Creates a durable queue for batch task generation requests.
@@ -179,6 +182,31 @@ public class RabbitMQConfig {
         return BindingBuilder.bind(skillEventsQueue)
                 .to(userServiceExchange)
                 .with(SKILL_EVENTS_ROUTING_KEY);
+    }
+
+    /**
+     * Creates a durable queue for consuming user onboarding completed events.
+     *
+     * @return The onboarding completed queue.
+     */
+    @Bean
+    public Queue onboardingCompletedQueue() {
+        return new Queue(ONBOARDING_COMPLETED_QUEUE, true, false, false);
+    }
+
+    /**
+     * Binds the onboarding completed queue to the user service exchange
+     * using the onboarding completed routing key.
+     *
+     * @param userServiceExchange The user service topic exchange.
+     * @param onboardingCompletedQueue The onboarding completed queue.
+     * @return The binding definition.
+     */
+    @Bean
+    public Binding onboardingCompletedBinding(TopicExchange userServiceExchange, Queue onboardingCompletedQueue) {
+        return BindingBuilder.bind(onboardingCompletedQueue)
+                .to(userServiceExchange)
+                .with(ONBOARDING_COMPLETED_ROUTING_KEY);
     }
 
     /**

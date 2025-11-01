@@ -6,5 +6,5 @@ import java.util.List;
 
 public record OnboardingRequest(
         @NotEmpty
-        List<SkillSelectionDto> skills
+        List<SkillSelection> skills
 ) {}

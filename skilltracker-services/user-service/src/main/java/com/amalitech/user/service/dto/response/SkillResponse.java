@@ -6,7 +6,7 @@ import java.util.UUID;
  * Data Transfer Object for safely exposing Skill information to the frontend.
  * Hides internal data like XP maps and supported task types.
  */
-public record SkillResponseDto(
+public record SkillResponse(
         UUID id,
         String name,
         String category,

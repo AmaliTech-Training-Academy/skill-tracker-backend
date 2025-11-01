@@ -5,7 +5,7 @@ import jakarta.validation.constraints.NotNull;
 
 import java.util.UUID;
 
-public record SkillSelectionDto(
+public record SkillSelection(
         @NotNull
         UUID skillId,
         @NotNull

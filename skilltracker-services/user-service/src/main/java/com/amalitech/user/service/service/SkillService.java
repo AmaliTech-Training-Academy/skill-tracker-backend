@@ -1,7 +1,7 @@
 package com.amalitech.user.service.service;
 
 
-import com.amalitech.user.service.dto.response.SkillResponseDto;
+import com.amalitech.user.service.dto.response.SkillResponse;
 import org.springframework.data.domain.Pageable;
 
 import java.util.List;
@@ -17,5 +17,5 @@ public interface SkillService {
      *
      * @return A list of SkillResponseDto objects.
      */
-    List<SkillResponseDto> getAllSkills(Pageable pageable);
+    List<SkillResponse> getAllSkills(Pageable pageable);
 }

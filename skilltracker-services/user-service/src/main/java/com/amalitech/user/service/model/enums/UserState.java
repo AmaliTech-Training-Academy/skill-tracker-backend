@@ -5,8 +5,7 @@ package com.amalitech.user.service.model.enums;
  */
 public enum UserState {
     REGISTERED,
-    ONBOARDING_SKILLS,
-    ONBOARDING_DIFFICULTY,
+    ONBOARDED,
     ACTIVE,
     SUSPENDED
 }

@@ -16,7 +16,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.UUID;
 
 /**
- * Implementation of UserProfileService for managing user profile operations.
+ * Implementation of the {@link UserProfileService} interface.
+ * This service provides concrete implementations for managing user profile operations,
+ * including retrieving, updating, and deleting user profiles.
  */
 @Service
 public class UserProfileServiceImpl implements UserProfileService {
@@ -34,11 +36,12 @@ public class UserProfileServiceImpl implements UserProfileService {
     }
 
     /**
-     * Retrieves a user profile by user ID.
+     * {@inheritDoc}
+     * <p>Retrieves a user profile by their unique user ID.</p>
      *
-     * @param userId the UUID of the user
-     * @return the user profile response
-     * @throws ProfileNotFoundException if the profile is not found
+     * @param userId The UUID of the user whose profile is to be retrieved.
+     * @return The {@link UserProfileResponse} containing the user's profile data.
+     * @throws ProfileNotFoundException If no user profile is found for the given {@code userId}.
      */
     @Override
     @Transactional(readOnly = true)
@@ -51,13 +54,14 @@ public class UserProfileServiceImpl implements UserProfileService {
     }
 
     /**
-     * Updates a user profile with the provided information.
-     * Only non-null fields in the request will be updated.
+     * {@inheritDoc}
+     * <p>Updates an existing user profile with the provided information.
+     * Only non-null fields in the {@code request} will be updated in the profile.</p>
      *
-     * @param userId the UUID of the user
-     * @param request the update request containing new profile data
-     * @return the updated user profile response
-     * @throws ProfileNotFoundException if the profile is not found
+     * @param userId  The UUID of the user whose profile is to be updated.
+     * @param request The {@link UpdateUserProfileRequest} containing the new profile data.
+     * @return The {@link UserProfileResponse} containing the updated user's profile data.
+     * @throws ProfileNotFoundException If no user profile is found for the given {@code userId}.
      */
     @Override
     @Transactional
@@ -74,10 +78,11 @@ public class UserProfileServiceImpl implements UserProfileService {
     }
 
     /**
-     * Deletes a user profile.
+     * {@inheritDoc}
+     * <p>Deletes a user profile associated with the given user ID.</p>
      *
-     * @param userId the UUID of the user
-     * @throws ProfileNotFoundException if the profile is not found
+     * @param userId The UUID of the user whose profile is to be deleted.
+     * @throws ProfileNotFoundException If no user profile is found for the given {@code userId}.
      */
     @Override
     @Transactional

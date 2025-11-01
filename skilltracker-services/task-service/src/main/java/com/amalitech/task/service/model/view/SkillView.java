@@ -1,7 +1,12 @@
 package com.amalitech.task.service.model.view;
 
+import io.hypersistence.utils.hibernate.type.array.ListArrayType;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.Type;
+
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -41,5 +46,9 @@ public class SkillView {
     private String name;
 
     private String description;
+
+    @Type(ListArrayType.class)
+    @Column(name = "supported_task_types", columnDefinition = "text[]")
+    private List<String> supportedTaskTypes = new ArrayList<>();
 }
 
