@@ -197,14 +197,13 @@ public class AuthServiceImpl implements AuthService {
      */
     @Transactional
     public void forgotPassword(String email) {
-        userRepository.findByEmail(email)
-                .orElseThrow(() -> new RefreshTokenException("User not found"));
-
-        String resetToken = UUID.randomUUID().toString();
-        String key = resetPrefix + resetToken;
-        redisUtil.set(key, email, resetExpiration / 1000);
-        String resetLink = appBaseUrl + "/api/v1/auth/password/reset?token=" + resetToken;
-        emailService.sendResetEmail(email, resetLink);
+        userRepository.findByEmail(email).ifPresent(user -> {
+            String resetToken = UUID.randomUUID().toString();;
+            String key = resetPrefix + resetToken;
+            redisUtil.set(key, email, resetExpiration / 1000);
+            String resetLink = appBaseUrl + "/api/v1/auth/password/reset?token=" + resetToken;
+            emailService.sendResetEmail(email, resetLink);
+        });
     }
 
     /**
