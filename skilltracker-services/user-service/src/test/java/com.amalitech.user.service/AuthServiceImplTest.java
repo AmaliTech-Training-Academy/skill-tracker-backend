@@ -97,7 +97,7 @@ class AuthServiceImplTest {
         testUser.setPasswordHash(ENCODED_PASSWORD);
         testUser.setRole(Role.USER);
         testUser.setState(UserState.REGISTERED);
-        testUser.setIsVerified(false);
+        testUser.setIsVerified(true);
     }
 
     // Helper to set private field
@@ -194,6 +194,8 @@ class AuthServiceImplTest {
         try (MockedStatic<UUID> mockedUuid = mockStatic(UUID.class)) {
             mockedUuid.when(UUID::randomUUID).thenReturn(resetToken);
 
+            setPrivateField(authService, "frontendUrl", APP_BASE_URL);
+
             authService.forgotPassword(EMAIL);
 
             verify(redisUtil).set(
@@ -204,10 +206,11 @@ class AuthServiceImplTest {
 
             verify(emailService).sendResetEmail(
                     eq(EMAIL),
-                    eq(APP_BASE_URL + "/api/v1/auth/password/reset?token=" + resetToken)
+                    eq(APP_BASE_URL + "/reset-password?token=" + resetToken)
             );
         }
     }
+
 
 
     @Test
@@ -273,4 +276,5 @@ class AuthServiceImplTest {
         Integer code = authService.generateCode();
         assertTrue(code >= 100000 && code <= 999999);
     }
+
 }
