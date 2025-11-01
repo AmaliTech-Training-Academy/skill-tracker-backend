@@ -14,23 +14,36 @@ COPY skilltracker-infra/discovery-server/pom.xml ./skilltracker-infra/discovery-
 # Download dependencies (cached layer)
 RUN cd skilltracker-infra/discovery-server && mvn dependency:go-offline -B
 
-# Copy source
+# Copy source code
 COPY skilltracker-infra/discovery-server/src ./skilltracker-infra/discovery-server/src
 
-# Build
+# Build the JAR
 RUN cd skilltracker-infra/discovery-server && mvn clean package -DskipTests
 
+
+# ==============================
+#   Runtime image
+# ==============================
 FROM eclipse-temurin:21-jre-alpine
+
 WORKDIR /app
 
-# Add non-root user
+# Install curl BEFORE switching to non-root
+USER root
+RUN apk add --no-cache curl
+
+# Create non-root user
 RUN addgroup -S spring && adduser -S spring -G spring
 USER spring:spring
 
-# Copy jar from build stage
+# Copy built JAR
 COPY --from=build /app/skilltracker-infra/discovery-server/target/*.jar app.jar
 
 EXPOSE 8082
+
+HEALTHCHECK --interval=10s --timeout=5s --start-period=20s --retries=5 \
+  CMD curl -f http://localhost:8082/actuator/health | grep '"status":"UP"' \
+   && curl -f http://localhost:8082/eureka/apps >/dev/null || exit 1
 
 ENTRYPOINT ["java", \
     "-XX:+UseContainerSupport", \

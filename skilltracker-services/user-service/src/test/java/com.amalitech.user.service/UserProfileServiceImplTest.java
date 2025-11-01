@@ -40,7 +40,6 @@ class UserProfileServiceImplTest {
     private UserProfileServiceImpl userProfileService;
 
     private UUID testUserId;
-    private User testUser;
     private UserProfile testProfile;
     private UserProfileResponse testResponse;
     private UpdateUserProfileRequest updateRequest;
@@ -49,7 +48,7 @@ class UserProfileServiceImplTest {
     void setUp() {
         testUserId = UUID.randomUUID();
 
-        testUser = new User();
+        User testUser = new User();
         testUser.setId(testUserId);
 
         testProfile = new UserProfile();

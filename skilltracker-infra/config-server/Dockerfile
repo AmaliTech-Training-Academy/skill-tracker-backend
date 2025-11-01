@@ -22,6 +22,9 @@ RUN cd skilltracker-infra/config-server && mvn clean package -DskipTests
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 
+# Install curl BEFORE creating the user
+RUN apk add --no-cache curl
+
 # Add non-root user
 RUN addgroup -S spring && adduser -S spring -G spring
 USER spring:spring
@@ -30,6 +33,10 @@ USER spring:spring
 COPY --from=build /app/skilltracker-infra/config-server/target/*.jar app.jar
 
 EXPOSE 8081
+
+# Healthcheck: Wait until Spring Boot reports UP
+HEALTHCHECK --interval=10s --timeout=5s --start-period=30s --retries=5 \
+  CMD curl -fs http://localhost:8081/actuator/health | grep '"status":"UP"' || exit 1
 
 ENTRYPOINT ["java", \
     "-XX:+UseContainerSupport", \
