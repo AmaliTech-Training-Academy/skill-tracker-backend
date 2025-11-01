@@ -88,6 +88,7 @@ public class ApiSecurityConfig {
                                 "/api/v1/auth/password/forgot",
                                 "/api/v1/auth/password/reset",
                                 "/api/v1/auth/verify-email-otp",
+                                "/api/v1/auth/resend-verification",
                                 "/api/v1/auth/verify",
                                 "/error",
                                 "/health",
