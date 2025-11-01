@@ -3,7 +3,6 @@ package com.amalitech.user.service.service;
 import com.amalitech.user.service.dto.UserRequestDTO;
 import com.amalitech.user.service.dto.UserResponseDTO;
 import com.amalitech.user.service.dto.request.LoginRequest;
-import com.amalitech.user.service.dto.request.RegisterRequest;
 import com.amalitech.user.service.dto.response.AuthResponse;
 import com.amalitech.user.service.exception.*;
 import com.amalitech.user.service.model.User;
