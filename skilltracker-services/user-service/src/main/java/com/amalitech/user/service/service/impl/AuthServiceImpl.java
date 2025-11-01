@@ -53,6 +53,8 @@ public class AuthServiceImpl implements AuthService {
     private final String appBaseUrl;
     private Integer tempCode;
     private CookieUtil cookieUtil;
+    @Value("${app.frontend-url}")
+    private String frontendUrl;
 
 
     public AuthServiceImpl(
@@ -201,7 +203,7 @@ public class AuthServiceImpl implements AuthService {
             String resetToken = UUID.randomUUID().toString();;
             String key = resetPrefix + resetToken;
             redisUtil.set(key, email, resetExpiration / 1000);
-            String resetLink = appBaseUrl + "/api/v1/auth/password/reset?token=" + resetToken;
+            String resetLink = frontendUrl + "/reset-password?token=" + resetToken;
             emailService.sendResetEmail(email, resetLink);
         });
     }
