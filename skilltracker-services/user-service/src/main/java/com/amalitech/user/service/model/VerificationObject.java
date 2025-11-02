@@ -3,6 +3,7 @@ package com.amalitech.user.service.model;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -10,19 +11,17 @@ import java.util.UUID;
 public class VerificationObject {
     private final UUID userId;
     private final int verificationCode;
-    private final int expirationTime;
-    LocalDateTime createdAt;
+    private final LocalDateTime expirationTime = LocalDateTime.now().plusMinutes(10);
+    LocalDateTime createdAt = LocalDateTime.now();
     LocalDateTime validatedAt;
 
-    public VerificationObject(UUID userId, int verificationCode, int expirationTime) {
+    public VerificationObject(UUID userId, int verificationCode) {
         this.userId = userId;
         this.verificationCode = verificationCode;
-        this.createdAt = LocalDateTime.now();
-        this.expirationTime = expirationTime;
     }
 
     public boolean isExpired() {
-        return LocalDateTime.now().isAfter(createdAt.plusMinutes(expirationTime));
+        return this.expirationTime.isBefore(LocalDateTime.now());
     }
 
     public boolean canBeValidated() {
