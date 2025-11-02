@@ -1,9 +1,8 @@
 package com.amalitech.user.service.model;
 
 import lombok.Getter;
-import lombok.Setter;
 
-import java.time.Duration;
+
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -21,7 +20,7 @@ public class VerificationObject {
     }
 
     public boolean isExpired() {
-        return this.expirationTime.isBefore(LocalDateTime.now());
+        return LocalDateTime.now().isAfter(expirationTime);
     }
 
     public boolean canBeValidated() {
