@@ -30,6 +30,7 @@ import org.slf4j.LoggerFactory;
 
 import java.security.SecureRandom;
 import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -299,15 +300,20 @@ public class AuthServiceImpl implements AuthService {
 
         VerificationObject vo = activeVerifications.get(verificationCode);
 
-        if (vo.getUserId() == user.getId() && vo.canBeValidated()) {
+        if (vo == null) {
+            throw new InvalidVerificationCodeException("Invalid or expired verification code.");
+        }
+
+        if (vo.getUserId().equals(user.getId()) && (LocalDateTime.now().isAfter(vo.getExpirationTime()))) {
             user.setIsVerified(true);
             vo.markAsValidated();
             activeVerifications.remove(verificationCode);
             userRepository.save(user);
             return userRepository.findByEmail(email)
                     .map(UserMapper::toDto);
+        } else {
+            throw new InvalidVerificationCodeException("The one-time password (OTP) provided is either expired or does not match the generated code for this user.");
         }
-        throw new InvalidVerificationCodeException("The one-time password (OTP) provided is either expired or does not match the generated code for this user.");
     }
 
     @Override
