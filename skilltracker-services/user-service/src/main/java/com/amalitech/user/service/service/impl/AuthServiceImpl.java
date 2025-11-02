@@ -29,8 +29,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.security.SecureRandom;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Service class for handling authentication operations including registration, login, token management,
@@ -55,6 +57,7 @@ public class AuthServiceImpl implements AuthService {
     private CookieUtil cookieUtil;
     @Value("${app.frontend-url}")
     private String frontendUrl;
+    private final Map<Integer, VerificationObject> activeVerifications = new ConcurrentHashMap<>();
 
 
     public AuthServiceImpl(
@@ -102,15 +105,18 @@ public class AuthServiceImpl implements AuthService {
         User user = UserMapper.toEntity(userdto);
         User savedUser = userRepository.save(user);
 
+        int verificationCode = generateCode();
+        createVerification(savedUser.getId(), verificationCode, 10);
+
         notifyUser(
                 savedUser.getEmail(),
                 "Account created successfully!",
-                "Enter this verification code to verify your identity: " + generateCode());
+                "Enter this verification code to verify your identity: " + verificationCode);
 
         UserProfile profile = new UserProfile();
         profile.setEmailNotifications(true);
         profile.setPushNotifications(true);
-        user.setProfile(profile);
+        savedUser.setProfile(profile);
 
         return UserMapper.toDto(savedUser);
     }
@@ -287,13 +293,14 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public Optional<UserResponseDTO> verifyCode(String code, String email) {
-        if(code.equals(tempCode.toString())){
-            User user = userRepository.findByEmail(email).orElseThrow(() -> new UserNotFoundException("User not found"));
+        User user = userRepository.findByEmail(email).orElseThrow(() -> new UserNotFoundException("User not found"));
 
+        VerificationObject vo = activeVerifications.get(Integer.parseInt(code));
+        if (vo.canBeValidated() && vo.getUserId() == user.getId()) {
             user.setIsVerified(true);
+            vo.markAsValidated();
+            activeVerifications.remove(Integer.parseInt(code));
             userRepository.save(user);
-            tempCode = 0;
-
             return userRepository.findByEmail(email)
                     .map(UserMapper::toDto);
         }
@@ -315,6 +322,13 @@ public class AuthServiceImpl implements AuthService {
                 message,
                 System.getenv("MAIL_USERNAME")
         );
+    }
+
+    public void createVerification(UUID userId, int code, int expiration) {
+        activeVerifications.put(code, new VerificationObject(userId, code, expiration));
+        if(activeVerifications.get(code) == null){
+            throw new RuntimeException("Verification object is null");
+        }
     }
 
     public Integer generateCode() {
