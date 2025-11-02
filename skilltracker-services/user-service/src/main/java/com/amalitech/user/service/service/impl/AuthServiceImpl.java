@@ -29,6 +29,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.security.SecureRandom;
+import java.time.Duration;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -106,7 +107,7 @@ public class AuthServiceImpl implements AuthService {
         User savedUser = userRepository.save(user);
 
         int verificationCode = generateCode();
-        createVerification(savedUser.getId(), verificationCode, 10);
+        createVerification(savedUser.getId(), verificationCode);
 
         notifyUser(
                 savedUser.getEmail(),
@@ -293,13 +294,15 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public Optional<UserResponseDTO> verifyCode(String code, String email) {
+        int verificationCode = Integer.parseInt(code);
         User user = userRepository.findByEmail(email).orElseThrow(() -> new UserNotFoundException("User not found"));
 
-        VerificationObject vo = activeVerifications.get(Integer.parseInt(code));
-        if (vo.canBeValidated() && vo.getUserId() == user.getId()) {
+        VerificationObject vo = activeVerifications.get(verificationCode);
+
+        if (vo.getUserId() == user.getId() && vo.canBeValidated()) {
             user.setIsVerified(true);
             vo.markAsValidated();
-            activeVerifications.remove(Integer.parseInt(code));
+            activeVerifications.remove(verificationCode);
             userRepository.save(user);
             return userRepository.findByEmail(email)
                     .map(UserMapper::toDto);
@@ -324,14 +327,16 @@ public class AuthServiceImpl implements AuthService {
         );
     }
 
-    public void createVerification(UUID userId, int code, int expiration) {
-        activeVerifications.put(code, new VerificationObject(userId, code, expiration));
+    public void createVerification(UUID userId, int code) {
+        activeVerifications.put(code, new VerificationObject(userId, code));
+        System.out.println("Verification Map: " + activeVerifications.toString() );
+
         if(activeVerifications.get(code) == null){
-            throw new RuntimeException("Verification object is null");
+            throw new RuntimeException("Verification object does not exist");
         }
     }
 
-    public Integer generateCode() {
+    public int generateCode() {
         SecureRandom random = new SecureRandom();
         tempCode = 100000 + random.nextInt(900000);
         return tempCode;
