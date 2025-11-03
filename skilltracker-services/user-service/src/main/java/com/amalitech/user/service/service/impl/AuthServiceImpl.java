@@ -304,7 +304,7 @@ public class AuthServiceImpl implements AuthService {
             throw new InvalidVerificationCodeException("Invalid or expired verification code.");
         }
 
-        if (vo.getUserId().equals(user.getId()) && (LocalDateTime.now().isAfter(vo.getExpirationTime()))) {
+        if (vo.getUserId().equals(user.getId()) && vo.getVerificationCode() == tempCode) {
             user.setIsVerified(true);
             vo.markAsValidated();
             activeVerifications.remove(verificationCode);
