@@ -29,8 +29,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.security.SecureRandom;
+import java.time.Duration;
+import java.time.LocalDateTime;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Service class for handling authentication operations including registration, login, token management,
@@ -55,6 +59,7 @@ public class AuthServiceImpl implements AuthService {
     private CookieUtil cookieUtil;
     @Value("${app.frontend-url}")
     private String frontendUrl;
+    private final Map<Integer, VerificationObject> activeVerifications = new ConcurrentHashMap<>();
 
 
     public AuthServiceImpl(
@@ -102,15 +107,18 @@ public class AuthServiceImpl implements AuthService {
         User user = UserMapper.toEntity(userdto);
         User savedUser = userRepository.save(user);
 
+        int verificationCode = generateCode();
+        createVerification(savedUser.getId(), verificationCode);
+
         notifyUser(
                 savedUser.getEmail(),
                 "Account created successfully!",
-                "Enter this verification code to verify your identity: " + generateCode());
+                "Enter this verification code to verify your identity: " + verificationCode);
 
         UserProfile profile = new UserProfile();
         profile.setEmailNotifications(true);
         profile.setPushNotifications(true);
-        user.setProfile(profile);
+        savedUser.setProfile(profile);
 
         return UserMapper.toDto(savedUser);
     }
@@ -287,25 +295,38 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public Optional<UserResponseDTO> verifyCode(String code, String email) {
-        if(code.equals(tempCode.toString())){
-            User user = userRepository.findByEmail(email).orElseThrow(() -> new UserNotFoundException("User not found"));
+        int verificationCode = Integer.parseInt(code);
+        User user = userRepository.findByEmail(email).orElseThrow(() -> new UserNotFoundException("User not found"));
 
+        VerificationObject vo = activeVerifications.get(verificationCode);
+
+        if (vo == null) {
+            throw new InvalidVerificationCodeException("Invalid or expired verification code.");
+        }
+
+        if (vo.getUserId().equals(user.getId()) && !vo.isExpired()) {
             user.setIsVerified(true);
+            vo.markAsValidated();
+            activeVerifications.remove(verificationCode);
             userRepository.save(user);
-            tempCode = 0;
-
             return userRepository.findByEmail(email)
                     .map(UserMapper::toDto);
+        } else {
+            throw new InvalidVerificationCodeException("The one-time password (OTP) provided is either expired or does not match the generated code for this user.");
         }
-        throw new InvalidVerificationCodeException("The one-time password (OTP) provided is either expired or does not match the generated code for this user.");
     }
 
     @Override
     public void sendVerificationCode(String toEmail) {
+        int verificationCode = generateCode();
+        User user = userRepository.findByEmail(toEmail).orElseThrow(() -> new UserNotFoundException("User not found"));
+
+        createVerification(user.getId(), verificationCode);
+
         notifyUser(
                 toEmail,
                 "SkillBoost Verification Code",
-                "Your verification code is: " + generateCode());
+                "Your verification code is: " + verificationCode);
     }
 
     public void notifyUser(String toEmail, String subject, String message) {
@@ -317,7 +338,16 @@ public class AuthServiceImpl implements AuthService {
         );
     }
 
-    public Integer generateCode() {
+    public void createVerification(UUID userId, int code) {
+        activeVerifications.put(code, new VerificationObject(userId, code));
+        System.out.println("Verification Map: " + activeVerifications.toString() );
+
+        if(activeVerifications.get(code) == null){
+            throw new RuntimeException("Verification object does not exist");
+        }
+    }
+
+    public int generateCode() {
         SecureRandom random = new SecureRandom();
         tempCode = 100000 + random.nextInt(900000);
         return tempCode;
