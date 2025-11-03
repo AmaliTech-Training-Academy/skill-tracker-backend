@@ -16,21 +16,30 @@ import com.amalitech.user.service.service.OnboardingService;
 
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
  * Implementation of the {@link OnboardingService} interface.
- * This service handles the business logic for completing a user's onboarding process,
- * including associating users with their selected skills and updating their account state.
+ * This service handles the business logic for completing a user's onboarding process.
+ *
+ * Revisions focus on:
+ * 1. Performance: Eliminating N+1 queries by pre-fetching all selected skills.
+ * 2. Resilience: Decoupling event publishing from the DB transaction using
+ * TransactionSynchronizationManager to publish *after* successful commit.
+ * 3. Validation: Validating all skill IDs upfront.
  */
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class OnboardingServiceImpl implements OnboardingService {
 
     private final UserRepository userRepository;
@@ -43,19 +52,16 @@ public class OnboardingServiceImpl implements OnboardingService {
      *
      * <p>This method performs the following actions:</p>
      * <ul>
-     *     <li>Retrieves the user by their ID, throwing {@link EntityNotFoundException} if not found.</li>
-     *     <li>Checks if the user has already completed onboarding (state is {@code ONBOARDED}),
-     *         throwing {@link OnboardingAlreadyCompletedException} if so.</li>
-     *     <li>Maps the provided skill selections to {@link UserSkill} entities.</li>
-     *     <li>Persists all new {@link UserSkill} entities to the database.</li>
-     *     <li>Updates the user's state to {@code ONBOARDED}.</li>
-     *     <li>Publishes a {@link UserOnboardingCompletedEvent} to the event bus.</li>
+     * <li>Retrieves the user and validates their onboarding state.</li>
+     * <li>Fetches all requested skills in a single query to prevent N+1 bottlenecks.</li>
+     * <li>Validates that all requested skills exist.</li>
+     * <li>Maps the skill selections to {@link UserSkill} entities.</li>
+     * <li>Persists all new {@link UserSkill} entities in a batch.</li>
+     * <li>Updates the user's state to {@code ONBOARDED}.</li>
+     * <li>Builds a {@link UserOnboardingCompletedEvent}.</li>
+     * <li>Registers a synchronization hook to publish the event *only* after the
+     * database transaction successfully commits.</li>
      * </ul>
-     *
-     * @param userId  The unique identifier (UUID) of the user completing onboarding.
-     * @param request The {@link OnboardingRequest} containing the user's selected skills and their proficiency levels.
-     * @throws EntityNotFoundException          If the user with the given ID is not found.
-     * @throws OnboardingAlreadyCompletedException If the user has already completed the onboarding process.
      */
     @Override
     @Transactional
@@ -68,8 +74,25 @@ public class OnboardingServiceImpl implements OnboardingService {
             throw new OnboardingAlreadyCompletedException(user.getState().name());
         }
 
+        Set<UUID> requestedSkillIds = request.skills().stream()
+                .map(SkillSelection::skillId)
+                .collect(Collectors.toSet());
+
+        Map<UUID, Skill> foundSkillsMap = skillRepository.findAllById(requestedSkillIds).stream()
+                .collect(Collectors.toMap(Skill::getId, Function.identity()));
+
+        if (foundSkillsMap.size() != requestedSkillIds.size()) {
+            Set<UUID> missingIds = requestedSkillIds.stream()
+                    .filter(id -> !foundSkillsMap.containsKey(id))
+                    .collect(Collectors.toSet());
+            throw new EntityNotFoundException("Could not find skills with IDs: " + missingIds);
+        }
+
         List<UserSkill> newUserSkills = request.skills().stream()
-                .map(skillDto -> createNewUserSkill(user, skillDto))
+                .map(skillDto -> {
+                    Skill skill = foundSkillsMap.get(skillDto.skillId());
+                    return createNewUserSkill(user, skill, skillDto);
+                })
                 .collect(Collectors.toList());
 
         userSkillRepository.saveAll(newUserSkills);
@@ -78,37 +101,51 @@ public class OnboardingServiceImpl implements OnboardingService {
         userRepository.save(user);
 
         List<UserOnboardingCompletedEvent.SkillSelectionData> selectedSkills =
-            newUserSkills.stream()
-                .map(userSkill -> UserOnboardingCompletedEvent.SkillSelectionData.builder()
-                    .skillId(userSkill.getSkill().getId())
-                    .skillName(userSkill.getSkill().getName())
-                    .difficultyLevel(userSkill.getCurrentLevel().name())
-                    .supportedTaskTypes(userSkill.getSkill().getSupportedTaskTypes())
-                    .build())
-                .collect(Collectors.toList());
+                newUserSkills.stream()
+                        .map(userSkill -> UserOnboardingCompletedEvent.SkillSelectionData.builder()
+                                .skillId(userSkill.getSkill().getId())
+                                .skillName(userSkill.getSkill().getName())
+                                .difficultyLevel(userSkill.getCurrentLevel().name())
+                                .supportedTaskTypes(new HashSet<>(userSkill.getSkill().getSupportedTaskTypes()))
+                                .build())
+                        .collect(Collectors.toList());
 
         UserOnboardingCompletedEvent event = UserOnboardingCompletedEvent.builder()
                 .userId(userId)
                 .selectedSkills(selectedSkills)
                 .build();
 
-        eventProducer.publishOnboardingCompleted(event);
+        TransactionSynchronizationManager.registerSynchronization(
+                new TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        try {
+                            eventProducer.publishOnboardingCompleted(event);
+                            log.info(
+                                    "Onboarding event for user {} queued for publishing (with retries).",
+                                    userId
+                            );
+                        } catch (Exception e) {
+                            log.error(
+                                    "CRITICAL: Onboarding DB commit succeeded but event publish failed for user {}. Downstream systems will be out of sync.",
+                                    userId,
+                                    e
+                            );
+                        }
+                    }
+                }
+        );
     }
 
     /**
-     * Constructs a new {@link UserSkill} entity based on the user and selected skill data.
-     * This private helper method encapsulates the logic for creating a {@code UserSkill} object,
-     * including fetching the {@link Skill} entity and calculating initial experience points (XP).
+     * Constructs a new {@link UserSkill} entity.
      *
-     * @param user     The {@link User} entity for whom the skill is being selected.
-     * @param skillDto The {@link SkillSelection} DTO containing the skill ID and selected level.
+     * @param user     The {@link User} entity.
+     * @param skill    The pre-fetched {@link Skill} entity.
+     * @param skillDto The {@link SkillSelection} DTO.
      * @return A newly created {@link UserSkill} entity.
-     * @throws EntityNotFoundException If the skill with the given ID in {@code skillDto} is not found.
      */
-    private UserSkill createNewUserSkill(User user, SkillSelection skillDto) {
-        Skill skill = skillRepository.findById(skillDto.skillId())
-                .orElseThrow(() -> new EntityNotFoundException("Skill not found with id" + skillDto.skillId()));
-
+    private UserSkill createNewUserSkill(User user, Skill skill, SkillSelection skillDto) {
         Long initialXp = skill.getLevelXpMap().getOrDefault(skillDto.level().name(), 0L);
 
         UserSkill userSkill = new UserSkill();

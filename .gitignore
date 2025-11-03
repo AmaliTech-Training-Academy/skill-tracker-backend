@@ -69,6 +69,7 @@ replay_pid*
 # Ignore the local development data seeder package
 /src/main/java/com/amalitech/task/service/seed/
 skilltracker-services/task-service/src/main/java/com/amalitech/task/service/seed/
+skilltracker-services/user-service/src/main/java/com/amalitech/user/service/seed/
 
 skilltracker-services/task-service/src/main/java/com/amalitech/task/service/controller/McqTestController.java
 

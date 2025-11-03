@@ -1,14 +1,19 @@
 package com.amalitech.user.service.dto.response;
 
+import java.io.Serializable;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 /**
- * Data Transfer Object for safely exposing Skill information to the frontend.
- * Hides internal data like XP maps and supported task types.
+ * DTO for returning skill information to the client.
  */
 public record SkillResponse(
         UUID id,
         String name,
+        String description,
         String category,
-        String iconUrl
-) {}
+        String iconUrl,
+        Set<String> supportedTaskTypes,
+        Map<String, Long> levelXpMap
+) implements Serializable {}

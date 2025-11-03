@@ -1,25 +1,22 @@
 package com.amalitech.task.service.service;
 
-import com.amalitech.task.service.dto.events.SkillEventDTO;
-import com.amalitech.task.service.dto.events.UserEventDTO;
+import com.amalitech.common.event.events.SkillEvent;
 import com.amalitech.task.service.model.view.SkillView;
-import com.amalitech.task.service.model.view.UserView;
 import com.amalitech.task.service.repository.SkillViewRepository;
-import com.amalitech.task.service.repository.UserViewRepository;
-
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashSet;
+
 /**
- * Service component responsible for consuming asynchronous events from the message queue (RabbitMQ)
- * to maintain a synchronized, localized read-model (view) of essential data (Users and Skills)
- * required by the Task Service.
+ * Service component responsible for consuming asynchronous skill events from the message queue (RabbitMQ)
+ * to maintain a synchronized, localized read-model (view) of skill data required by the Task Service.
  * <p>
- * This pattern helps decouple services and allows the Task Service to query data locally
- * without making synchronous REST calls to the source services (e.g., User Service).
+ * This pattern helps decouple services and allows the Task Service to query skill data locally
+ * without making synchronous REST calls to the User Service.
  * The transactions ensure data consistency during the write operation.
  */
 @Service
@@ -27,64 +24,43 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class DataSyncConsumer {
 
-    private final UserViewRepository userViewRepository;
     private final SkillViewRepository skillViewRepository;
 
-    /**
-     * Listens for user-related events (e.g., USER_CREATED, USER_UPDATED) and updates the
-     * local {@link UserView} data store.
-     * <p>
-     * The method is bound to the {@code user.events.task_service.q} queue and executes
-     * within a transaction to ensure that the user view is persisted atomically.
-     *
-     * @param userEvent The {@link UserEventDTO} containing the user data to be synchronized.
-     */
-    @RabbitListener(queues = "user.events.task_service.q")
-    @Transactional
-    public void handleUserEvent(UserEventDTO userEvent) {
-        try {
-            log.info("Processing user event for user ID: {}", userEvent.id());
 
-            UserView userView = UserView.builder()
-                    .id(userEvent.id())
-                    .fullName(userEvent.fullName())
-                    .email(userEvent.email())
-                    .role(userEvent.role())
-                    .build();
-
-            userViewRepository.save(userView);
-
-        } catch (Exception e) {
-            log.error("Failed to process user event for user ID: {}", userEvent.id(), e);
-        }
-    }
 
     /**
-     * Listens for skill-related events (e.g., SKILL_CREATED, SKILL_UPDATED) and updates the
-     * local {@link SkillView} data store.
+     * Listens for skill-related events (SKILL_CREATED, SKILL_UPDATED, SKILL_DELETED) and updates the
+     * local {@link SkillView} data store accordingly.
      * <p>
      * The method is bound to the {@code skill.events.task_service.q} queue and executes
      * within a transaction to ensure the skill view is persisted atomically.
      *
-     * @param skillEvent The {@link SkillEventDTO} containing the skill data to be synchronized.
+     * @param skillEvent The {@link SkillEvent} containing the skill data and operation type.
      */
     @RabbitListener(queues = "skill.events.task_service.q")
     @Transactional
-    public void handleSkillEvent(SkillEventDTO skillEvent) {
+    public void handleSkillEvent(SkillEvent skillEvent) {
         try {
-            log.info("Processing skill event for skill ID: {}", skillEvent.id());
+            log.info("Processing {} event for skill ID: {}", skillEvent.getEventType(), skillEvent.getSkillId());
+
+            if (skillEvent.getEventType() == SkillEvent.EventType.SKILL_DELETED) {
+                skillViewRepository.deleteById(skillEvent.getSkillId());
+                log.info("Deleted skill view for skill: {}", skillEvent.getSkillId());
+                return;
+            }
 
             SkillView skillView = SkillView.builder()
-                    .id(skillEvent.id())
-                    .name(skillEvent.name())
-                    .description(skillEvent.description())
-                    .supportedTaskTypes(skillEvent.supportedTaskTypes())
+                    .id(skillEvent.getSkillId())
+                    .name(skillEvent.getName())
+                    .description(skillEvent.getDescription())
+                    .supportedTaskTypes(new HashSet<>(skillEvent.getSupportedTaskTypes()))
                     .build();
 
             skillViewRepository.save(skillView);
+            log.info("Synchronized skill view for skill: {}", skillEvent.getSkillId());
 
         } catch (Exception e) {
-            log.error("Failed to process skill event for skill ID: {}", skillEvent.id(), e);
+            log.error("Failed to process {} event for skill ID: {}", skillEvent.getEventType(), skillEvent.getSkillId(), e);
         }
     }
 }

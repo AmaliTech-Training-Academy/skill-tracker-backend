@@ -3,6 +3,7 @@ package com.amalitech.user.service.controller;
 import com.amalitech.user.service.dto.request.OnboardingRequest;
 import com.amalitech.user.service.security.CustomUserDetails;
 import com.amalitech.user.service.service.OnboardingService;
+
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;

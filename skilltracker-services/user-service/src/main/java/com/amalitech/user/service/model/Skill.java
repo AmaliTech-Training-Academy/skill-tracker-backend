@@ -61,7 +61,7 @@ public class Skill {
      */
     @Type(ListArrayType.class)
     @Column(name = "supported_task_types", columnDefinition = "text[]")
-    private List<String> supportedTaskTypes = new ArrayList<>();
+    private Set<String> supportedTaskTypes = new HashSet<>();
 
     @Type(JsonType.class)
     @Column(name = "level_xp_map", nullable = false, columnDefinition = "jsonb")
@@ -75,9 +75,18 @@ public class Skill {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
+    /**
+     * Ensures data integrity before any INSERT or UPDATE operation.
+     * 1. Normalizes the skill name to uppercase.
+     * 2. Validates the Level XP map.
+     */
     @PrePersist
     @PreUpdate
-    private void validateLevelXpMap() {
+    private void onPreSaveOrUpdate() {
+        if (this.name != null) {
+            this.name = this.name.toUpperCase();
+        }
+
         if (levelXpMap == null || levelXpMap.isEmpty()) {
             throw new IllegalStateException("Level XP map must contain at least one difficulty level with XP threshold");
         }

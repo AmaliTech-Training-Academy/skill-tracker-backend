@@ -3,6 +3,7 @@ package com.amalitech.common.event.events;
 import lombok.Builder;
 import lombok.Data;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -29,6 +30,6 @@ public class UserOnboardingCompletedEvent {
         private UUID skillId;
         private String skillName;
         private String difficultyLevel;
-        private List<String> supportedTaskTypes;
+        private Set<String> supportedTaskTypes;
     }
 }
