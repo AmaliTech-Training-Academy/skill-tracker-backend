@@ -6,6 +6,8 @@ import com.amalitech.task.service.dto.request.BatchGenerationRequest;
 import com.amalitech.task.service.dto.request.GenerateTaskRequest;
 import com.amalitech.task.service.dto.response.AdminTaskDetailResponse;
 import com.amalitech.task.service.dto.response.AdminTaskSummaryResponse;
+import com.amalitech.task.service.dto.request.McqRequestTaskDTO;
+import com.amalitech.task.service.dto.response.McqResponseTaskDTO;
 import com.amalitech.task.service.events.RabbitMQEventProducer;
 import com.amalitech.task.service.exception.ResourceNotFoundException;
 import com.amalitech.task.service.mapper.TaskMapper;
@@ -19,6 +21,11 @@ import com.amalitech.task.service.repository.TaskSubmissionRepository;
 import com.amalitech.task.service.repository.UserSkillProfileRepository;
 import com.amalitech.task.service.service.SkillService;
 import com.amalitech.task.service.service.TaskService;
+
+import com.google.genai.Client;
+import com.google.genai.types.GenerateContentResponse;
+
+
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.Cacheable;
@@ -307,4 +314,45 @@ public class TaskServiceImpl implements TaskService {
         if (correctCount < 15) return TaskDifficulty.INTERMEDIATE;
         return TaskDifficulty.ADVANCED;
     }
+
+    @Override
+    public McqResponseTaskDTO generateMCQ(McqRequestTaskDTO taskDTO) {
+        Client client = new Client();
+        GenerateContentResponse response = client.models.generateContent(
+                    "gemini-2.5-flash",
+                    "{\n" +
+                            "  \"instruction_type\": \"mcq_generation\",\n" +
+                            "  \"input\": {\n" +
+                            "    \"interest\": \" Core Java \",\n" +
+                            "    \"difficulty\": \"Intermediate\",\n" +
+                            "    \"lastPerformance\": \"integer\"\n" +
+                            "  },\n" +
+                            "  \"expected_output\": {\n" +
+                            "    \"question_id\": \"string\",\n" +
+                            "    \"question_text\": \"string\",\n" +
+                            "    \"options\": [\n" +
+                            "      \"string (option A)\",\n" +
+                            "      \"string (option B)\",\n" +
+                            "      \"string (option C)\",\n" +
+                            "      \"string (option D)\"\n" +
+                            "    ],\n" +
+                            "    \"correct_answer_index\": \"String (A-B)\",\n" +
+                            "    \"explanation\": \"string (why the answer is correct)\"\n" +
+                            "  },\n" +
+                            "  \"constraints\": [\n" +
+                            "  \"question_text must be self-containing of a complete question, code examples included if it exists.\"\n" +
+                            "    \"Options must be clear and unique.\",\n" +
+                            "    \"One correct answer only.\",\n" +
+                            "    \"Explanation must reference key concept in simple terms.\",\n" +
+                            "    \"Difficulty affects depth, not question length.\"\n" +
+                            "    \"Ensure there is a balance mixed of question kinds(coding, mcq, text-based, etc)\"\n" +
+                            "    \" Ensure expected_output always matches expected_output block of prompt structure. \"\n" +
+                            "  ]\n" +
+                            "}",
+                    null);
+
+            System.out.println(response.text());
+
+            return ;
+        }
 }
