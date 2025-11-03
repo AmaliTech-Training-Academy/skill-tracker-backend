@@ -4,6 +4,7 @@ import com.amalitech.feedback.service.dto.client.TaskDTO;
 import com.amalitech.feedback.service.dto.client.response.Judge0SubmissionResponse;
 import com.amalitech.feedback.service.dto.client.submission.impl.CodingSubmissionFeedback;
 import com.amalitech.feedback.service.dto.client.submission.DetailedEvaluationResponse;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -46,8 +47,7 @@ public class AIFeedbackClient {
         
         return Mono.fromCallable(() -> {
             ChatClient chatClient = chatClientBuilder.build();
-            
-            // Prepare template variables
+
             Map<String, Object> variables = new HashMap<>();
             variables.put("skill", task.getSkillName() != null ? task.getSkillName() : "General Programming");
             variables.put("difficulty", task.getDifficulty() != null ? task.getDifficulty().toString() : "MEDIUM");
@@ -56,7 +56,6 @@ public class AIFeedbackClient {
             variables.put("testCases", formatTestCases(executionResults));
             variables.put("criteria", "Standard evaluation criteria: correctness, efficiency, and code style");
 
-            // Create prompt from template
             Prompt prompt = codingEvaluationPromptTemplate.create(variables);
 
             String response = chatClient.prompt(prompt)

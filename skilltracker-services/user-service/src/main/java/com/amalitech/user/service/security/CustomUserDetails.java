@@ -40,7 +40,8 @@ public class CustomUserDetails implements UserDetails {
 
     @Override
     public boolean isAccountNonLocked() {
-        return user.getState() == UserState.REGISTERED;
+        return user.getState() == UserState.REGISTERED ||
+               user.getState() == UserState.ONBOARDED;
     }
 
     @Override
@@ -50,6 +51,7 @@ public class CustomUserDetails implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        return user.getState() == UserState.REGISTERED;
+        return user.getState() == UserState.REGISTERED ||
+               user.getState() == UserState.ONBOARDED;
     }
 }

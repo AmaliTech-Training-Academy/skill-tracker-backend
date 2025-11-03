@@ -36,6 +36,7 @@ build/
 ## randoms
 template.xml
 .env
+.env.example
 *.bak
 
 # Database initialization with sensitive credentials

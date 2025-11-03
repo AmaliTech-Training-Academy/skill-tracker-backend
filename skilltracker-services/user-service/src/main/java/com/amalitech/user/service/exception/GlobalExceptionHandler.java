@@ -181,6 +181,25 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
     }
 
+    /**
+     * Handles exceptions related to duplicate resource creation.
+     * Returns a 409 CONFLICT.
+     */
+    @ExceptionHandler(DuplicateSkillException.class)
+    public ResponseEntity<ApiError> handleDuplicateSkill(
+            DuplicateSkillException ex, HttpServletRequest request) {
+
+        ApiError apiError = ApiError.of(
+                HttpStatus.CONFLICT.value(),
+                "Skill already exists",
+                ex.getMessage(),
+                request.getRequestURI(),
+                null,
+                getTraceId()
+        );
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(apiError);
+    }
+
     @ExceptionHandler(DataAccessException.class)
     @ResponseStatus(HttpStatus.SERVICE_UNAVAILABLE)
     public ResponseEntity<ApiError> handleDatabaseException(DataAccessException ex, HttpServletRequest request) { // Add request

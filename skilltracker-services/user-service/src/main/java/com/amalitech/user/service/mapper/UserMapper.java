@@ -6,6 +6,7 @@ import com.amalitech.user.service.model.User;
 import com.amalitech.user.service.model.enums.PremiumTier;
 import com.amalitech.user.service.model.enums.Role;
 import com.amalitech.user.service.model.enums.UserState;
+
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Component;
 
