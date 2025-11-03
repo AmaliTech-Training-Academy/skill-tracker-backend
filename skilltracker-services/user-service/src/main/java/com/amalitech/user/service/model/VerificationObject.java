@@ -23,10 +23,6 @@ public class VerificationObject {
         return LocalDateTime.now().isAfter(expirationTime);
     }
 
-    public boolean canBeValidated() {
-        return validatedAt == null && !isExpired();
-    }
-
     public void markAsValidated() {
         this.validatedAt = LocalDateTime.now();
     }
