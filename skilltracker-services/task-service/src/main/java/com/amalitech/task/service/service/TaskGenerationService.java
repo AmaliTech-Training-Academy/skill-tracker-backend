@@ -83,7 +83,7 @@ public class TaskGenerationService {
 
             for (int i = 0; i < request.requiredCount(); i++) {
                 String topic = String.format("A coding challenge about %s", request.skillName());
-                contentGeneratorService.generateCodingTask(skill, request.difficulty(), topic);
+                contentGeneratorService.generateCodingTask(skill, request.difficulty());
             }
 
             log.info("Batch generation complete for {}", lockKey);
@@ -114,7 +114,7 @@ public class TaskGenerationService {
                     .orElseThrow(() -> new RuntimeException("Skill not found: " + request.skillName()));
 
             log.info("Generating ADMIN CODING task for topic '{}'...", request.topic());
-            contentGeneratorService.generateCodingTask(skill, request.difficulty(), request.topic());
+            contentGeneratorService.generateCodingTask(skill, request.difficulty());
 
             log.info("Admin CODING task generation complete for {}", request.topic());
 
@@ -173,7 +173,7 @@ public class TaskGenerationService {
                     skill.getName(), i + 1);
 
             switch (taskType) {
-                case CODING -> contentGeneratorService.generateCodingTask(skill, difficulty, topic);
+                case CODING -> contentGeneratorService.generateCodingTask(skill, difficulty);
                 case MULTIPLE_CHOICE -> {
                     // TODO: Implement when MCQ generator is available
                     log.warn("MCQ generation not yet implemented for skill: {}", skill.getName());

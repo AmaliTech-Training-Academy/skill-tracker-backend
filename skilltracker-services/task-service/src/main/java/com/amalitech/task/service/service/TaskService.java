@@ -2,8 +2,12 @@ package com.amalitech.task.service.service;
 
 import com.amalitech.task.service.dto.TaskAvailabilityDTO;
 import com.amalitech.task.service.dto.TaskDTO;
+import com.amalitech.task.service.dto.response.AdminTaskDetailResponse;
+import com.amalitech.task.service.dto.response.AdminTaskSummaryResponse;
 import com.amalitech.task.service.exception.ResourceNotFoundException;
 import com.amalitech.task.service.model.enums.TaskDifficulty;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 import java.util.UUID;
@@ -55,4 +59,18 @@ public interface TaskService {
      * @return A DTO with the count and a flag if generation is needed.
      */
     TaskAvailabilityDTO checkTaskAvailability(String skillName, TaskDifficulty difficulty);
+    /**
+     * Retrieves a paginated list of all tasks for administrative purposes.
+     * @param pageable The pagination information (page, size, sort).
+     * @return A paginated list of lightweight task summaries.
+     */
+    Page<AdminTaskSummaryResponse> getAllTasksForAdmin(Pageable pageable);
+
+    /**
+     * Retrieves the full details of a single task for the admin view.
+     * @param taskId The ID of the task to retrieve.
+     * @return The detailed task DTO including its content.
+     * @throws ResourceNotFoundException if task is not found.
+     */
+    AdminTaskDetailResponse getTaskForAdmin(UUID taskId);;
 }

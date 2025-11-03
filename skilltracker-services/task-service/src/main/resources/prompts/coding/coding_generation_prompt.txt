@@ -8,22 +8,22 @@ TASK:
 Generate exactly 5 high-quality coding challenges in JSON format following the structure below.
 
 REQUIRED JSON STRUCTURE:
-{
+\{
   "challenges": [
-    {
+    \{
       "title": "Descriptive challenge title (max 70 chars)",
       "description": "Clear problem statement explaining what needs to be built (2-4 sentences)",
       "detailedRequirements": "Comprehensive requirements with examples and edge cases to consider",
       "starterCode": "Initial code template with function signature and basic structure",
       "testCases": [
-        {
+        \{
           "input": "Test input (string, array, or object as appropriate)",
           "expectedOutput": "Expected result",
           "isHidden": false,
           "description": "What this test case validates"
-        }
+        \}
       ],
-      "evaluationCriteria": {
+      "evaluationCriteria": \{
         "correctness": [
           "Criterion 1: Specific correctness requirement",
           "Criterion 2: Another correctness requirement",
@@ -39,7 +39,7 @@ REQUIRED JSON STRUCTURE:
           "Criterion 2: Naming convention expectation",
           "Criterion 3: Documentation/readability requirement"
         ]
-      },
+      \},
       "hints": [
         "Hint 1: Helpful pointer without giving away the solution",
         "Hint 2: Another strategic hint"
@@ -47,9 +47,9 @@ REQUIRED JSON STRUCTURE:
       "estimatedDuration": 15,
       "maxXP": 10,
       "difficulty": "BEGINNER"
-    }
+    \}
   ]
-}
+\}
 
 CRITICAL REQUIREMENTS - NON-NEGOTIABLE:
 1. Generate EXACTLY 5 coding challenges (Total: 50 XP)
@@ -114,7 +114,6 @@ Test Cases:
 - Each test must have clear description of what it validates
 
 Evaluation Criteria:
-
 CORRECTNESS (50% weight):
 - Does the solution pass all test cases?
 - Are edge cases handled properly?
