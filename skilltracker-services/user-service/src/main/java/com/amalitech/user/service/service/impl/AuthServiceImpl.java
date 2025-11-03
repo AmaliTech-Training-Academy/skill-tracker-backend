@@ -304,7 +304,7 @@ public class AuthServiceImpl implements AuthService {
             throw new InvalidVerificationCodeException("Invalid or expired verification code.");
         }
 
-        if (vo.getUserId().equals(user.getId()) && vo.getVerificationCode() == tempCode) {
+        if (vo.getUserId().equals(user.getId()) && !vo.isExpired()) {
             user.setIsVerified(true);
             vo.markAsValidated();
             activeVerifications.remove(verificationCode);
@@ -318,10 +318,15 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public void sendVerificationCode(String toEmail) {
+        int verificationCode = generateCode();
+        User user = userRepository.findByEmail(toEmail).orElseThrow(() -> new UserNotFoundException("User not found"));
+
+        createVerification(user.getId(), verificationCode);
+
         notifyUser(
                 toEmail,
                 "SkillBoost Verification Code",
-                "Your verification code is: " + generateCode());
+                "Your verification code is: " + verificationCode);
     }
 
     public void notifyUser(String toEmail, String subject, String message) {
