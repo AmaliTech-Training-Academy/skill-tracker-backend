@@ -79,7 +79,7 @@ public class Task {
     private Boolean isPublished = false;
 
     @CreationTimestamp
-    @Column(nullable = false)
+    @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
     @UpdateTimestamp

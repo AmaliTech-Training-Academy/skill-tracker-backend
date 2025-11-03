@@ -12,7 +12,7 @@ import java.util.List;
 import java.util.UUID;
 
 @Component
-@Order(1) // Run before task generation
+@Order(1)
 @RequiredArgsConstructor
 @Slf4j
 public class SkillDataSeeder implements CommandLineRunner {

@@ -1,6 +1,5 @@
 package com.amalitech.feedback.service.config;
 
-
 import org.springframework.ai.chat.prompt.PromptTemplate;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;

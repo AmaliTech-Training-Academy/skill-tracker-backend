@@ -1,7 +1,8 @@
-# docker-compose.yml (root level - shared infrastructure)
-
 services:
-  # Service Discovery
+  # ===============================
+  # Infrastructure Core
+  # ===============================
+
   discovery-server:
     build:
       context: .
@@ -15,16 +16,20 @@ services:
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8082/actuator/health"]
       interval: 10s
-      timeout: 5s
-      retries: 5
+      timeout: 10s
+      retries: 10
+      start_period: 20s
+    depends_on:
+      rabbitmq:
+        condition: service_started
+      postgres:
+        condition: service_started
 
-  # Config Server
   config-server:
     build:
       context: .
       dockerfile: ./skilltracker-infra/config-server/Dockerfile
     image: skilltracker/config-server:latest
-    container_name: config-server
     env_file: .env
     ports:
       - "8081:8081"
@@ -37,17 +42,16 @@ services:
       - skilltracker-network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8081/actuator/health"]
-      interval: 10s
-      timeout: 5s
+      interval: 30s
+      timeout: 10s
       retries: 5
+      start_period: 60s
 
-  # API Gateway
   api-gateway:
     build:
       context: .
       dockerfile: ./skilltracker-infra/api-gateway/Dockerfile
     image: skilltracker/api-gateway:latest
-    container_name: api-gateway
     env_file: .env
     ports:
       - "8080:8080"
@@ -70,28 +74,10 @@ services:
       timeout: 5s
       retries: 5
 
-  # Centralized Audit MongoDB
-  mongodb-audit:
-    container_name: mongo-audit-db
-    image: mongo:7
-    environment:
-      MONGO_INITDB_DATABASE: audit_db
-      MONGO_INITDB_ROOT_USERNAME: ${MONGO_AUDIT_USER}
-      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_AUDIT_PASSWORD}
-    ports:
-      - "27021:27017"
-    volumes:
-      - mongo_audit_data:/data/db
-    command: --auth
-    healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - skilltracker-network
+  # ===============================
+  # Dependencies
+  # ===============================
 
-  # Redis - shared cache
   redis:
     container_name: redis-cache
     image: redis:latest
@@ -108,7 +94,6 @@ services:
       timeout: 3s
       retries: 5
 
-  # RabbitMQ - message broker
   rabbitmq:
     container_name: rabbitmq-broker
     image: rabbitmq:3-management
@@ -117,8 +102,8 @@ services:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
     ports:
-      - "5672:5672" # AMQP
-      - "15672:15672" # Management UI
+      - "5672:5672"
+      - "15672:15672"
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
     networks:
@@ -129,7 +114,6 @@ services:
       timeout: 5s
       retries: 5
 
-  # PostgreSQL - Consolidated Database
   postgres:
     container_name: postgres-db
     image: postgres:16-alpine
@@ -141,7 +125,6 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./init-postgres.sql:/docker-entrypoint-initdb.d/init-postgres.sql
     networks:
       - skilltracker-network
     healthcheck:
@@ -150,74 +133,9 @@ services:
       timeout: 5s
       retries: 5
 
-  # MongoDB - Analytics Service
-  mongodb-analytics:
-    container_name: mongo-analytics-db
-    image: mongo:7
-    environment:
-      MONGO_INITDB_DATABASE: ${MONGO_ANALYTICS_DB}
-      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ANALYTICS_USER}
-      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ANALYTICS_PASSWORD}
-    ports:
-      - "27022:27017"
-    volumes:
-      - mongo_analytics_data:/data/db
-    command: --auth
-    healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - skilltracker-network
-
-  # MongoDB - Gamification Service
-  mongodb-gamification:
-    container_name: mongo-gamification-db
-    image: mongo:7
-    environment:
-      MONGO_INITDB_DATABASE: ${MONGO_GAMIFICATION_DB}
-      MONGO_INITDB_ROOT_USERNAME: ${MONGO_GAMIFICATION_USER}
-      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_GAMIFICATION_PASSWORD}
-    ports:
-      - "27023:27017"
-    volumes:
-      - mongo_gamification_data:/data/db
-    command: --auth
-    healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - skilltracker-network
-
-  # MongoDB - Notification Service
-  mongodb-notification:
-    container_name: mongo-notification-db
-    image: mongo:7
-    environment:
-      MONGO_INITDB_DATABASE: ${MONGO_NOTIFICATION_DB}
-      MONGO_INITDB_ROOT_USERNAME: ${MONGO_NOTIFICATION_USER}
-      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_NOTIFICATION_PASSWORD}
-    ports:
-      - "27024:27017"
-    volumes:
-      - mongo_notification_data:/data/db
-    command: --auth
-    healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - skilltracker-network
-
-  # =====================================================
-  # BUSINESS SERVICES
-  # =====================================================
-
+  # ===============================
   # User Service
+  # ===============================
   user-service:
     build:
       context: .
@@ -231,14 +149,19 @@ services:
       SPRING_CLOUD_CONFIG_URI: http://config-server:8081
       SPRING_CONFIG_IMPORT: optional:configserver:http://config-server:8081
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB}
-      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER_USER}
-      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_USER_PASSWORD}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
       SPRING_RABBITMQ_HOST: rabbitmq
       SPRING_RABBITMQ_USERNAME: ${RABBITMQ_USER}
       SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
       SPRING_DATA_REDIS_HOST: redis
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
       SERVER_PORT: 8084
+      cookie.secure: 'true'
+      cookie.same-site: 'None'
+      cookie.domain: ''
+      spring.cloud.config.allow-override: true
+      spring.cloud.config.override-system: true
     ports:
       - "8084:8084"
     depends_on:
@@ -256,365 +179,32 @@ services:
       - skilltracker-network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8084/actuator/health"]
-      interval: 30s
+      interval: 20s
       timeout: 10s
       retries: 5
-      start_period: 60s
+      start_period: 40s
 
-  # Task Service
-  task-service:
-    build:
-      context: .
-      dockerfile: ./skilltracker-services/task-service/Dockerfile
-    image: skilltracker/task-service:latest
-    container_name: task-service
-    env_file: .env
-    environment:
-      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
-      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8082/eureka/
-      SPRING_CLOUD_CONFIG_URI: http://config-server:8081
-      SPRING_CONFIG_IMPORT: optional:configserver:http://config-server:8081
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB}
-      SPRING_DATASOURCE_USERNAME: ${POSTGRES_TASK_USER}
-      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_TASK_PASSWORD}
-      SPRING_RABBITMQ_HOST: rabbitmq
-      SPRING_RABBITMQ_USERNAME: ${RABBITMQ_USER}
-      SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
-      SPRING_DATA_REDIS_HOST: redis
-      SPRING_JPA_HIBERNATE_DDL_AUTO: update
-      SERVER_PORT: 8085
-    ports:
-      - "8085:8085"
+  # ===============================
+  # Ngrok Tunnel
+  # ===============================
+
+  ngrok:
+    image: ngrok/ngrok:latest
+    container_name: ngrok
     depends_on:
-      discovery-server:
-        condition: service_healthy
-      config-server:
-        condition: service_healthy
-      postgres:
-        condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
+      - api-gateway
+    command: http --log=stdout api-gateway:8080
+    environment:
+      - NGROK_AUTHTOKEN=${NGROK_AUTHTOKEN}
+      - NGROK_REGION=us
+    ports:
+      - "4040:4040"
     networks:
       - skilltracker-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8085/actuator/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 60s
 
-  # Feedback Service
-  feedback-service:
-    build:
-      context: .
-      dockerfile: ./skilltracker-services/feedback-service/Dockerfile
-    image: skilltracker/feedback-service:latest
-    container_name: feedback-service
-    env_file: .env
-    environment:
-      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
-      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8082/eureka/
-      SPRING_CLOUD_CONFIG_URI: http://config-server:8081
-      SPRING_CONFIG_IMPORT: optional:configserver:http://config-server:8081
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB}
-      SPRING_DATASOURCE_USERNAME: ${POSTGRES_FEEDBACK_USER}
-      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_FEEDBACK_PASSWORD}
-      SPRING_RABBITMQ_HOST: rabbitmq
-      SPRING_RABBITMQ_USERNAME: ${RABBITMQ_USER}
-      SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
-      SPRING_DATA_REDIS_HOST: redis
-      SPRING_JPA_HIBERNATE_DDL_AUTO: update
-      SERVER_PORT: 8090
-    ports:
-      - "8090:8090"
-    depends_on:
-      discovery-server:
-        condition: service_healthy
-      config-server:
-        condition: service_healthy
-      postgres:
-        condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    networks:
-      - skilltracker-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8090/actuator/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 60s
-
-  # Payment Service
-  payment-service:
-    build:
-      context: .
-      dockerfile: ./skilltracker-services/payment-service/Dockerfile
-    image: skilltracker/payment-service:latest
-    container_name: payment-service
-    env_file: .env
-    environment:
-      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
-      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8082/eureka/
-      SPRING_CLOUD_CONFIG_URI: http://config-server:8081
-      SPRING_CONFIG_IMPORT: optional:configserver:http://config-server:8081
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB}
-      SPRING_DATASOURCE_USERNAME: ${POSTGRES_PAYMENT_USER}
-      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PAYMENT_PASSWORD}
-      SPRING_RABBITMQ_HOST: rabbitmq
-      SPRING_RABBITMQ_USERNAME: ${RABBITMQ_USER}
-      SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
-      SPRING_DATA_REDIS_HOST: redis
-      SPRING_JPA_HIBERNATE_DDL_AUTO: update
-      SERVER_PORT: 8087
-    ports:
-      - "8087:8087"
-    depends_on:
-      discovery-server:
-        condition: service_healthy
-      config-server:
-        condition: service_healthy
-      postgres:
-        condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    networks:
-      - skilltracker-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8087/actuator/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 60s
-
-  # Practice Service
-  practice-service:
-    build:
-      context: .
-      dockerfile: ./skilltracker-services/practice-service/Dockerfile
-    image: skilltracker/practice-service:latest
-    container_name: practice-service
-    env_file: .env
-    environment:
-      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
-      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8082/eureka/
-      SPRING_CLOUD_CONFIG_URI: http://config-server:8081
-      SPRING_CONFIG_IMPORT: optional:configserver:http://config-server:8081
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB}
-      SPRING_DATASOURCE_USERNAME: ${POSTGRES_PRACTICE_USER}
-      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PRACTICE_PASSWORD}
-      SPRING_RABBITMQ_HOST: rabbitmq
-      SPRING_RABBITMQ_USERNAME: ${RABBITMQ_USER}
-      SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
-      SPRING_DATA_REDIS_HOST: redis
-      SPRING_JPA_HIBERNATE_DDL_AUTO: update
-      SERVER_PORT: 8089
-    ports:
-      - "8089:8089"
-    depends_on:
-      discovery-server:
-        condition: service_healthy
-      config-server:
-        condition: service_healthy
-      postgres:
-        condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    networks:
-      - skilltracker-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8089/actuator/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 60s
-
-  # Analytics Service
-  analytics-service:
-    build:
-      context: .
-      dockerfile: ./skilltracker-services/analytics-service/Dockerfile
-    image: skilltracker/analytics-service:latest
-    container_name: analytics-service
-    env_file: .env
-    environment:
-      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
-      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8082/eureka/
-      SPRING_CLOUD_CONFIG_URI: http://config-server:8081
-      SPRING_CONFIG_IMPORT: optional:configserver:http://config-server:8081
-      SPRING_DATA_MONGODB_HOST: mongodb-analytics
-      SPRING_DATA_MONGODB_PORT: 27017
-      SPRING_DATA_MONGODB_DATABASE: ${MONGO_ANALYTICS_DB}
-      SPRING_DATA_MONGODB_USERNAME: ${MONGO_ANALYTICS_USER}
-      SPRING_DATA_MONGODB_PASSWORD: ${MONGO_ANALYTICS_PASSWORD}
-      SPRING_DATA_MONGODB_AUTHENTICATION_DATABASE: admin
-      SPRING_RABBITMQ_HOST: rabbitmq
-      SPRING_RABBITMQ_USERNAME: ${RABBITMQ_USER}
-      SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
-      SPRING_DATA_REDIS_HOST: redis
-      SERVER_PORT: 8086
-    ports:
-      - "8086:8086"
-    depends_on:
-      discovery-server:
-        condition: service_healthy
-      config-server:
-        condition: service_healthy
-      mongodb-analytics:
-        condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    networks:
-      - skilltracker-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8086/actuator/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 60s
-
-  # Gamification Service
-  gamification-service:
-    build:
-      context: .
-      dockerfile: ./skilltracker-services/gamification-service/Dockerfile
-    image: skilltracker/gamification-service:latest
-    container_name: gamification-service
-    env_file: .env
-    environment:
-      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
-      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8082/eureka/
-      SPRING_CLOUD_CONFIG_URI: http://config-server:8081
-      SPRING_CONFIG_IMPORT: optional:configserver:http://config-server:8081
-      SPRING_DATA_MONGODB_HOST: mongodb-gamification
-      SPRING_DATA_MONGODB_PORT: 27017
-      SPRING_DATA_MONGODB_DATABASE: ${MONGO_GAMIFICATION_DB}
-      SPRING_DATA_MONGODB_USERNAME: ${MONGO_GAMIFICATION_USER}
-      SPRING_DATA_MONGODB_PASSWORD: ${MONGO_GAMIFICATION_PASSWORD}
-      SPRING_DATA_MONGODB_AUTHENTICATION_DATABASE: admin
-      SPRING_RABBITMQ_HOST: rabbitmq
-      SPRING_RABBITMQ_USERNAME: ${RABBITMQ_USER}
-      SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
-      SPRING_DATA_REDIS_HOST: redis
-      SERVER_PORT: 8088
-    ports:
-      - "8088:8088"
-    depends_on:
-      discovery-server:
-        condition: service_healthy
-      config-server:
-        condition: service_healthy
-      mongodb-gamification:
-        condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    networks:
-      - skilltracker-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8088/actuator/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 60s
-
-  # Notification Service
-  notification-service:
-    build:
-      context: .
-      dockerfile: ./skilltracker-services/notification-service/Dockerfile
-    image: skilltracker/notification-service:latest
-    container_name: notification-service
-    env_file: .env
-    environment:
-      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
-      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8082/eureka/
-      SPRING_CLOUD_CONFIG_URI: http://config-server:8081
-      SPRING_CONFIG_IMPORT: optional:configserver:http://config-server:8081
-      SPRING_DATA_MONGODB_HOST: mongodb-notification
-      SPRING_DATA_MONGODB_PORT: 27017
-      SPRING_DATA_MONGODB_DATABASE: ${MONGO_NOTIFICATION_DB}
-      SPRING_DATA_MONGODB_USERNAME: ${MONGO_NOTIFICATION_USER}
-      SPRING_DATA_MONGODB_PASSWORD: ${MONGO_NOTIFICATION_PASSWORD}
-      SPRING_DATA_MONGODB_AUTHENTICATION_DATABASE: admin
-      SPRING_RABBITMQ_HOST: rabbitmq
-      SPRING_RABBITMQ_USERNAME: ${RABBITMQ_USER}
-      SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
-      SPRING_DATA_REDIS_HOST: redis
-      SPRING_MAIL_HOST: ${MAIL_HOST}
-      SPRING_MAIL_PORT: ${MAIL_PORT}
-      SPRING_MAIL_USERNAME: ${MAIL_USERNAME}
-      SPRING_MAIL_PASSWORD: ${MAIL_PASSWORD}
-      SERVER_PORT: 8091
-    ports:
-      - "8091:8091"
-    depends_on:
-      discovery-server:
-        condition: service_healthy
-      config-server:
-        condition: service_healthy
-      mongodb-notification:
-        condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    networks:
-      - skilltracker-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8091/actuator/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 60s
-
-  # BFF Service
-  bff-service:
-    build:
-      context: .
-      dockerfile: ./skilltracker-services/bff-service/Dockerfile
-    image: skilltracker/bff-service:latest
-    container_name: bff-service
-    env_file: .env
-    environment:
-      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
-      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8082/eureka/
-      SPRING_CLOUD_CONFIG_URI: http://config-server:8081
-      SPRING_CONFIG_IMPORT: optional:configserver:http://config-server:8081
-      SPRING_DATA_REDIS_HOST: redis
-      SERVER_PORT: 8083
-    ports:
-      - "8083:8083"
-    depends_on:
-      discovery-server:
-        condition: service_healthy
-      config-server:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      user-service:
-        condition: service_healthy
-      task-service:
-        condition: service_healthy
-    networks:
-      - skilltracker-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8083/actuator/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 60s
+# ===============================
+# Networks and Volumes
+# ===============================
 
 networks:
   skilltracker-network:
@@ -623,8 +213,4 @@ networks:
 volumes:
   redis_data:
   rabbitmq_data:
-  mongo_audit_data:
   postgres_data:
-  mongo_analytics_data:
-  mongo_gamification_data:
-  mongo_notification_data:

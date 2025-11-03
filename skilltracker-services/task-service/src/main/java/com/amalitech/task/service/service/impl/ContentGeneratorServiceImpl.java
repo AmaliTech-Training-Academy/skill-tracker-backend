@@ -34,7 +34,6 @@ public class ContentGeneratorServiceImpl implements ContentGeneratorService {
     private final ObjectMapper objectMapper;
     private final TaskRepository taskRepository;
     private final TaskDefinitionRepository taskDefinitionRepository;
-
     private final PromptTemplate codingPromptTemplate;
 
     public ContentGeneratorServiceImpl(ChatModel chatModel,
@@ -55,9 +54,9 @@ public class ContentGeneratorServiceImpl implements ContentGeneratorService {
      */
     @Override
     @Transactional
-    public List<Task> generateCodingTask(SkillView skill, TaskDifficulty difficulty, String topic) {
-        log.info("Generating Coding tasks via OpenAI for skill: {}, difficulty: {}, topic: {}",
-                skill.getName(), difficulty, topic);
+    public List<Task> generateCodingTask(SkillView skill, TaskDifficulty difficulty) {
+        log.info("Generating Coding tasks via OpenAI for skill: {}, difficulty: {}",
+                skill.getName(), difficulty);
 
         Map<String, Object> promptParameters = Map.of(
                 "skill", skill.getName(),
@@ -77,7 +76,7 @@ public class ContentGeneratorServiceImpl implements ContentGeneratorService {
                     savedTask.getTitle(), savedTask.getId());
         }
 
-        log.info("Generated {} coding tasks for topic: {}", savedTasks.size(), topic);
+        log.info("Generated {} coding tasks for topic", savedTasks.size());
         return savedTasks;
     }
 

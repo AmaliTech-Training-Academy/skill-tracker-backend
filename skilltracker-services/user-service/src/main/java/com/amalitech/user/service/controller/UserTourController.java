@@ -1,17 +1,17 @@
 package com.amalitech.user.service.controller;
 
 import com.amalitech.common.security.dto.response.ApiResponse;
-import com.amalitech.user.service.dto.UserResponseDTO;
 import com.amalitech.user.service.dto.request.TourStatusRequest;
 import com.amalitech.user.service.dto.response.UserStatusDTO;
-import com.amalitech.user.service.model.enums.GuidedTourStatus;
 import com.amalitech.user.service.security.CustomUserDetails;
 import com.amalitech.user.service.service.UserTourService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.UUID;
 

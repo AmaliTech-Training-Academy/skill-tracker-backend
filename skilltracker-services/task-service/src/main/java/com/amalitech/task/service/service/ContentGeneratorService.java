@@ -17,8 +17,7 @@ public interface ContentGeneratorService {
      *
      * @param skill      The skill to generate tasks for.
      * @param difficulty The difficulty level.
-     * @param topic      A specific topic (can be broad).
      * @return A list of newly created and persisted Task entities.
      */
-    List<Task> generateCodingTask(SkillView skill, TaskDifficulty difficulty, String topic);
+    List<Task> generateCodingTask(SkillView skill, TaskDifficulty difficulty);
 }

@@ -2,7 +2,7 @@ package com.amalitech.user.service.security;
 
 import com.amalitech.user.service.model.User;
 import com.amalitech.user.service.model.enums.UserState;
-import org.springframework.security.core.userdetails.UserDetailsService;
+import lombok.Getter;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -10,6 +10,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import java.util.Collection;
 import java.util.Collections;
 
+@Getter
 public class CustomUserDetails implements UserDetails {
     private final User user;
 
@@ -39,7 +40,8 @@ public class CustomUserDetails implements UserDetails {
 
     @Override
     public boolean isAccountNonLocked() {
-        return user.getState() == UserState.REGISTERED;
+        return user.getState() == UserState.REGISTERED ||
+               user.getState() == UserState.ONBOARDED;
     }
 
     @Override
@@ -49,11 +51,7 @@ public class CustomUserDetails implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        return user.getState() == UserState.REGISTERED;
-    }
-
-
-    public User getUser() {
-        return user;
+        return user.getState() == UserState.REGISTERED ||
+               user.getState() == UserState.ONBOARDED;
     }
 }

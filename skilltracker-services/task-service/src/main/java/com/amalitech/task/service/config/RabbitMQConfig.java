@@ -34,11 +34,11 @@ public class RabbitMQConfig {
     public static final String SUBMISSION_EVALUATED_ROUTING_KEY = "submission.evaluated";
 
     public static final String USER_SERVICE_EXCHANGE = "user.exchange";
-    public static final String USER_EVENTS_QUEUE = "user.events.task_service.q";
-    public static final String USER_EVENTS_ROUTING_KEY = "user.#";
-
     public static final String SKILL_EVENTS_QUEUE = "skill.events.task_service.q";
     public static final String SKILL_EVENTS_ROUTING_KEY = "skill.#";
+
+    public static final String ONBOARDING_COMPLETED_QUEUE = "user.onboarding.task_service.q";
+    public static final String ONBOARDING_COMPLETED_ROUTING_KEY = "user.onboarding.completed";
 
 
     /**
@@ -132,16 +132,6 @@ public class RabbitMQConfig {
     }
 
     /**
-     * Creates a durable queue to consume user-related events from the User Service.
-     *
-     * @return The user events queue.
-     */
-    @Bean
-    public Queue userEventsQueue() {
-        return new Queue(USER_EVENTS_QUEUE, true, false, false);
-    }
-
-    /**
      * Creates a durable queue to consume skill-related events from the User Service.
      *
      * @return The skill events queue.
@@ -149,21 +139,6 @@ public class RabbitMQConfig {
     @Bean
     public Queue skillEventsQueue() {
         return new Queue(SKILL_EVENTS_QUEUE, true, false, false);
-    }
-
-    /**
-     * Binds the user events queue to the user service exchange
-     * using a wildcard routing key ({@code USER_EVENTS_ROUTING_KEY}) to capture all user events.
-     *
-     * @param userServiceExchange The user service topic exchange.
-     * @param userEventsQueue     The user events queue.
-     * @return The binding definition.
-     */
-    @Bean
-    public Binding userEventsBinding(TopicExchange userServiceExchange, Queue userEventsQueue) {
-        return BindingBuilder.bind(userEventsQueue)
-                .to(userServiceExchange)
-                .with(USER_EVENTS_ROUTING_KEY);
     }
 
     /**
@@ -179,6 +154,31 @@ public class RabbitMQConfig {
         return BindingBuilder.bind(skillEventsQueue)
                 .to(userServiceExchange)
                 .with(SKILL_EVENTS_ROUTING_KEY);
+    }
+
+    /**
+     * Creates a durable queue for consuming user onboarding completed events.
+     *
+     * @return The onboarding completed queue.
+     */
+    @Bean
+    public Queue onboardingCompletedQueue() {
+        return new Queue(ONBOARDING_COMPLETED_QUEUE, true, false, false);
+    }
+
+    /**
+     * Binds the onboarding completed queue to the user service exchange
+     * using the onboarding completed routing key.
+     *
+     * @param userServiceExchange The user service topic exchange.
+     * @param onboardingCompletedQueue The onboarding completed queue.
+     * @return The binding definition.
+     */
+    @Bean
+    public Binding onboardingCompletedBinding(TopicExchange userServiceExchange, Queue onboardingCompletedQueue) {
+        return BindingBuilder.bind(onboardingCompletedQueue)
+                .to(userServiceExchange)
+                .with(ONBOARDING_COMPLETED_ROUTING_KEY);
     }
 
     /**

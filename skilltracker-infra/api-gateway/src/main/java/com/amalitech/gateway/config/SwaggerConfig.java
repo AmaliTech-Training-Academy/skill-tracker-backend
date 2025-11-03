@@ -27,6 +27,7 @@ public class SwaggerConfig {
 
         urls.add(createSwaggerUrl("USER SERVICE", "/v3/api-docs/user-service"));
         urls.add(createSwaggerUrl("TASK SERVICE", "/v3/api-docs/task-service"));
+        urls.add(createSwaggerUrl("ANALYTICS SERVICE", "/v3/api-docs/analytics-service"));
 
         configProperties.setUrls(urls);
         configProperties.setDefaultModelsExpandDepth(-1);

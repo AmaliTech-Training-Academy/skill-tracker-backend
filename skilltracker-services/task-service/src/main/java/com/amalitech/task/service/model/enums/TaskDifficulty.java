@@ -13,7 +13,7 @@ package com.amalitech.task.service.model.enums;
  * </ul>
  */
 public enum TaskDifficulty {
-    EASY,
-    MEDIUM,
-    HARD
+    BEGINNER,
+    INTERMEDIATE,
+    ADVANCED
 }

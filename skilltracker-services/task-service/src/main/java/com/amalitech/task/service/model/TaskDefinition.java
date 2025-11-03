@@ -40,7 +40,7 @@ public class TaskDefinition {
     private int latestVersion = 0;
 
     @CreationTimestamp
-    @Column(nullable = false)
+    @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
     @UpdateTimestamp

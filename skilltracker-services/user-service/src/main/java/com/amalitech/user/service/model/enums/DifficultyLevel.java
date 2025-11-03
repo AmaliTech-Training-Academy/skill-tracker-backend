@@ -1,8 +1,11 @@
 package com.amalitech.user.service.model.enums;
 
+import lombok.Getter;
+
 /**
  * Defines the standard levels of complexity or proficiency associated with a skill or task.
  */
+@Getter
 public enum DifficultyLevel {
     BEGINNER(1),
     INTERMEDIATE(2),
@@ -14,7 +17,4 @@ public enum DifficultyLevel {
         this.level = level;
     }
 
-    public int getLevel() {
-        return level;
-    }
 }

@@ -3,6 +3,8 @@ package com.amalitech.task.service.service.impl;
 import com.amalitech.task.service.dto.TaskAvailabilityDTO;
 import com.amalitech.task.service.dto.TaskDTO;
 import com.amalitech.task.service.dto.request.BatchGenerationRequest;
+import com.amalitech.task.service.dto.response.AdminTaskDetailResponse;
+import com.amalitech.task.service.dto.response.AdminTaskSummaryResponse;
 import com.amalitech.task.service.events.RabbitMQEventProducer;
 import com.amalitech.task.service.exception.ResourceNotFoundException;
 import com.amalitech.task.service.mapper.TaskMapper;
@@ -14,9 +16,12 @@ import com.amalitech.task.service.repository.SkillViewRepository;
 import com.amalitech.task.service.repository.TaskRepository;
 import com.amalitech.task.service.repository.TaskSubmissionRepository;
 import com.amalitech.task.service.service.TaskService;
+
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -118,6 +123,34 @@ public class TaskServiceImpl implements TaskService {
      * {@inheritDoc}
      */
     @Override
+    @Transactional(readOnly = true)
+    public Page<AdminTaskSummaryResponse> getAllTasksForAdmin(Pageable pageable) {
+        log.debug("Fetching paginated tasks for admin, page: {}, size: {}",
+                pageable.getPageNumber(), pageable.getPageSize());
+
+        Page<Task> taskPage = taskRepository.findAll(pageable);
+
+        return taskPage.map(taskMapper::toAdminSummaryDTO);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public AdminTaskDetailResponse getTaskForAdmin(UUID taskId) {
+        log.debug("Fetching full task details for admin, ID: {}", taskId);
+
+        Task task = taskRepository.findById(taskId)
+                .orElseThrow(() -> new ResourceNotFoundException("Task not found with id: " + taskId));
+
+        return taskMapper.toAdminDetailDTO(task);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     public TaskAvailabilityDTO checkTaskAvailability(String skillName, TaskDifficulty difficulty) {
         SkillView skill = skillViewRepository.findByName(skillName)
                 .orElseThrow(() -> new ResourceNotFoundException("Skill not found: " + skillName));
@@ -206,8 +239,8 @@ public class TaskServiceImpl implements TaskService {
     private TaskDifficulty determineUserDifficulty(UUID userId, UUID skillId) {
         Long correctCount = submissionRepository.countByUserIdAndIsCorrect(userId, true);
 
-        if (correctCount < 5) return TaskDifficulty.EASY;
-        if (correctCount < 15) return TaskDifficulty.MEDIUM;
-        return TaskDifficulty.HARD;
+        if (correctCount < 5) return TaskDifficulty.BEGINNER;
+        if (correctCount < 15) return TaskDifficulty.INTERMEDIATE;
+        return TaskDifficulty.ADVANCED;
     }
 }
