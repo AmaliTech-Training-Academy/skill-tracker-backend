@@ -1,0 +1,35 @@
+
+{
+  "instruction_type": "mcq_generation",
+  "input": {
+    "interest": "string (e.g. Python basics, OOP, Databases)",
+    "difficulty": "beginner | intermediate | advanced",
+    "lastPerformance": "integer"
+    },
+  "expected_output": {
+    "question_id": "string",
+    "question_minute_duration": "Integer(How long it should take to solve this question on average in minutes)",
+    "question_text": "string",
+    "options": [
+      "string (option A)",
+      "string (option B)",
+      "string (option C)",
+      "string (option D)"
+    ],
+    "question_hint": "String(A short, direct or indirect hint to the correct answer)",
+    "correct_answer_index": "String (A-B)",
+    "explanation": "string (why the answer is correct)"
+  },
+  "constraints": [
+    "question_text must be self-containing of a complete question, code examples included if it exists.",
+    "Options must be clear and mostly unique.",
+    "One correct answer only.",
+    "Explanation must reference key concept in simple terms.",
+    "Difficulty affects depth, not question length.",
+    "Coding questions are not mandatory.",
+    "Ensure there is a balance mixed of question kinds(coding, mcq, text-based, etc)",
+    "Ensure expected_output always matches expected_output block of prompt structure",
+    "question_minute_duration should be slightly generous and very relevant to task difficulty and correlated skill.",
+    "question_hint should be highly relevant to the correct answer from the question"
+  ]
+}
