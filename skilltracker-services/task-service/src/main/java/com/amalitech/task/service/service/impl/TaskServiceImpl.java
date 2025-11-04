@@ -8,6 +8,8 @@ import com.amalitech.task.service.dto.response.AdminTaskDetailResponse;
 import com.amalitech.task.service.dto.response.AdminTaskSummaryResponse;
 import com.amalitech.task.service.dto.request.McqRequestTaskDTO;
 import com.amalitech.task.service.dto.response.McqResponseTaskDTO;
+import com.amalitech.task.service.dto.request.McqRequestDTO;
+import com.amalitech.task.service.dto.response.McqResponseDTO;
 import com.amalitech.task.service.events.RabbitMQEventProducer;
 import com.amalitech.task.service.exception.ResourceNotFoundException;
 import com.amalitech.task.service.mapper.TaskMapper;
@@ -26,6 +28,8 @@ import com.google.genai.Client;
 import com.google.genai.types.GenerateContentResponse;
 
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.Cacheable;
@@ -35,11 +39,18 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.core.io.ClassPathResource;
 
 import java.time.Duration;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
+
+import static com.amalitech.task.service.mapper.MCQMapper.mapJsonToMcqResponse;
 
 /**
  * Implementation of the TaskService interface.
@@ -316,43 +327,34 @@ public class TaskServiceImpl implements TaskService {
     }
 
     @Override
-    public McqResponseTaskDTO generateMCQ(McqRequestTaskDTO taskDTO) {
-        Client client = new Client();
-        GenerateContentResponse response = client.models.generateContent(
-                    "gemini-2.5-flash",
-                    "{\n" +
-                            "  \"instruction_type\": \"mcq_generation\",\n" +
-                            "  \"input\": {\n" +
-                            "    \"interest\": \" Core Java \",\n" +
-                            "    \"difficulty\": \"Intermediate\",\n" +
-                            "    \"lastPerformance\": \"integer\"\n" +
-                            "  },\n" +
-                            "  \"expected_output\": {\n" +
-                            "    \"question_id\": \"string\",\n" +
-                            "    \"question_text\": \"string\",\n" +
-                            "    \"options\": [\n" +
-                            "      \"string (option A)\",\n" +
-                            "      \"string (option B)\",\n" +
-                            "      \"string (option C)\",\n" +
-                            "      \"string (option D)\"\n" +
-                            "    ],\n" +
-                            "    \"correct_answer_index\": \"String (A-B)\",\n" +
-                            "    \"explanation\": \"string (why the answer is correct)\"\n" +
-                            "  },\n" +
-                            "  \"constraints\": [\n" +
-                            "  \"question_text must be self-containing of a complete question, code examples included if it exists.\"\n" +
-                            "    \"Options must be clear and unique.\",\n" +
-                            "    \"One correct answer only.\",\n" +
-                            "    \"Explanation must reference key concept in simple terms.\",\n" +
-                            "    \"Difficulty affects depth, not question length.\"\n" +
-                            "    \"Ensure there is a balance mixed of question kinds(coding, mcq, text-based, etc)\"\n" +
-                            "    \" Ensure expected_output always matches expected_output block of prompt structure. \"\n" +
-                            "  ]\n" +
-                            "}",
-                    null);
+    public McqResponseDTO generateMCQ(McqRequestDTO taskDTO) throws Exception {
+        try (Client client = new Client()) {
+            try {
+                String data = readFileContent("prompts/mcq/mcq_prompt.json", "mcq_prompt.json");
 
-            System.out.println(response.text());
+                GenerateContentResponse response = client.models.generateContent("gemini-2.5-flash", data, null);
 
-            return ;
+                return mapJsonToMcqResponse(String.valueOf(response));
+            } catch(Exception e) {
+                throw new Exception("Error reading file: " + e.getMessage());
+            }
+        } catch (Exception e) {
+            throw new Exception("Error generating MCQ: " + e.getMessage());
         }
+    }
+
+    public String readFileContent(String filePath, String fileName) throws Exception {
+        try {
+            ClassPathResource resource = new ClassPathResource(filePath);
+            return Files.readString(resource.getFile().toPath(), StandardCharsets.UTF_8);
+        } catch (Exception e) {
+            System.err.println("Error reading file: " + e.getMessage());
+        }
+        throw new Exception("Error reading file: " + fileName);
+    }
+
+    public static String convertToJson(GenerateContentResponse response) {
+        Gson gson = new GsonBuilder().setPrettyPrinting().create();
+        return gson.toJson(response);
+    }
 }
