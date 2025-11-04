@@ -7,7 +7,6 @@
     "lastPerformance": "integer"
     },
   "expected_output": {
-    "question_id": "string",
     "question_minute_duration": "Integer(How long it should take to solve this question on average in minutes)",
     "question_text": "string",
     "options": [
