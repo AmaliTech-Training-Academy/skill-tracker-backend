@@ -16,4 +16,5 @@ public class McqRequestTaskDTO {
     private User user_details;
     private TaskDTO task_details;
     private List<String> constraints;
+    private int no_of_questions;
 }
