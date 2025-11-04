@@ -11,7 +11,7 @@ import java.util.List;
 @Builder
 @Getter
 @Setter
-public class McqRequestTaskDTO {
+public class McqRequestDTO {
     private String instruction_type;
     private User user_details;
     private TaskDTO task_details;
