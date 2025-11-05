@@ -1,14 +1,14 @@
 package com.amalitech.task.service.service.impl;
 
-import com.amalitech.task.service.model.content.impl.CodingTaskContent;
-import com.amalitech.task.service.service.ContentGeneratorService;
 import com.amalitech.task.service.model.Task;
 import com.amalitech.task.service.model.TaskDefinition;
+import com.amalitech.task.service.model.content.impl.CodingTaskContent;
 import com.amalitech.task.service.model.enums.TaskDifficulty;
 import com.amalitech.task.service.model.enums.TaskType;
 import com.amalitech.task.service.model.view.SkillView;
 import com.amalitech.task.service.repository.TaskDefinitionRepository;
 import com.amalitech.task.service.repository.TaskRepository;
+import com.amalitech.task.service.service.ContentGeneratorService;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -18,6 +18,7 @@ import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.chat.prompt.PromptTemplate;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,7 +37,7 @@ public class ContentGeneratorServiceImpl implements ContentGeneratorService {
     private final TaskDefinitionRepository taskDefinitionRepository;
     private final PromptTemplate codingPromptTemplate;
 
-    public ContentGeneratorServiceImpl(ChatModel chatModel,
+    public ContentGeneratorServiceImpl(@Qualifier("flagshipChatModel") ChatModel chatModel,
                                        ObjectMapper objectMapper,
                                        TaskRepository taskRepository,
                                        TaskDefinitionRepository taskDefinitionRepository,
@@ -54,16 +55,18 @@ public class ContentGeneratorServiceImpl implements ContentGeneratorService {
      */
     @Override
     @Transactional
-    public List<Task> generateCodingTask(SkillView skill, TaskDifficulty difficulty) {
-        log.info("Generating Coding tasks via OpenAI for skill: {}, difficulty: {}",
-                skill.getName(), difficulty);
+    public List<Task> generateCodingTask(SkillView skill, TaskDifficulty difficulty, int quantity) {
+        log.info("Generating {} Coding tasks via OpenAI for skill: {}, difficulty: {}",
+                quantity, skill.getName(), difficulty);
 
         Map<String, Object> promptParameters = Map.of(
                 "skill", skill.getName(),
-                "difficulty", difficulty.name()
+                "difficulty", difficulty.name(),
+                "quantity", quantity
         );
 
         Prompt prompt = codingPromptTemplate.create(promptParameters);
+
         String aiResponse = callOpenAI(prompt);
 
         List<JsonNode> challengeNodes = parseCodingResponseToNodes(aiResponse);
@@ -190,37 +193,18 @@ public class ContentGeneratorServiceImpl implements ContentGeneratorService {
      * @throws RuntimeException if the API call fails after retries
      */
     private String callOpenAI(Prompt prompt) {
-        int maxRetries = 3;
-        int retryCount = 0;
+        try {
+            log.debug("Calling Spring AI ChatModel...");
 
-        while (true) {
-            try {
-                log.debug("Calling OpenAI API (attempt {}/{})", retryCount + 1, maxRetries);
+            ChatResponse response = chatModel.call(prompt);
+            String content = response.getResult().getOutput().getText();
 
-                ChatResponse response = chatModel.call(prompt);
-                String content = response.getResult().getOutput().getText();
+            log.debug("OpenAI response received: {} characters", content.length());
+            return cleanJsonResponse(content);
 
-                log.debug("OpenAI response received: {} characters", content.length());
-
-                return cleanJsonResponse(content);
-
-            } catch (Exception e) {
-                retryCount++;
-                log.error("OpenAI API call failed (attempt {}/{}): {}",
-                        retryCount, maxRetries, e.getMessage());
-
-                if (retryCount >= maxRetries) {
-                    log.error("Failed to call OpenAI after {} attempts", maxRetries, e);
-                    throw new RuntimeException("Failed to generate task content via OpenAI", e);
-                }
-
-                try {
-                    Thread.sleep(1000L * retryCount);
-                } catch (InterruptedException ie) {
-                    Thread.currentThread().interrupt();
-                    throw new RuntimeException("Interrupted during retry", ie);
-                }
-            }
+        } catch (Exception e) {
+            log.error("Failed to call OpenAI after all retries.", e);
+            throw new RuntimeException("Failed to generate task content via OpenAI after all retries", e);
         }
     }
 

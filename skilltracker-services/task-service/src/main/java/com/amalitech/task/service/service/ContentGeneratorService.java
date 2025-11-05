@@ -6,18 +6,16 @@ import com.amalitech.task.service.model.view.SkillView;
 
 import java.util.List;
 
-/**
- * Interface for all AI-driven content generation.
- * This abstracts the specific AI provider (e.g., DeepSeek) and the
- * persistence logic from the job orchestrator.
- */
 public interface ContentGeneratorService {
+
     /**
-     * Generates a list of coding tasks based on the provided prompt.
+     * Generates a batch of coding tasks for a given skill and difficulty.
      *
-     * @param skill      The skill to generate tasks for.
-     * @param difficulty The difficulty level.
-     * @return A list of newly created and persisted Task entities.
+     * @param skill The skill to generate tasks for.
+     * @param difficulty The difficulty of the tasks.
+     * @param quantity The number of tasks to generate in this batch.
+     * @return A list of the persisted Task entities.
      */
-    List<Task> generateCodingTask(SkillView skill, TaskDifficulty difficulty);
+    List<Task> generateCodingTask(SkillView skill, TaskDifficulty difficulty, int quantity);
+
 }

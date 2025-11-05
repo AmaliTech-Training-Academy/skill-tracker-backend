@@ -39,15 +39,12 @@ public class RabbitMQEventProducer implements EventProducer {
      * @param request The {@link BatchGenerationRequest} detailing the desired skill, difficulty, and count.
      */
     public void requestBatchTaskGeneration(BatchGenerationRequest request) {
-        try {
-            log.info("Publishing BATCH generation request: {}", request);
-            rabbitTemplate.convertAndSend(
-                    RabbitMQConfig.BATCH_GENERATION_QUEUE,
-                    request
-            );
-        } catch (Exception e) {
-            log.error("Failed to publish BATCH generation request", e);
-        }
+        log.info("Publishing BATCH generation request: {}", request);
+        rabbitTemplate.convertAndSend(
+                RabbitMQConfig.TASK_GENERATION_EXCHANGE,
+                RabbitMQConfig.BATCH_GENERATION_ROUTING_KEY,
+                request
+        );
     }
 
     /**
@@ -59,15 +56,12 @@ public class RabbitMQEventProducer implements EventProducer {
      * @param request The {@link GenerateTaskRequest} detailing the specific task parameters (topic, language, etc.).
      */
     public void requestSpecificTaskGeneration(GenerateTaskRequest request) {
-        try {
-            log.info("Publishing ADMIN generation request: {}", request);
-            rabbitTemplate.convertAndSend(
-                    RabbitMQConfig.ADMIN_GENERATION_QUEUE,
-                    request
-            );
-        } catch (Exception e) {
-            log.error("Failed to publish ADMIN generation request", e);
-        }
+        log.info("Publishing ADMIN generation request: {}", request);
+        rabbitTemplate.convertAndSend(
+                RabbitMQConfig.TASK_GENERATION_EXCHANGE,
+                RabbitMQConfig.ADMIN_GENERATION_ROUTING_KEY,
+                request
+        );
     }
 
     /**
@@ -80,16 +74,12 @@ public class RabbitMQEventProducer implements EventProducer {
      * @param submission The {@link SubmissionCreatedEvent} containing the necessary details for evaluation.
      */
     public void publishSubmissionCreated(SubmissionCreatedEvent submission) {
-        try {
-            log.info("Publishing submission created event: {}", submission.getSubmissionId());
-            rabbitTemplate.convertAndSend(
-                    RabbitMQConfig.SUBMISSION_EXCHANGE,
-                    RabbitMQConfig.SUBMISSION_CREATED_ROUTING_KEY,
-                    submission
-            );
-        } catch (Exception e) {
-            log.error("Failed to publish submission created event for ID: {}", submission.getSubmissionId(), e);
-        }
+        log.info("Publishing submission created event: {}", submission.getSubmissionId());
+        rabbitTemplate.convertAndSend(
+                RabbitMQConfig.SUBMISSION_EXCHANGE,
+                RabbitMQConfig.SUBMISSION_CREATED_ROUTING_KEY,
+                submission
+        );
     }
 
     /**
@@ -101,15 +91,11 @@ public class RabbitMQEventProducer implements EventProducer {
      * @param event The fully evaluated {@link SubmissionEvaluatedEvent} with scores and feedback.
      */
     public void publishSubmissionEvaluated(SubmissionEvaluatedEvent event) {
-        try {
-            log.info("Publishing submission evaluated event: {}", event.getSubmissionId());
-            rabbitTemplate.convertAndSend(
-                    RabbitMQConfig.SUBMISSION_EXCHANGE,
-                    RabbitMQConfig.SUBMISSION_EVALUATED_ROUTING_KEY,
-                    event
-            );
-        } catch (Exception e) {
-            log.error("Failed to publish submission evaluated event for ID: {}", event.getSubmissionId(), e);
-        }
+        log.info("Publishing submission evaluated event: {}", event.getSubmissionId());
+        rabbitTemplate.convertAndSend(
+                RabbitMQConfig.SUBMISSION_EXCHANGE,
+                RabbitMQConfig.SUBMISSION_EVALUATED_ROUTING_KEY,
+                event
+        );
     }
 }

@@ -38,10 +38,13 @@ public class CustomUserDetails implements UserDetails {
         return true;
     }
 
+    /**
+     * An account is considered "non-locked" unless it is explicitly
+     * in a state that implies a lock (e.g., SUSPENDED).
+     */
     @Override
     public boolean isAccountNonLocked() {
-        return user.getState() == UserState.REGISTERED ||
-               user.getState() == UserState.ONBOARDED;
+        return user.getState() != UserState.SUSPENDED;
     }
 
     @Override
@@ -49,9 +52,11 @@ public class CustomUserDetails implements UserDetails {
         return true;
     }
 
+    /**
+     * An account should be enabled for all valid, active states.
+     */
     @Override
     public boolean isEnabled() {
-        return user.getState() == UserState.REGISTERED ||
-               user.getState() == UserState.ONBOARDED;
+        return user.getState() != UserState.SUSPENDED;
     }
 }

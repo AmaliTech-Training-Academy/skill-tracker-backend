@@ -50,23 +50,28 @@ public class OnboardingServiceImpl implements OnboardingService {
     /**
      * {@inheritDoc}
      *
-     * <p>This method performs the following actions:</p>
-     * <ul>
-     * <li>Retrieves the user and validates their onboarding state.</li>
-     * <li>Fetches all requested skills in a single query to prevent N+1 bottlenecks.</li>
-     * <li>Validates that all requested skills exist.</li>
-     * <li>Maps the skill selections to {@link UserSkill} entities.</li>
-     * <li>Persists all new {@link UserSkill} entities in a batch.</li>
-     * <li>Updates the user's state to {@code ONBOARDED}.</li>
-     * <li>Builds a {@link UserOnboardingCompletedEvent}.</li>
-     * <li>Registers a synchronization hook to publish the event *only* after the
-     * database transaction successfully commits.</li>
-     * </ul>
+     * <p>This method orchestrates the onboarding process by delegating to
+     * private methods for validation, persistence, and event registration.
+     * The entire operation is atomic due to @Transactional.
+     * </p>
      */
     @Override
     @Transactional
     @PreAuthorize("hasAuthority('USER') and #userId == authentication.principal.user.id")
     public void completeOnboarding(UUID userId, OnboardingRequest request) {
+
+        User user = findAndValidateUser(userId);
+        Map<UUID, Skill> foundSkillsMap = validateAndFetchSkills(request);
+
+        List<UserSkill> newUserSkills = persistOnboardingData(user, request, foundSkillsMap);
+
+        buildAndRegisterOnboardingEvent(user.getId(), newUserSkills);
+    }
+
+    /**
+     * Finds the user and validates they are in a state to be onboarded.
+     */
+    private User findAndValidateUser(UUID userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new EntityNotFoundException("User not found with id: " + userId));
 
@@ -74,6 +79,17 @@ public class OnboardingServiceImpl implements OnboardingService {
             throw new OnboardingAlreadyCompletedException(user.getState().name());
         }
 
+        if (user.getState() == UserState.PENDING_TASKS) {
+            throw new OnboardingAlreadyCompletedException("Onboarding is already in progress.");
+        }
+
+        return user;
+    }
+
+    /**
+     * Fetches all requested skills in a single batch and validates that all exist.
+     */
+    private Map<UUID, Skill> validateAndFetchSkills(OnboardingRequest request) {
         Set<UUID> requestedSkillIds = request.skills().stream()
                 .map(SkillSelection::skillId)
                 .collect(Collectors.toSet());
@@ -87,6 +103,19 @@ public class OnboardingServiceImpl implements OnboardingService {
                     .collect(Collectors.toSet());
             throw new EntityNotFoundException("Could not find skills with IDs: " + missingIds);
         }
+        return foundSkillsMap;
+    }
+
+    /**
+     * Creates and persists all UserSkill entities and updates the User's state.
+     * This method is now idempotent: it deletes any existing UserSkill
+     * records for the user before inserting the new ones. This cleans up
+     * any orphaned data from a previously failed onboarding (Saga rollback).
+     */
+    private List<UserSkill> persistOnboardingData(User user, OnboardingRequest request, Map<UUID, Skill> foundSkillsMap) {
+
+        log.info("Deleting existing UserSkill records for user: {}", user.getId());
+        userSkillRepository.deleteByUserId(user.getId());
 
         List<UserSkill> newUserSkills = request.skills().stream()
                 .map(skillDto -> {
@@ -97,9 +126,17 @@ public class OnboardingServiceImpl implements OnboardingService {
 
         userSkillRepository.saveAll(newUserSkills);
 
-        user.setState(UserState.ONBOARDED);
+        user.setState(UserState.PENDING_TASKS);
         userRepository.save(user);
 
+        return newUserSkills;
+    }
+
+    /**
+     * Builds the onboarding event and registers it to publish *after*
+     * the database transaction successfully commits.
+     */
+    private void buildAndRegisterOnboardingEvent(UUID userId, List<UserSkill> newUserSkills) {
         List<UserOnboardingCompletedEvent.SkillSelectionData> selectedSkills =
                 newUserSkills.stream()
                         .map(userSkill -> UserOnboardingCompletedEvent.SkillSelectionData.builder()

@@ -16,15 +16,16 @@ import com.amalitech.task.service.repository.SkillViewRepository;
 import com.amalitech.task.service.repository.TaskRepository;
 import com.amalitech.task.service.repository.TaskSubmissionRepository;
 import com.amalitech.task.service.service.TaskService;
-
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -46,6 +47,7 @@ public class TaskServiceImpl implements TaskService {
     private final TaskSubmissionRepository submissionRepository;
     private final RabbitMQEventProducer taskEventProducer;
     private final TaskMapper taskMapper;
+    private final StringRedisTemplate redisTemplate;
 
     /**
      * Minimum number of tasks required per difficulty level before triggering generation.
@@ -54,17 +56,21 @@ public class TaskServiceImpl implements TaskService {
     @Value("${app.task.min-tasks-per-difficulty:5}")
     private int minTasksPerDifficulty;
 
+    private static final String FETCH_LOCK_PREFIX = "lock:task-fetch-gen:";
+    private static final Duration FETCH_LOCK_TIMEOUT = Duration.ofMinutes(1);
+
     public TaskServiceImpl(TaskRepository taskRepository,
                            SkillViewRepository skillViewRepository,
                            TaskSubmissionRepository submissionRepository,
                            RabbitMQEventProducer taskEventProducer,
-                           TaskMapper taskMapper
+                           TaskMapper taskMapper, StringRedisTemplate redisTemplate
     ) {
         this.taskRepository = taskRepository;
         this.skillViewRepository = skillViewRepository;
         this.submissionRepository = submissionRepository;
         this.taskEventProducer = taskEventProducer;
         this.taskMapper = taskMapper;
+        this.redisTemplate = redisTemplate;
     }
 
     /**
@@ -185,7 +191,7 @@ public class TaskServiceImpl implements TaskService {
         List<Task> cachedTasks = taskRepository.findBySkillIdAndDifficultyAndType(
                 skill.getId(),
                 difficulty,
-                neededType, // Filter by type
+                neededType,
                 true,
                 PageRequest.of(0, limit)
         );
@@ -196,17 +202,34 @@ public class TaskServiceImpl implements TaskService {
             return cachedTasks;
         }
 
-        log.info("Cache miss for {}/{}. Have {}, need {}. Triggering async generation.",
-                skill.getName(), difficulty, cachedTasks.size(), limit);
+        String lockKey = FETCH_LOCK_PREFIX + skill.getName() + ":" + difficulty;
 
-        BatchGenerationRequest request = new BatchGenerationRequest(
-                skill.getName(),
-                difficulty,
-                minTasksPerDifficulty,
-                neededType
-        );
+        Boolean lockAcquired = redisTemplate.opsForValue()
+                .setIfAbsent(lockKey, "generating", FETCH_LOCK_TIMEOUT);
 
-        taskEventProducer.requestBatchTaskGeneration(request);
+        if (Boolean.FALSE.equals(lockAcquired)) {
+            log.warn("Cache miss for {}/{}. Generation is already in progress. Returning {} tasks.",
+                    skill.getName(), difficulty, cachedTasks.size());
+            return cachedTasks;
+        }
+
+        try {
+            log.info("Cache miss for {}/{}. Acquired lock. Triggering async generation.",
+                    skill.getName(), difficulty);
+
+            BatchGenerationRequest request = new BatchGenerationRequest(
+                    skill.getName(),
+                    difficulty,
+                    minTasksPerDifficulty,
+                    neededType
+            );
+
+            taskEventProducer.requestBatchTaskGeneration(request);
+
+        } catch (Exception e) {
+            redisTemplate.delete(lockKey);
+            log.error("Failed to publish task generation request for {}: {}", lockKey, e.getMessage(), e);
+        }
 
         return cachedTasks;
     }
