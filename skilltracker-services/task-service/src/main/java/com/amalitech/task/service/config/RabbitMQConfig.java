@@ -24,22 +24,38 @@ import org.springframework.context.annotation.Configuration;
  */
 @Configuration
 public class RabbitMQConfig {
-    public static final String BATCH_GENERATION_QUEUE = "task.generation.batch.q";
-    public static final String ADMIN_GENERATION_QUEUE = "task.generation.admin.q";
+    // --- User Service (Incoming) ---
+    public static final String USER_SERVICE_EXCHANGE = "user.exchange";
+    public static final String SKILL_EVENTS_QUEUE = "skill.events.task_service.q";
+    public static final String SKILL_EVENTS_ROUTING_KEY = "skill.#";
+    public static final String ONBOARDING_COMPLETED_QUEUE = "user.onboarding.task_service.q";
+    public static final String ONBOARDING_COMPLETED_ROUTING_KEY = "user.onboarding.completed";
 
+    // --- Task Generation (Outgoing) ---
+    public static final String TASK_GENERATION_EXCHANGE = "task.generation.exchange";
+
+    public static final String BATCH_GENERATION_QUEUE = "task.generation.batch.q";
+    public static final String BATCH_GENERATION_ROUTING_KEY = "task.gen.batch";
+
+    public static final String ADMIN_GENERATION_QUEUE = "task.generation.admin.q";
+    public static final String ADMIN_GENERATION_ROUTING_KEY = "task.gen.admin";
+
+    // --- Submission (Outgoing) ---
     public static final String SUBMISSION_EXCHANGE = "submission.exchange";
     public static final String SUBMISSION_CREATED_QUEUE = "submission.created.q";
     public static final String SUBMISSION_EVALUATED_QUEUE = "submission.evaluated.q";
     public static final String SUBMISSION_CREATED_ROUTING_KEY = "submission.created";
     public static final String SUBMISSION_EVALUATED_ROUTING_KEY = "submission.evaluated";
 
-    public static final String USER_SERVICE_EXCHANGE = "user.exchange";
-    public static final String SKILL_EVENTS_QUEUE = "skill.events.task_service.q";
-    public static final String SKILL_EVENTS_ROUTING_KEY = "skill.#";
 
-    public static final String ONBOARDING_COMPLETED_QUEUE = "user.onboarding.task_service.q";
-    public static final String ONBOARDING_COMPLETED_ROUTING_KEY = "user.onboarding.completed";
+    // ===================================================================
+    // --- Task Generation Exchange, Queues, & Bindings ---
+    // ===================================================================
 
+    @Bean
+    public TopicExchange taskGenerationExchange() {
+        return new TopicExchange(TASK_GENERATION_EXCHANGE);
+    }
 
     /**
      * Creates a durable queue for batch task generation requests.
@@ -61,6 +77,24 @@ public class RabbitMQConfig {
         return new Queue(ADMIN_GENERATION_QUEUE, true, false, false);
     }
 
+    @Bean
+    public Binding batchGenerationBinding(TopicExchange taskGenerationExchange, Queue batchGenerationQueue) {
+        return BindingBuilder.bind(batchGenerationQueue)
+                .to(taskGenerationExchange)
+                .with(BATCH_GENERATION_ROUTING_KEY);
+    }
+
+    @Bean
+    public Binding adminGenerationBinding(TopicExchange taskGenerationExchange, Queue adminGenerationQueue) {
+        return BindingBuilder.bind(adminGenerationQueue)
+                .to(taskGenerationExchange)
+                .with(ADMIN_GENERATION_ROUTING_KEY);
+    }
+
+
+    // ===================================================================
+    // --- Submission Exchange, Queues, & Bindings ---
+    // ===================================================================
     /**
      * Creates a topic exchange for submission-related events.
      *
@@ -120,6 +154,12 @@ public class RabbitMQConfig {
                 .to(submissionExchange)
                 .with(SUBMISSION_EVALUATED_ROUTING_KEY);
     }
+
+
+
+    // ===================================================================
+    // --- User Service (Incoming) Exchange, Queues, & Bindings ---
+    // ===================================================================
 
     /**
      * Creates a topic exchange for events originating from the User Service.

@@ -1,7 +1,8 @@
 package com.amalitech.task.service.events;
 
 import com.amalitech.common.event.events.UserOnboardingCompletedEvent;
-import com.amalitech.task.service.service.TaskGenerationService;
+import com.amalitech.task.service.service.TaskGenerationListener;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.AmqpRejectAndDontRequeueException;
@@ -16,7 +17,7 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class UserOnboardingEventConsumer {
 
-    private final TaskGenerationService taskGenerationService;
+    private final TaskGenerationListener taskGenerationListener;
 
     @RabbitListener(queues = "user.onboarding.task_service.q")
     public void handleOnboardingCompleted(UserOnboardingCompletedEvent event) {
@@ -24,12 +25,13 @@ public class UserOnboardingEventConsumer {
                 event.getUserId(), event.getSelectedSkills().size());
 
         try {
-            taskGenerationService.generateTasksAfterOnboarding(event);
-            log.info("Successfully generated tasks for user onboarding: {}", event.getUserId());
+            taskGenerationListener.generateTasksAfterOnboarding(event);
+
+            log.info("Successfully delegated task generation for user onboarding: {}", event.getUserId());
 
         } catch (Exception e) {
-            log.error("Failed to generate tasks for onboarding event: {}", event.getUserId(), e);
-            throw new AmqpRejectAndDontRequeueException("Task generation failed", e);
+            log.error("Failed to delegate task generation for onboarding event: {}", event.getUserId(), e);
+            throw new AmqpRejectAndDontRequeueException("Task generation delegation failed", e);
         }
     }
 }

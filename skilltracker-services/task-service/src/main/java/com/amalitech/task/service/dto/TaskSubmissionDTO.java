@@ -4,6 +4,7 @@ import com.amalitech.task.service.model.enums.SubmissionStatus;
 import com.amalitech.task.service.model.feedback.SubmissionFeedback;
 import com.amalitech.task.service.model.submission.SubmissionAnswer;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -30,6 +31,10 @@ public class TaskSubmissionDTO {
     private SubmissionFeedback feedback;
     private Boolean isCorrect;
     private Integer scoreEarned;
+
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
     private LocalDateTime submittedAt;
+
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
     private LocalDateTime evaluatedAt;
 }

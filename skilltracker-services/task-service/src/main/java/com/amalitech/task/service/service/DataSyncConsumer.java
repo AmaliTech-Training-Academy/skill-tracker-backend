@@ -3,6 +3,7 @@ package com.amalitech.task.service.service;
 import com.amalitech.common.event.events.SkillEvent;
 import com.amalitech.task.service.model.view.SkillView;
 import com.amalitech.task.service.repository.SkillViewRepository;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
