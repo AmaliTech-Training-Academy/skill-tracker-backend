@@ -227,8 +227,8 @@ public class TaskServiceImpl implements TaskService {
             taskEventProducer.requestBatchTaskGeneration(request);
 
         } catch (Exception e) {
-            redisTemplate.delete(lockKey);
-            log.error("Failed to publish task generation request for {}: {}", lockKey, e.getMessage(), e);
+            log.error("Failed to publish task generation request for {}: {}. Lock will remain for {}s.",
+                    lockKey, e.getMessage(), FETCH_LOCK_TIMEOUT.toSeconds(), e);
         }
 
         return cachedTasks;

@@ -67,6 +67,7 @@ public class TaskGenerationServiceImpl implements TaskGenerationService {
      */
     @Async
     @Transactional
+    @Override
     public void processBatchGeneration(BatchGenerationRequest request) {
         if (request.taskType() != TaskType.CODING) {
             log.warn("Received BATCH request for non-CODING task type: {}. Skipping.", request.taskType());
@@ -107,6 +108,7 @@ public class TaskGenerationServiceImpl implements TaskGenerationService {
      */
     @Async
     @Transactional
+    @Override
     public void processAdminGeneration(GenerateTaskRequest request) {
         if (request.taskType() != TaskType.CODING) {
             log.warn("Received ADMIN request for non-CODING task type: {}. Skipping.", request.taskType());
@@ -132,7 +134,6 @@ public class TaskGenerationServiceImpl implements TaskGenerationService {
     }
 
     /**
-     * --- REFACTORED ---
      * This method now treats the generation of ALL tasks for a user
      * as a single atomic operation. The try...catch block wraps the
      * entire loop to ensure that a single failure rolls back the
