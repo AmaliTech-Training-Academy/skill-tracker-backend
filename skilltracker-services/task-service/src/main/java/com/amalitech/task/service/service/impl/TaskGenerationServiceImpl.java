@@ -132,37 +132,49 @@ public class TaskGenerationServiceImpl implements TaskGenerationService {
     }
 
     /**
-     * This was already correct, but we move it here for consistency.
+     * --- REFACTORED ---
+     * This method now treats the generation of ALL tasks for a user
+     * as a single atomic operation. The try...catch block wraps the
+     * entire loop to ensure that a single failure rolls back the
+     * entire onboarding saga.
      */
     @Async
     @Transactional
+    @Override
     public void generateTasksAfterOnboarding(UserOnboardingCompletedEvent event) {
         UUID userId = event.getUserId();
         log.info("Generating tasks for user onboarding: {}", userId);
 
-        for (UserOnboardingCompletedEvent.SkillSelectionData skillData : event.getSelectedSkills()) {
-            try {
-                for (String taskTypeStr : skillData.getSupportedTaskTypes()) {
-                    TaskType taskType = TaskType.valueOf(taskTypeStr.toUpperCase());
-                    int quantity = getTaskQuantity(taskType);
+        try {
+            for (UserOnboardingCompletedEvent.SkillSelectionData skillData : event.getSelectedSkills()) {
 
-                    log.info("Generating {} {} tasks for skill: {}",
-                            quantity, taskType, skillData.getSkillName());
+                try {
+                    for (String taskTypeStr : skillData.getSupportedTaskTypes()) {
+                        TaskType taskType = TaskType.valueOf(taskTypeStr.toUpperCase());
+                        int quantity = getTaskQuantity(taskType);
 
-                    generateTasksOfType(skillData, taskType, quantity);
+                        log.info("Generating {} {} tasks for skill: {}",
+                                quantity, taskType, skillData.getSkillName());
+
+                        generateTasksOfType(skillData, taskType, quantity);
+                    }
+                } catch (Exception e) {
+                    log.error("Failed to generate tasks for skill {}: {}",
+                            skillData.getSkillId(), e.getMessage());
+                    throw new RuntimeException("Failed to generate tasks for skill: " + skillData.getSkillName(), e);
                 }
-
-                log.info("Successfully completed task generation for user: {}", userId);
-                TaskGenerationSucceededEvent successEvent = new TaskGenerationSucceededEvent(userId);
-                replyEventProducer.publishTaskGenerationSucceeded(successEvent);
-
-            } catch (Exception e) {
-                log.error("CRITICAL: Failed to generate tasks for user {}: {}",
-                        userId, e.getMessage(), e);
-
-                TaskGenerationFailedEvent failEvent = new TaskGenerationFailedEvent(userId, e.getMessage());
-                replyEventProducer.publishTaskGenerationFailed(failEvent);
             }
+
+            log.info("Successfully completed ALL task generation for user: {}", userId);
+            TaskGenerationSucceededEvent successEvent = new TaskGenerationSucceededEvent(userId);
+            replyEventProducer.publishTaskGenerationSucceeded(successEvent);
+
+        } catch (Exception e) {
+            log.error("CRITICAL: Task generation saga FAILED for user {}: {}",
+                    userId, e.getMessage(), e);
+
+            TaskGenerationFailedEvent failEvent = new TaskGenerationFailedEvent(userId, e.getMessage());
+            replyEventProducer.publishTaskGenerationFailed(failEvent);
         }
     }
 
