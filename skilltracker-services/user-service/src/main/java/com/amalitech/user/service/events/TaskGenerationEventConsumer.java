@@ -57,7 +57,7 @@ public class TaskGenerationEventConsumer {
         if (user.getState() == UserState.PENDING_TASKS) {
             user.setState(UserState.REGISTERED);
             userRepository.save(user);
-            log.warn("User {} state has been ROLLED BACK to INCOMPLETE.", user.getId());
+            log.warn("User {} state has been ROLLED BACK to REGISTERED.", user.getId());
         } else {
             log.warn("Received task failure event for user {} in unexpected state: {}",
                     user.getId(), user.getState());
