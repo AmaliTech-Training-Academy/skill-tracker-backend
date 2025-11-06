@@ -1,23 +1,29 @@
 {
-  "instruction_type": "mcq_generation",
   "input": {
+    "userId": "UUID",
     "interest": "Databases",
     "difficulty": "beginner",
     "no_of_questions": 10
   },
   "expected_output": {
+    "userId": "String(UserId from input block)",
     "question_number": "Integer(eg: 1, 2, 3, 4, ..., n)",
-    "question_text": "string(The actual question)",
+    "question_title": "String(Very short title of question)",
+    "question_description": "String(Brief description of the objective of this question)",
+    "type": "MCQ",
+    "question_text": "String(The actual question)",
     "question_duration": "Integer(Generous expected time allocated to answer question.)",
+    "question_difficulty": "String(e.g: EASY | MEDIUM | HARD)",
     "options": [
-      "string (option A)",
-      "string (option B)",
-      "string (option C)",
-      "string (option D)"
+      "String (option A)",
+      "String (option B)",
+      "String (option C)",
+      "String (option D)"
     ],
     "hint": "String(A direct or indirect hint to what the answer is.)",
     "correct_answer": "String (Specific answer from list of options)",
-    "explanation": "string (why the answer is correct)"
+    "xpReward": "Integer",
+    "explanation": "String (why the answer is correct)"
   },
   "constraints": [
     "question_text must be self-containing of a complete question, code examples included if it exists.",
@@ -34,7 +40,8 @@
     "Ensure hint is leading enough to arrive at the right answer",
     "Ensure correct_answer includes actual value from the listed options",
     "Ensure Array of question object is always returned, even if just one question.",
-    "Exclude all .md formatting conventions, I want straight clear json"
+    "Exclude all .md formatting conventions, I want straight clear json",
+    "Ensure "
   ],
   "exceptions": [
     "Ensure questions are short."
