@@ -36,12 +36,4 @@ public class MCQMapper {
                 .mcqQuestion(mcqQuestions)
                 .build();
     }
-
-//    public static void main(String[] args) {
-//        String jsonResponse = "[...]"; // Your JSON array from Gemini
-//
-//        McqResponseDTO response = mapJsonToMcqResponse(jsonResponse);
-//
-//        System.out.println("Total questions: " + response.getMcqQuestion().size());
-//    }
 }
