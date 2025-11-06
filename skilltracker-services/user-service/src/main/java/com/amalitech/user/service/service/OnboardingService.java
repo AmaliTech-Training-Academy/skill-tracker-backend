@@ -1,6 +1,7 @@
 package com.amalitech.user.service.service;
 
 import com.amalitech.user.service.dto.request.OnboardingRequest;
+import com.amalitech.user.service.dto.response.OnboardingResponseDTO;
 
 import java.util.UUID;
 
@@ -16,6 +17,8 @@ public interface OnboardingService {
      *
      * @param userId The UUID of the authenticated user.
      * @param request The DTO containing the list of selected skills and levels.
+     *
+     * @return The updated User entity with the new state.
      */
-    void completeOnboarding(UUID userId, OnboardingRequest request);
+    OnboardingResponseDTO completeOnboarding(UUID userId, OnboardingRequest request);
 }

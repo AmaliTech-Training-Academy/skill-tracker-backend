@@ -37,7 +37,9 @@ public class SendGridConfig {
     @Bean
     public SendGrid sendGridClient() {
         if (sendGridApiKey == null || sendGridApiKey.trim().isEmpty()) {
-            throw new IllegalArgumentException("SendGrid API key is not configured. Please set 'sendgrid.api.key' in your properties.");
+            throw new IllegalArgumentException(
+                    "SendGrid API key is not configured. Please set 'sendgrid.api.key' in your properties."
+            );
         }
 
         return new SendGrid(sendGridApiKey);

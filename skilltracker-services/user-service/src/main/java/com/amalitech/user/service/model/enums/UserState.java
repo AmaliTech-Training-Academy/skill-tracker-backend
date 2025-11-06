@@ -5,7 +5,6 @@ package com.amalitech.user.service.model.enums;
  */
 public enum UserState {
     REGISTERED,
-    PENDING_TASKS,
     ONBOARDED,
     ACTIVE,
     SUSPENDED

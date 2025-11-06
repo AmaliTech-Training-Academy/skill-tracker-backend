@@ -32,4 +32,12 @@ public class PromptTemplateConfig {
     ) {
         return new PromptTemplate(codingPromptResource);
     }
+
+//    @Bean
+//    public PromptTemplate essayPromptTemplate(
+//            @Value("classpath:prompts/essay/essay_generation_prompt.txt") Resource essayPromptResource
+//    ) {
+//        return new PromptTemplate(essayPromptResource);
+//    }
+
 }

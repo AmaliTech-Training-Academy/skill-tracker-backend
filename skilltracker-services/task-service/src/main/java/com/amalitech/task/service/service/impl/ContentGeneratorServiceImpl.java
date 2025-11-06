@@ -9,7 +9,6 @@ import com.amalitech.task.service.model.view.SkillView;
 import com.amalitech.task.service.repository.TaskDefinitionRepository;
 import com.amalitech.task.service.repository.TaskRepository;
 import com.amalitech.task.service.service.ContentGeneratorService;
-
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -31,6 +30,7 @@ import java.util.stream.StreamSupport;
 @Service
 @Slf4j
 public class ContentGeneratorServiceImpl implements ContentGeneratorService {
+
     private final ChatModel chatModel;
     private final ObjectMapper objectMapper;
     private final TaskRepository taskRepository;

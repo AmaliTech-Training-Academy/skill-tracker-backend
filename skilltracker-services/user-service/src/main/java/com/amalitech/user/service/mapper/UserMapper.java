@@ -2,11 +2,11 @@ package com.amalitech.user.service.mapper;
 
 import com.amalitech.user.service.dto.UserRequestDTO;
 import com.amalitech.user.service.dto.UserResponseDTO;
+import com.amalitech.user.service.dto.response.OnboardingResponseDTO;
 import com.amalitech.user.service.model.User;
 import com.amalitech.user.service.model.enums.PremiumTier;
 import com.amalitech.user.service.model.enums.Role;
 import com.amalitech.user.service.model.enums.UserState;
-
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Component;
 
@@ -51,6 +51,25 @@ public class UserMapper {
                 entity.getPremiumTier(),
                 entity.getLanguage(),
                 entity.getTimezone()
+        );
+    }
+
+    /**
+     * Maps a User entity to the OnboardingResponseDTO.
+     *
+     * @param user The persisted User entity.
+     * @return An OnboardingResponseDTO.
+     */
+    public OnboardingResponseDTO toOnboardingResponseDTO(User user) {
+        if (user == null) {
+            return null;
+        }
+
+        return new OnboardingResponseDTO(
+                user.getId(),
+                user.getEmail(),
+                user.getState(),
+                user.getTaskGenerationStatus()
         );
     }
 }

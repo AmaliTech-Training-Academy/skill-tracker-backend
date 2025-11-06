@@ -2,9 +2,8 @@ package com.amalitech.feedback.service.service;
 
 import com.amalitech.feedback.service.dto.client.TaskDTO;
 import com.amalitech.feedback.service.dto.client.response.Judge0SubmissionResponse;
-import com.amalitech.feedback.service.dto.client.submission.impl.CodingSubmissionFeedback;
 import com.amalitech.feedback.service.dto.client.submission.DetailedEvaluationResponse;
-
+import com.amalitech.feedback.service.dto.client.submission.impl.CodingSubmissionFeedback;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -213,12 +212,15 @@ public class AIFeedbackClient {
         if (firstFailed != null) {
             sb.append("FAILED TEST CASE:\n");
             sb.append("Status: ").append(firstFailed.getStatus().getDescription()).append("\n");
+
             if (firstFailed.getStderr() != null && !firstFailed.getStderr().isBlank()) {
                 sb.append("Error: ").append(firstFailed.getStderr()).append("\n");
             }
+
             if (firstFailed.getCompileOutput() != null && !firstFailed.getCompileOutput().isBlank()) {
                 sb.append("Compile Output: ").append(firstFailed.getCompileOutput()).append("\n");
             }
+
             if (firstFailed.getStdout() != null) {
                 sb.append("Actual Output: ").append(firstFailed.getStdout()).append("\n");
             }
