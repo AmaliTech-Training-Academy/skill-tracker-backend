@@ -1,22 +1,22 @@
-
 {
   "instruction_type": "mcq_generation",
   "input": {
-    "interest": "string (e.g. Python basics, OOP, Databases)",
-    "difficulty": "beginner | intermediate | advanced",
-    "lastPerformance": "integer"
-    },
+    "interest": "Databases",
+    "difficulty": "beginner",
+    "no_of_questions": 10
+  },
   "expected_output": {
-    "question_minute_duration": "Integer(How long it should take to solve this question on average in minutes)",
-    "question_text": "string",
+    "question_number": "Integer(eg: 1, 2, 3, 4, ..., n)",
+    "question_text": "string(The actual question)",
+    "question_duration": "Integer(Generous expected time allocated to answer question.)",
     "options": [
       "string (option A)",
       "string (option B)",
       "string (option C)",
       "string (option D)"
     ],
-    "question_hint": "String(A short, direct or indirect hint to the correct answer)",
-    "correct_answer_index": "String (A-B)",
+    "hint": "String(A direct or indirect hint to what the answer is.)",
+    "correct_answer": "String (Specific answer from list of options)",
     "explanation": "string (why the answer is correct)"
   },
   "constraints": [
@@ -28,7 +28,15 @@
     "Coding questions are not mandatory.",
     "Ensure there is a balance mixed of question kinds(coding, mcq, text-based, etc)",
     "Ensure expected_output always matches expected_output block of prompt structure",
-    "question_minute_duration should be slightly generous and very relevant to task difficulty and correlated skill.",
-    "question_hint should be highly relevant to the correct answer from the question"
+    "Ensure number of questions generated are exactly no_of_questions integer field value",
+    "Ensure question_duration stand for completion of all questions generated, not just one.",
+    "Ensure question_duration matches difficulty and interest.",
+    "Ensure hint is leading enough to arrive at the right answer",
+    "Ensure correct_answer includes actual value from the listed options",
+    "Ensure Array of question object is always returned, even if just one question.",
+    "Exclude all .md formatting conventions, I want straight clear json"
+  ],
+  "exceptions": [
+    "Ensure questions are short."
   ]
 }
