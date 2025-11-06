@@ -33,11 +33,22 @@ public class PromptTemplateConfig {
         return new PromptTemplate(codingPromptResource);
     }
 
-//    @Bean
-//    public PromptTemplate essayPromptTemplate(
-//            @Value("classpath:prompts/essay/essay_generation_prompt.txt") Resource essayPromptResource
-//    ) {
-//        return new PromptTemplate(essayPromptResource);
-//    }
+    /**
+     * Creates a {@link PromptTemplate} bean specifically for essay generation tasks.
+     * <p>
+     * This bean loads its template content from the classpath resource specified by the
+     * {@code @Value} annotation ({@code "classpath:prompts/essay/essay_generation_prompt.txt"}).
+     *
+     * @param essayPromptResource The {@link Resource} injected by Spring, pointing to the
+     * prompt text file on the classpath.
+     * @return A {@link PromptTemplate} instance initialized with the content of the
+     * provided resource.
+     */
+    @Bean
+    public PromptTemplate essayPromptTemplate(
+            @Value("classpath:prompts/essay/essay_generation_prompt.txt") Resource essayPromptResource
+    ) {
+        return new PromptTemplate(essayPromptResource);
+    }
 
 }
