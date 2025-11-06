@@ -23,9 +23,9 @@ public class MCQMapper {
             MCQquestionDTO mcqQuestion = MCQquestionDTO.builder()
                     .question_duration(questionJson.get("question_minute_duration").getAsInt())
                     .question_text(questionJson.get("question_text").getAsString())
-                    .possible_answers(gson.fromJson(questionJson.get("options"), List.class))
+                    .options(gson.fromJson(questionJson.get("options"), List.class))
                     .hint(questionJson.get("question_hint").getAsString())
-                    .correct_answer_index(questionJson.get("correct_answer_index").getAsString())
+                    .correct_answer(questionJson.get("correct_answer_index").getAsString())
                     .explanation(questionJson.get("explanation").getAsString())
                     .build();
 
