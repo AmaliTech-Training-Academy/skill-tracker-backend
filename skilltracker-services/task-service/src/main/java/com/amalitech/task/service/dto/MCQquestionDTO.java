@@ -10,10 +10,11 @@ import java.util.List;
 @AllArgsConstructor
 @Builder
 public class MCQquestionDTO {
+    private String question_number;
     private String question_text;
     private int question_duration;
-    private List<String> possible_answers;
+    private List<String> options;
     private String hint;
-    private String correct_answer_index;
+    private String correct_answer;
     private String explanation;
 }
