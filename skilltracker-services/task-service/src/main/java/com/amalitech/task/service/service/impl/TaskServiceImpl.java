@@ -10,6 +10,7 @@ import com.amalitech.task.service.dto.response.AdminTaskSummaryResponse;
 import com.amalitech.task.service.dto.request.McqRequestTaskDTO;
 import com.amalitech.task.service.dto.response.McqResponseTaskDTO;
 import com.amalitech.task.service.dto.request.McqRequestDTO;
+import com.amalitech.task.service.dto.request.UserProfileRequestDTO;
 import com.amalitech.task.service.dto.response.McqResponseDTO;
 import com.amalitech.task.service.events.RabbitMQEventProducer;
 import com.amalitech.task.service.exception.ResourceNotFoundException;
@@ -335,16 +336,16 @@ public class TaskServiceImpl implements TaskService {
     }
 
     @Override
-    public McqResponseDTO generateMCQ(McqRequestDTO taskDTO) throws IOException {
+    public McqResponseDTO generateMCQ(McqRequestDTO mcqRequestDTO) throws IOException {
         Client client = new Client();
         ClassPathResource prompt = new ClassPathResource("prompts/mcq/mcq_prompt.json");
 
         String updatedFields = updateFields(
                 Files.readString(prompt.getFile().toPath(), StandardCharsets.UTF_8),
                 Map.of(
-                        "interest", taskDTO.getInterest(),
-                        "difficulty", taskDTO.getDifficulty_level(),
-                        "no_of_questions", String.valueOf(taskDTO.getNo_of_questions()))
+                        "interest", mcqRequestDTO.getInterest(),
+                        "difficulty", mcqRequestDTO.getDifficulty(),
+                        "no_of_questions", String.valueOf(mcqRequestDTO.getNo_of_questions()))
                 );
 
 
@@ -359,59 +360,76 @@ public class TaskServiceImpl implements TaskService {
         }
         List<MCQquestionDTO> questions = parseJsonToMcqList(response.text());
 
-        Task newTask = new Task().builder()
-                .title(taskDTO.getTitle())
-                .description(taskDTO.getDescription())
-                .type(taskDTO.getType())
-                .difficulty(taskDTO.getDifficulty())
-                .build();
+//        Task newTask = new Task().builder()
+//                .title(taskDTO.getTitle())
+//                .description(taskDTO.getDescription())
+//                .type(taskDTO.getType())
+//                .difficulty(taskDTO.getDifficulty())
+//                .build();
 
-//        questions.forEach(taskRepository.save());
-
-//        taskRepository.save(questions);
+//        taskRepository.save(newTask);
 
         return new McqResponseDTO(questions);
     }
 
-        public static String updateFields (String jsonString, Map < String, String > updates){
-            Gson gson = new Gson();
-            JsonObject jsonObject = gson.fromJson(jsonString, JsonObject.class);
-            updates.forEach(jsonObject::addProperty);
-            return gson.toJson(jsonObject);
-        }
+    @Override
+    public UserProfileRequestDTO generateLearningPath(UserProfileRequestDTO userProfileRequestDTO) {
+        Client client = new Client();
+        ClassPathResource prompt = new ClassPathResource("prompts/mcq/learningPath_prompt.json");
 
-        public static String updateField (String jsonString, String field, String value){
-            return updateFields(jsonString, Map.of(field, value));
-        }
+//        String updateUserId = updateNumberOfQuestions(
+//                Files.readString(prompt.getFile().toPath(), StandardCharsets.UTF_8),
+//                no_of_questions);
+//
+//        GenerateContentResponse response =
+//                client.models.generateContent(
+//                        model,
+//                        jsonResponse,
+//                        null);
 
-        public static String cleanMarkdownJson (String response){
-            String cleaned = response.trim();
 
-            // Remove opening markdown code block
-            if (cleaned.startsWith("```json")) {
-                cleaned = cleaned.substring(7);
-            } else if (cleaned.startsWith("```")) {
-                cleaned = cleaned.substring(3);
-            }
-
-            // Remove closing markdown code block
-            if (cleaned.endsWith("```")) {
-                cleaned = cleaned.substring(0, cleaned.length() - 3);
-            }
-
-            return cleaned.trim();
-        }
-
-        public static List<MCQquestionDTO> parseJsonToMcqList (String jsonArrayString){
-            Gson gson = new GsonBuilder().setStrictness(Strictness.LENIENT).create();
-
-            // Define the type for List<MCQquestionDTO>
-            Type listType = new TypeToken<List<MCQquestionDTO>>() {
-            }.getType();
-
-            // Parse JSON array directly to List<MCQquestionDTO>
-            List<MCQquestionDTO> mcqQuestions = gson.fromJson(jsonArrayString, listType);
-
-            return mcqQuestions;
-        }
+        return new UserProfileRequestDTO();
     }
+
+    public static String updateFields (String jsonString, Map < String, String > updates){
+        Gson gson = new Gson();
+        JsonObject jsonObject = gson.fromJson(jsonString, JsonObject.class);
+        updates.forEach(jsonObject::addProperty);
+        return gson.toJson(jsonObject);
+    }
+
+    public static String updateField (String jsonString, String field, String value){
+        return updateFields(jsonString, Map.of(field, value));
+    }
+
+    public static String cleanMarkdownJson (String response){
+        String cleaned = response.trim();
+
+        // Remove opening markdown code block
+        if (cleaned.startsWith("```json")) {
+            cleaned = cleaned.substring(7);
+        } else if (cleaned.startsWith("```")) {
+            cleaned = cleaned.substring(3);
+        }
+
+        // Remove closing markdown code block
+        if (cleaned.endsWith("```")) {
+            cleaned = cleaned.substring(0, cleaned.length() - 3);
+        }
+
+        return cleaned.trim();
+    }
+
+    public static List<MCQquestionDTO> parseJsonToMcqList (String jsonArrayString){
+        Gson gson = new GsonBuilder().setStrictness(Strictness.LENIENT).create();
+
+        // Define the type for List<MCQquestionDTO>
+        Type listType = new TypeToken<List<MCQquestionDTO>>() {
+        }.getType();
+
+        // Parse JSON array directly to List<MCQquestionDTO>
+        List<MCQquestionDTO> mcqQuestions = gson.fromJson(jsonArrayString, listType);
+
+        return mcqQuestions;
+    }
+}
