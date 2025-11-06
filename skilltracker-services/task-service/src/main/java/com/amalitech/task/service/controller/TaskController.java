@@ -6,6 +6,8 @@ import com.amalitech.task.service.dto.request.McqRequestTaskDTO;
 import com.amalitech.task.service.dto.response.McqResponseTaskDTO;
 import com.amalitech.task.service.model.enums.TaskType;
 import com.amalitech.task.service.dto.request.McqRequestDTO;
+import com.amalitech.task.service.dto.request.UserProfileRequestDTO;
+import com.amalitech.task.service.dto.response.LearningPathResponseDTO;
 import com.amalitech.task.service.dto.response.McqResponseDTO;
 import com.amalitech.task.service.service.TaskService;
 import lombok.RequiredArgsConstructor;
@@ -57,13 +59,24 @@ public class TaskController {
         return ResponseEntity.ok(response);
     }
 
+
+    /**
+     * This accepts an McqResponseDTO and returns a McqResponseDTO*/
     @PostMapping("/generate/mcq")
 //    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<McqResponseDTO>> generateMCQ(
             @RequestBody McqRequestDTO taskDTO
     ) throws Exception {
-        McqResponseDTO task = taskService.generateMCQ(taskDTO);
-        return ResponseEntity.ok(ApiResponse.success("MCQ Task Generated Successfully", task, ""));
+        McqResponseDTO mcqTask = taskService.generateMCQ(taskDTO);
+        return ResponseEntity.ok(ApiResponse.success("MCQ Task Generated Successfully", mcqTask, ""));
+    }
+
+    @PostMapping("/generate/learning-path")
+    public ResponseEntity<ApiResponse<LearningPathResponseDTO>> generateLearningPath(
+            @RequestBody() UserProfileRequestDTO userProfileRequestDTO
+    ) throws Exception {
+        LearningPathResponseDTO mcqTask = taskService.generateMCQ(userProfileRequestDTO);
+        return ResponseEntity.ok(ApiResponse.success("Learning Path Task Generated Successfully", mcqTask, ""));
     }
 
     @GetMapping
