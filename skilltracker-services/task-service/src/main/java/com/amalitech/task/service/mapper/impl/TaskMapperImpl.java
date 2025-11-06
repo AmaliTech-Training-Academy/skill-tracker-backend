@@ -1,5 +1,6 @@
 package com.amalitech.task.service.mapper.impl;
 
+import com.amalitech.task.service.dto.MCQquestionDTO;
 import com.amalitech.task.service.dto.TaskDTO;
 import com.amalitech.task.service.dto.response.AdminTaskDetailResponse;
 import com.amalitech.task.service.dto.response.AdminTaskSummaryResponse;
@@ -7,9 +8,18 @@ import com.amalitech.task.service.mapper.TaskMapper;
 import com.amalitech.task.service.model.Task;
 import com.amalitech.task.service.model.TaskDefinition;
 import com.amalitech.task.service.model.view.SkillView;
+import com.amalitech.task.service.model.enums.TaskDifficulty;
+import com.amalitech.task.service.model.enums.TaskType;
+import com.amalitech.user.service.dto.UserRequestDTO;
+import com.amalitech.user.service.model.User;
+import com.amalitech.user.service.model.enums.PremiumTier;
+import com.amalitech.user.service.model.enums.Role;
+import com.amalitech.user.service.model.enums.UserState;
 import org.springframework.stereotype.Component;
 
 import java.util.UUID;
+
+import java.time.LocalDateTime;
 
 @Component
 public class TaskMapperImpl implements TaskMapper {
@@ -71,6 +81,23 @@ public class TaskMapperImpl implements TaskMapper {
         if (task == null) {
             return null;
         }
+
+    public static Task toEntity(MCQquestionDTO dto) {
+        if (dto == null) return null;
+        Task task = new Task();
+        task.setTitle(dto.getQuestion_title());
+        task.setDescription(dto.getQuestion_description());
+        task.setType(TaskType.valueOf(dto.getQuestion_type()));
+        task.setDifficulty(TaskDifficulty.valueOf(dto.getQuestion_difficulty()));
+        task.setContent(dto.getContent()); // Come to this later...
+        task.setTaskDefinition(TaskDefinition.builder().build());
+        task.setEstimatedDurationInMinutes(dto.getQuestion_duration());
+        task.setXpReward(dto.getXpReward());
+        task.setUpdatedAt(LocalDateTime.now());
+
+        return task;
+    }
+}
 
         TaskDefinition definition = task.getTaskDefinition();
         UUID taskDefId = null;
