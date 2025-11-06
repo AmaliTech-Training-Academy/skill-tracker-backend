@@ -8,6 +8,7 @@ import com.amalitech.task.service.dto.response.AdminTaskSummaryResponse;
 import com.amalitech.task.service.dto.request.McqRequestTaskDTO;
 import com.amalitech.task.service.dto.response.McqResponseTaskDTO;
 import com.amalitech.task.service.dto.request.McqRequestDTO;
+import com.amalitech.task.service.dto.request.UserProfileRequestDTO;
 import com.amalitech.task.service.dto.response.McqResponseDTO;
 import com.amalitech.task.service.exception.ResourceNotFoundException;
 import com.amalitech.task.service.model.enums.TaskDifficulty;
@@ -25,6 +26,8 @@ import java.util.UUID;
 public interface TaskService {
 
     McqResponseDTO generateMCQ(McqRequestDTO taskDTO) throws Exception;
+
+    UserProfileRequestDTO generateLearningPath(UserProfileRequestDTO userProfileRequestDTO);
 
     /**
      * Get personalized tasks for a user based on their skill and difficulty.
