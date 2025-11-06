@@ -9,6 +9,7 @@ import com.amalitech.user.service.model.User;
 import lombok.*;
 
 import java.util.List;
+import java.util.UUID;
 
 @AllArgsConstructor
 @NoArgsConstructor
@@ -16,13 +17,8 @@ import java.util.List;
 @Getter
 @Setter
 public class McqRequestDTO {
-    private String title;
-    private String description;
-    private TaskType type;
-    private TaskDifficulty difficulty;
-    private String content;
-    private Integer xpReward;
+    private UUID userId;
     private String interest;
-    private String difficulty_level;
+    private String difficulty;
     private Integer no_of_questions;
 }
