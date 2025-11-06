@@ -1,5 +1,6 @@
 package com.amalitech.task.service.service.impl;
 
+import com.amalitech.task.service.dto.MCQquestionDTO;
 import com.amalitech.task.service.dto.TaskAvailabilityDTO;
 import com.amalitech.task.service.dto.TaskDTO;
 import com.amalitech.task.service.dto.request.BatchGenerationRequest;
@@ -30,6 +31,9 @@ import com.google.genai.types.GenerateContentResponse;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonObject;
+import com.google.gson.Strictness;
+import com.google.gson.reflect.TypeToken;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.Cacheable;
@@ -43,10 +47,12 @@ import org.springframework.core.io.ClassPathResource;
 
 import java.time.Duration;
 import java.io.IOException;
+import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -64,6 +70,7 @@ import static com.amalitech.task.service.mapper.MCQMapper.mapJsonToMcqResponse;
 @Transactional(readOnly = true)
 public class TaskServiceImpl implements TaskService {
 
+
     private final TaskRepository taskRepository;
     private final UserSkillProfileRepository userSkillProfileRepository;
     private final SkillService skillService;
@@ -71,6 +78,7 @@ public class TaskServiceImpl implements TaskService {
     private final RabbitMQEventProducer taskEventProducer;
     private final TaskMapper taskMapper;
     private final StringRedisTemplate redisTemplate;
+    private final String model = "gemini-2.5-flash";
 
     /**
      * Minimum number of tasks required per difficulty level before triggering generation.
@@ -314,7 +322,7 @@ public class TaskServiceImpl implements TaskService {
      *   <li>15 or more correct: HARD</li>
      * </ul>
      *
-     * @param userId the unique identifier of the user
+     * @param userId  the unique identifier of the user
      * @param skillId the unique identifier of the skill
      * @return the determined difficulty level
      */
@@ -327,34 +335,83 @@ public class TaskServiceImpl implements TaskService {
     }
 
     @Override
-    public McqResponseDTO generateMCQ(McqRequestDTO taskDTO) throws Exception {
-        try (Client client = new Client()) {
-            try {
-                String data = readFileContent("prompts/mcq/mcq_prompt.json", "mcq_prompt.json");
+    public McqResponseDTO generateMCQ(McqRequestDTO taskDTO) throws IOException {
+        Client client = new Client();
+        ClassPathResource prompt = new ClassPathResource("prompts/mcq/mcq_prompt.json");
 
-                GenerateContentResponse response = client.models.generateContent("gemini-2.5-flash", data, null);
+        String updatedFields = updateFields(
+                Files.readString(prompt.getFile().toPath(), StandardCharsets.UTF_8),
+                Map.of(
+                        "interest", taskDTO.getInterest(),
+                        "difficulty", taskDTO.getDifficulty_level(),
+                        "no_of_questions", String.valueOf(taskDTO.getNo_of_questions()))
+                );
 
-                return mapJsonToMcqResponse(String.valueOf(response));
-            } catch(Exception e) {
-                throw new Exception("Error reading file: " + e.getMessage());
+
+        GenerateContentResponse response =
+                client.models.generateContent(
+                        model,
+                        updatedFields,
+                        null);
+
+        if (response.text() == null) {
+            throw new IOException("No response from Ai API....");
+        }
+        List<MCQquestionDTO> questions = parseJsonToMcqList(response.text());
+
+        Task newTask = new Task().builder()
+                .title(taskDTO.getTitle())
+                .description(taskDTO.getDescription())
+                .type(taskDTO.getType())
+                .difficulty(taskDTO.getDifficulty())
+                .build();
+
+//        questions.forEach(taskRepository.save());
+
+//        taskRepository.save(questions);
+
+        return new McqResponseDTO(questions);
+    }
+
+        public static String updateFields (String jsonString, Map < String, String > updates){
+            Gson gson = new Gson();
+            JsonObject jsonObject = gson.fromJson(jsonString, JsonObject.class);
+            updates.forEach(jsonObject::addProperty);
+            return gson.toJson(jsonObject);
+        }
+
+        public static String updateField (String jsonString, String field, String value){
+            return updateFields(jsonString, Map.of(field, value));
+        }
+
+        public static String cleanMarkdownJson (String response){
+            String cleaned = response.trim();
+
+            // Remove opening markdown code block
+            if (cleaned.startsWith("```json")) {
+                cleaned = cleaned.substring(7);
+            } else if (cleaned.startsWith("```")) {
+                cleaned = cleaned.substring(3);
             }
-        } catch (Exception e) {
-            throw new Exception("Error generating MCQ: " + e.getMessage());
+
+            // Remove closing markdown code block
+            if (cleaned.endsWith("```")) {
+                cleaned = cleaned.substring(0, cleaned.length() - 3);
+            }
+
+            return cleaned.trim();
+        }
+
+        public static List<MCQquestionDTO> parseJsonToMcqList (String jsonArrayString){
+            Gson gson = new GsonBuilder().setStrictness(Strictness.LENIENT).create();
+
+            // Define the type for List<MCQquestionDTO>
+            Type listType = new TypeToken<List<MCQquestionDTO>>() {
+            }.getType();
+
+            // Parse JSON array directly to List<MCQquestionDTO>
+            List<MCQquestionDTO> mcqQuestions = gson.fromJson(jsonArrayString, listType);
+
+            return mcqQuestions;
         }
     }
-
-    public String readFileContent(String filePath, String fileName) throws Exception {
-        try {
-            ClassPathResource resource = new ClassPathResource(filePath);
-            return Files.readString(resource.getFile().toPath(), StandardCharsets.UTF_8);
-        } catch (Exception e) {
-            System.err.println("Error reading file: " + e.getMessage());
-        }
-        throw new Exception("Error reading file: " + fileName);
-    }
-
-    public static String convertToJson(GenerateContentResponse response) {
-        Gson gson = new GsonBuilder().setPrettyPrinting().create();
-        return gson.toJson(response);
-    }
-}
