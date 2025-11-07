@@ -71,14 +71,6 @@ public class TaskController {
         return ResponseEntity.ok(ApiResponse.success("MCQ Task Generated Successfully", mcqTask, ""));
     }
 
-    @PostMapping("/generate/learning-path")
-    public ResponseEntity<ApiResponse<LearningPathResponseDTO>> generateLearningPath(
-            @RequestBody() UserProfileRequestDTO userProfileRequestDTO
-    ) throws Exception {
-        LearningPathResponseDTO mcqTask = taskService.generateMCQ(userProfileRequestDTO);
-        return ResponseEntity.ok(ApiResponse.success("Learning Path Task Generated Successfully", mcqTask, ""));
-    }
-
     @GetMapping
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<List<TaskDTO>>> getPersonalizedTasks(
