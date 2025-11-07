@@ -7,12 +7,14 @@ import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.core.Ordered;
 import org.springframework.http.HttpCookie;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.ReactiveJwtDecoder;
 import org.springframework.stereotype.Component;
 import org.springframework.util.AntPathMatcher;
+import org.springframework.util.StringUtils;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
@@ -77,10 +79,10 @@ public class JwtGlobalFilter implements GlobalFilter, Ordered {
             return chain.filter(exchange);
         }
 
-        String token = extractTokenFromCookie(request);
+        String token = extractToken(request);
 
         if (token == null) {
-            log.warn("Missing '{}' cookie for non-whitelisted path: {}", ACCESS_TOKEN_COOKIE_NAME, path);
+            log.warn("Missing Authorization header or '{}' cookie for non-whitelisted path: {}", ACCESS_TOKEN_COOKIE_NAME, path);
             return unauthorized(exchange);
         }
 
@@ -102,11 +104,23 @@ public class JwtGlobalFilter implements GlobalFilter, Ordered {
      * @param request the incoming HTTP request
      * @return the JWT token string, or {@code null} if the cookie is not present
      */
-    private String extractTokenFromCookie(ServerHttpRequest request) {
+    private String extractToken(ServerHttpRequest request) {
+
+        String authHeader = request.getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
+        if (StringUtils.hasText(authHeader) && authHeader.startsWith("Bearer ")) {
+            return authHeader.substring(7);
+        }
+
+        String queryToken = request.getQueryParams().getFirst("token");
+        if (StringUtils.hasText(queryToken)) {
+            return queryToken;
+        }
+
         HttpCookie accessTokenCookie = request.getCookies().getFirst(ACCESS_TOKEN_COOKIE_NAME);
         if (accessTokenCookie != null) {
             return accessTokenCookie.getValue();
         }
+
         return null;
     }
 

@@ -2,11 +2,11 @@ package com.amalitech.task.service.service;
 
 import com.amalitech.task.service.dto.TaskAvailabilityDTO;
 import com.amalitech.task.service.dto.TaskDTO;
+import com.amalitech.task.service.dto.request.GenerateTaskRequest;
 import com.amalitech.task.service.dto.response.AdminTaskDetailResponse;
 import com.amalitech.task.service.dto.response.AdminTaskSummaryResponse;
 import com.amalitech.task.service.exception.ResourceNotFoundException;
 import com.amalitech.task.service.model.enums.TaskDifficulty;
-
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -73,5 +73,14 @@ public interface TaskService {
      * @return The detailed task DTO including its content.
      * @throws ResourceNotFoundException if task is not found.
      */
-    AdminTaskDetailResponse getTaskForAdmin(UUID taskId);;
+    AdminTaskDetailResponse getTaskForAdmin(UUID taskId);
+
+    /**
+     * Handles the business logic for an admin's request to generate a task.
+     * It creates the message payload and publishes it to the queue.
+     *
+     * @param requestBody The task generation parameters from the admin.
+     * @param adminUserId The UUID of the admin making the request (for notifications).
+     */
+    void requestSpecificTaskGeneration(GenerateTaskRequest requestBody, UUID adminUserId);
 }

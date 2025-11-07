@@ -2,11 +2,11 @@ package com.amalitech.task.service.dto.request;
 
 import com.amalitech.task.service.model.enums.TaskDifficulty;
 import com.amalitech.task.service.model.enums.TaskType;
-
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
 import java.io.Serializable;
+import java.util.UUID;
 
 /**
  * An immutable data carrier (DTO) used to request the explicit, targeted generation of a single task
@@ -24,6 +24,9 @@ import java.io.Serializable;
  * @param languageName The programming language or natural language context for the task (e.g., "Java", "English"). Optional, but highly recommended for technical tasks.
  */
 public record GenerateTaskRequest(
+        @NotNull
+        UUID userId,
+
         @NotNull(message = "Task type is required")
         TaskType taskType,
 

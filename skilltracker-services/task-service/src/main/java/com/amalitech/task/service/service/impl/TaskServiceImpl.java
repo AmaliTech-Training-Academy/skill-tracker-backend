@@ -3,6 +3,7 @@ package com.amalitech.task.service.service.impl;
 import com.amalitech.task.service.dto.TaskAvailabilityDTO;
 import com.amalitech.task.service.dto.TaskDTO;
 import com.amalitech.task.service.dto.request.BatchGenerationRequest;
+import com.amalitech.task.service.dto.request.GenerateTaskRequest;
 import com.amalitech.task.service.dto.response.AdminTaskDetailResponse;
 import com.amalitech.task.service.dto.response.AdminTaskSummaryResponse;
 import com.amalitech.task.service.events.RabbitMQEventProducer;
@@ -86,7 +87,7 @@ public class TaskServiceImpl implements TaskService {
         log.debug("Determined difficulty: {} for user: {}", difficulty, userId);
 
         List<Task> tasks = getOrGenerateTasksForSkillAndDifficulty(
-                skill, difficulty, TaskType.CODING, limit
+                userId, skill, difficulty, TaskType.CODING, limit
         );
 
         return tasks.stream()
@@ -105,7 +106,7 @@ public class TaskServiceImpl implements TaskService {
         SkillView skill = skillService.getSkillByName(skillName);
 
         List<Task> tasks = getOrGenerateTasksForSkillAndDifficulty(
-                skill, difficulty, TaskType.CODING, limit
+                null, skill, difficulty, TaskType.CODING, limit
         );
 
         return tasks.stream()
@@ -186,7 +187,7 @@ public class TaskServiceImpl implements TaskService {
      * @return a list of tasks from the cache (may be less than the requested limit)
      */
     private List<Task> getOrGenerateTasksForSkillAndDifficulty(
-            SkillView skill, TaskDifficulty difficulty, TaskType taskType, int limit) {
+            UUID userId, SkillView skill, TaskDifficulty difficulty, TaskType taskType, int limit) {
 
         List<Task> cachedTasks = taskRepository.findBySkillIdAndDifficultyAndType(
                 skill.getId(),
@@ -199,6 +200,12 @@ public class TaskServiceImpl implements TaskService {
         if (cachedTasks.size() >= limit) {
             log.info("Cache hit: Using {} cached tasks for {}/{}",
                     cachedTasks.size(), skill.getName(), difficulty);
+            return cachedTasks;
+        }
+
+        if (userId == null) {
+            log.warn("Cache miss for anonymous request {}/{}. Not triggering generation.",
+                    skill.getName(), difficulty);
             return cachedTasks;
         }
 
@@ -218,6 +225,7 @@ public class TaskServiceImpl implements TaskService {
                     skill.getName(), difficulty);
 
             BatchGenerationRequest request = new BatchGenerationRequest(
+                    userId,
                     skill.getName(),
                     difficulty,
                     minTasksPerDifficulty,
@@ -229,9 +237,32 @@ public class TaskServiceImpl implements TaskService {
         } catch (Exception e) {
             log.error("Failed to publish task generation request for {}: {}. Lock will remain for {}s.",
                     lockKey, e.getMessage(), FETCH_LOCK_TIMEOUT.toSeconds(), e);
+            redisTemplate.delete(lockKey);
         }
 
         return cachedTasks;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    @Transactional
+    public void requestSpecificTaskGeneration(GenerateTaskRequest requestBody, UUID adminUserId) {
+        log.info("Admin {} requesting specific task generation for skill: {}", adminUserId, requestBody.skillName());
+
+        GenerateTaskRequest messagePayload = new GenerateTaskRequest(
+                adminUserId,
+                requestBody.taskType(),
+                requestBody.skillName(),
+                requestBody.difficulty(),
+                requestBody.topic(),
+                requestBody.languageName()
+        );
+
+        taskEventProducer.requestSpecificTaskGeneration(messagePayload);
+
+        log.info("Specific task generation request for admin {} published to RabbitMQ.", adminUserId);
     }
 
     /**
