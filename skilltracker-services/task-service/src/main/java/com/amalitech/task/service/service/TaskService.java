@@ -27,7 +27,7 @@ public interface TaskService {
 
     McqResponseDTO generateMCQ(McqRequestDTO taskDTO) throws Exception;
 
-    UserProfileRequestDTO generateLearningPath(UserProfileRequestDTO userProfileRequestDTO);
+//    UserProfileRequestDTO generateLearningPath(UserProfileRequestDTO userProfileRequestDTO);
 
     /**
      * Get personalized tasks for a user based on their skill and difficulty.
