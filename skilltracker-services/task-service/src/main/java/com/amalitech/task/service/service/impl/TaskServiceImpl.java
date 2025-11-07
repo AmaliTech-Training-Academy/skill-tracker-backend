@@ -10,12 +10,13 @@ import com.amalitech.task.service.dto.response.AdminTaskSummaryResponse;
 import com.amalitech.task.service.dto.request.McqRequestTaskDTO;
 import com.amalitech.task.service.dto.response.McqResponseTaskDTO;
 import com.amalitech.task.service.dto.request.McqRequestDTO;
-import com.amalitech.task.service.dto.request.UserProfileRequestDTO;
 import com.amalitech.task.service.dto.response.McqResponseDTO;
 import com.amalitech.task.service.events.RabbitMQEventProducer;
 import com.amalitech.task.service.exception.ResourceNotFoundException;
 import com.amalitech.task.service.mapper.TaskMapper;
 import com.amalitech.task.service.model.Task;
+import com.amalitech.task.service.model.content.TaskContent;
+import com.amalitech.task.service.model.content.impl.McqTaskContent;
 import com.amalitech.task.service.model.UserSkillProfile;
 import com.amalitech.task.service.model.enums.TaskDifficulty;
 import com.amalitech.task.service.model.enums.TaskType;
@@ -51,13 +52,10 @@ import java.io.IOException;
 import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
-
-import static com.amalitech.task.service.mapper.MCQMapper.mapJsonToMcqResponse;
 
 /**
  * Implementation of the TaskService interface.
@@ -361,14 +359,7 @@ public class TaskServiceImpl implements TaskService {
         }
         List<MCQquestionDTO> questions = parseJsonToMcqList(response.text());
 
-//        Task newTask = new Task().builder()
-//                .title(taskDTO.getTitle())
-//                .description(taskDTO.getDescription())
-//                .type(taskDTO.getType())
-//                .difficulty(taskDTO.getDifficulty())
-//                .build();
-
-//        taskRepository.save(newTask);
+        saveQuestions(questions);
 
         return new McqResponseDTO(questions);
     }
@@ -410,5 +401,34 @@ public class TaskServiceImpl implements TaskService {
         List<MCQquestionDTO> mcqQuestions = gson.fromJson(jsonArrayString, listType);
 
         return mcqQuestions;
+    }
+
+    public void saveQuestions(List<MCQquestionDTO> questions) {
+
+        for(MCQquestionDTO question : questions) {
+            Task task = new Task().builder()
+                    .title(question.getQuestion_title())
+                    .description(question.getQuestion_description())
+                    .type(TaskType.valueOf(question.getQuestion_type()))
+                    .difficulty(TaskDifficulty.valueOf(question.getQuestion_difficulty()))
+                    .content(createMCQContent(question))
+                    .xpReward(question.getXpReward())
+                    .build();
+
+            taskRepository.save(task);
+        }
+    }
+
+    public McqTaskContent createMCQContent(MCQquestionDTO content) {
+
+        return McqTaskContent.builder()
+                .question_number(content.getQuestion_number())
+                .question_text(content.getQuestion_text())
+                .question_duration(content.getQuestion_duration())
+                .options(content.getOptions())
+                .hint(content.getHint())
+                .correct_answer(content.getCorrect_answer())
+                .explanation(content.getExplanation())
+                .build();
     }
 }
