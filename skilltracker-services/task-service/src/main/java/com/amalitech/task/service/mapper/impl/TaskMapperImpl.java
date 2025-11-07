@@ -89,7 +89,7 @@ public class TaskMapperImpl implements TaskMapper {
         task.setDescription(dto.getQuestion_description());
         task.setType(TaskType.valueOf(dto.getQuestion_type()));
         task.setDifficulty(TaskDifficulty.valueOf(dto.getQuestion_difficulty()));
-        task.setContent(dto.getContent()); // Come to this later...
+//        task.setContent(dto.getContent()); // Come to this later...
         task.setTaskDefinition(TaskDefinition.builder().build());
         task.setEstimatedDurationInMinutes(dto.getQuestion_duration());
         task.setXpReward(dto.getXpReward());
