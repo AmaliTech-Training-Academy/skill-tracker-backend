@@ -322,7 +322,7 @@ public class TaskServiceImpl implements TaskService {
      *   <li>5-14 correct: MEDIUM</li>
      *   <li>15 or more correct: HARD</li>
      * </ul>
-     *
+     *param
      * @param userId  the unique identifier of the user
      * @param skillId the unique identifier of the skill
      * @return the determined difficulty level
@@ -343,6 +343,7 @@ public class TaskServiceImpl implements TaskService {
         String updatedFields = updateFields(
                 Files.readString(prompt.getFile().toPath(), StandardCharsets.UTF_8),
                 Map.of(
+                        "userId", mcqRequestDTO.getUserId().toString(),
                         "interest", mcqRequestDTO.getInterest(),
                         "difficulty", mcqRequestDTO.getDifficulty(),
                         "no_of_questions", String.valueOf(mcqRequestDTO.getNo_of_questions()))
@@ -372,10 +373,10 @@ public class TaskServiceImpl implements TaskService {
         return new McqResponseDTO(questions);
     }
 
-    @Override
-    public UserProfileRequestDTO generateLearningPath(UserProfileRequestDTO userProfileRequestDTO) {
-        Client client = new Client();
-        ClassPathResource prompt = new ClassPathResource("prompts/mcq/learningPath_prompt.json");
+//    @Override
+//    public UserProfileRequestDTO generateLearningPath(UserProfileRequestDTO userProfileRequestDTO) {
+//        Client client = new Client();
+//        ClassPathResource prompt = new ClassPathResource("prompts/mcq/learningPath_prompt.json");
 
 //        String updateUserId = updateNumberOfQuestions(
 //                Files.readString(prompt.getFile().toPath(), StandardCharsets.UTF_8),
@@ -388,8 +389,8 @@ public class TaskServiceImpl implements TaskService {
 //                        null);
 
 
-        return new UserProfileRequestDTO();
-    }
+//        return new UserProfileRequestDTO();
+//    }
 
     public static String updateFields (String jsonString, Map < String, String > updates){
         Gson gson = new Gson();
