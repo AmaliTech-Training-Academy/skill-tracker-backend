@@ -1,6 +1,6 @@
 package com.amalitech.analytics.service.config;
 
-// File: com.your-app.config.WebSocketConfig.java
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
@@ -8,11 +8,37 @@ import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBr
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
 
+
+/**
+ * WebSocket configuration for enabling STOMP (Simple Text Oriented Messaging Protocol)
+ * messaging over WebSocket connections.
+ * <p>
+ * This configuration connects the application to an external RabbitMQ STOMP broker relay,
+ * allowing scalable, message-driven communication between distributed clients.
+ * It defines endpoint mappings, broker relay settings, and routing prefixes for
+ * server-to-client and client-to-server communication.
+ * </p>
+ *
+ * <p><strong>Key Features:</strong></p>
+ * <ul>
+ *   <li>Connects to an external RabbitMQ STOMP relay for high scalability.</li>
+ *   <li>Defines prefixes for application destinations and user-specific queues.</li>
+ *   <li>Registers a WebSocket handshake endpoint for clients.</li>
+ * </ul>
+ *
+ * <p>
+ * The {@link EnableWebSocketMessageBroker} annotation enables message handling backed
+ * by a message broker, making it possible to route messages via topics and queues
+ * using annotations such as {@code @MessageMapping}.
+ * </p>
+ *
+ * @author
+ * @since 1.0
+ */
 @Configuration
 @EnableWebSocketMessageBroker
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
-    // Inject dedicated STOMP properties
     @Value("${stomp.relay.host}")
     private String rabbitStompHost;
 
@@ -25,36 +51,48 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     @Value("${stomp.relay.system-password}")
     private String rabbitSystemPassword;
 
+    /**
+     * Configures the message broker for STOMP communication.
+     * <p>
+     * This method sets up a STOMP broker relay connected to RabbitMQ, defines
+     * prefixes for message destinations, and configures user-specific queue routing.
+     * </p>
+     *
+     * @param registry the {@link MessageBrokerRegistry} used to configure broker settings
+     */
     @Override
     public void configureMessageBroker(MessageBrokerRegistry registry) {
-
-        // Setting up the scalable, external broker relay
         registry.enableStompBrokerRelay("/queue", "/topic")
                 .setRelayHost(rabbitStompHost)
                 .setRelayPort(rabbitStompPort)
-
-                // Credentials for your Spring app to connect to RabbitMQ as a STOMP client
                 .setClientLogin(rabbitSystemUsername)
                 .setClientPasscode(rabbitSystemPassword)
-
-                // Credentials for your Spring app to manage queue subscriptions on behalf of the users
                 .setSystemLogin(rabbitSystemUsername)
                 .setSystemPasscode(rabbitSystemPassword)
-
-                // Recommended settings for troubleshooting and user management in a distributed setup
                 .setUserDestinationBroadcast("/topic/unresolved-user-destination")
                 .setUserRegistryBroadcast("/topic/user-registry");
 
-        // Prefix for server-side endpoints (e.g., @MessageMapping("/app/...") )
         registry.setApplicationDestinationPrefixes("/app");
-        // Prefix for user-specific queues (e.g., /user/UUID-123/queue/updates)
         registry.setUserDestinationPrefix("/user");
     }
 
+    /**
+     * Registers WebSocket endpoints for client connections.
+     * <p>
+     * The endpoint {@code /ws-analytics} serves as the HTTP entry point
+     * for WebSocket handshake requests. Clients connect to this endpoint
+     * before subscribing to STOMP topics or queues.
+     * </p>
+     *
+     * <p><strong>Note:</strong> The {@code setAllowedOriginPatterns("*")} setting
+     * is for development use only. In production, specify explicit origins
+     * to prevent cross-origin security risks.</p>
+     *
+     * @param registry the {@link StompEndpointRegistry} used to register STOMP endpoints
+     */
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
-        // The HTTP endpoint for the initial WebSocket handshake
         registry.addEndpoint("/ws-analytics")
-                .setAllowedOriginPatterns("*"); // Configure this securely in production
+                .setAllowedOriginPatterns("*");
     }
 }

@@ -1,6 +1,5 @@
 package com.amalitech.analytics.service.service;
 
-
 import com.amalitech.analytics.service.dto.TaskCompletedEvent;
 import com.amalitech.analytics.service.dto.TaskSubmissionRequestDTO;
 import com.amalitech.analytics.service.events.AnalyticsUpdateEvent;
@@ -12,18 +11,32 @@ import com.amalitech.analytics.service.repository.SkillTrajectorySnapshotReposit
 import com.amalitech.analytics.service.repository.TaskSubmissionLogRepository;
 import com.amalitech.analytics.service.repository.UserAggregateStatsRepository;
 import com.amalitech.analytics.service.repository.UserSkillProgressRepository;
+import com.amalitech.analytics.service.service.interfaces.AnalyticsServiceInterface;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
 import java.time.LocalDate;
 import java.time.ZoneOffset;
 
+/**
+ * Default implementation of {@link AnalyticsServiceInterface}.
+ *
+ * <p>This service handles all write and update operations for analytics,
+ * including task completions, progress tracking, and aggregate updates.
+ * It also publishes internal domain events to notify other layers (e.g., WebSocket push).</p>
+ *
+ * <p>All operations are transactional and ensure consistency across
+ * progress tracking, trajectory snapshots, and aggregate statistics.</p>
+ *
+ * @since 1.0
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class AnalyticsService {
+public class AnalyticsService implements AnalyticsServiceInterface {
 
     private final TaskSubmissionLogRepository logRepository;
     private final UserSkillProgressRepository skillProgressRepository;
@@ -32,18 +45,25 @@ public class AnalyticsService {
     private final ApplicationEventPublisher eventPublisher;
 
     /**
-     Processes a completed task event, updating skill progress, user statistics, and snapshots.
+     * {@inheritDoc}
      */
+    @Override
     @Transactional
     public void processTaskCompletion(TaskCompletedEvent event) {
         log.info("Processing TaskCompletedEvent for user: {}", event.userId());
+
         UserSkillProgress progress = updateSkillProgress(event);
         updateUserAggregateStats(event);
         logSubmission(event);
         updateTrajectorySnapshot(progress);
+
         eventPublisher.publishEvent(new AnalyticsUpdateEvent(this, event.userId()));
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     @Transactional
     public void submitTaskDirectly(TaskSubmissionRequestDTO request) {
         log.warn("DIRECT SUBMISSION API USED: Bypassing message queue for user {}", request.userId());
@@ -52,10 +72,11 @@ public class AnalyticsService {
     }
 
     /**
-     Retrieves or creates a UserSkillProgress record and updates it with the XP from the event.
-
-     @param event The completed task event.
-     @return Updated UserSkillProgress entity.
+     * Retrieves or creates a {@link UserSkillProgress} record and updates it
+     * based on the completed task event.
+     *
+     * @param event the task completion event
+     * @return the updated {@link UserSkillProgress} entity
      */
     private UserSkillProgress updateSkillProgress(TaskCompletedEvent event) {
         UserSkillProgress progress = skillProgressRepository
@@ -76,9 +97,10 @@ public class AnalyticsService {
     }
 
     /**
-     Updates the daily trajectory snapshot for a user's skill based on current progress.
-
-     @param progress The user's skill progress.
+     * Updates or creates a trajectory snapshot entry for the user’s skill
+     * on the current date, reflecting the latest progress state.
+     *
+     * @param progress the current user skill progress
      */
     private void updateTrajectorySnapshot(UserSkillProgress progress) {
         LocalDate today = LocalDate.now(ZoneOffset.UTC);
@@ -86,27 +108,34 @@ public class AnalyticsService {
         SkillTrajectorySnapshot snapshot = trajectoryRepository
                 .findByUserIdAndSkillIdAndSnapshotDate(progress.getUserId(), progress.getSkillId(), today)
                 .orElseGet(() -> SkillTrajectorySnapshot.fromProgress(progress, today));
+
         trajectoryRepository.save(snapshot);
     }
 
     /**
-     Updates the user's aggregate stats such as total tasks completed and streaks.
-
-     @param event The task completed event.
-     @return The updated UserAggregateStats entity.
+     * Updates the aggregate user statistics such as total tasks completed
+     * and streak information.
+     *
+     * @param event the completed task event
+     * @return the updated {@link UserAggregateStats} entity
      */
     private UserAggregateStats updateUserAggregateStats(TaskCompletedEvent event) {
         LocalDate practiceDate = event.completedAt().atZone(ZoneOffset.UTC).toLocalDate();
+
         UserAggregateStats stats = aggregateStatsRepository.findById(event.userId())
                 .orElseGet(() -> new UserAggregateStats(event.userId()));
+
         stats.updateStreak(practiceDate);
         return aggregateStatsRepository.save(stats);
     }
 
     /**
-     Logs a task submission event by persisting it as an immutable TaskSubmissionLog entity.
-
-     @param event The completed task event.
+     * Logs a task submission by persisting a {@link TaskSubmissionLog} record.
+     *
+     * <p>This log provides an immutable audit trail of user submissions
+     * for analytical and compliance purposes.</p>
+     *
+     * @param event the completed task event
      */
     private void logSubmission(TaskCompletedEvent event) {
         TaskSubmissionLog submissionLog = TaskSubmissionLog.builder()
@@ -119,6 +148,7 @@ public class AnalyticsService {
                 .rubricsScores(event.rubricsScores())
                 .completedAt(event.completedAt())
                 .build();
+
         logRepository.save(submissionLog);
         log.debug("Logged new task submission for user {} and skill {}", event.userId(), event.skillId());
     }

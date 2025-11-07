@@ -4,31 +4,37 @@ import com.amalitech.analytics.service.dto.*;
 import com.amalitech.analytics.service.model.SkillSnapShot;
 import com.amalitech.analytics.service.model.UserSkillProgress;
 import com.amalitech.analytics.service.model.enums.Granularity;
-import com.amalitech.analytics.service.repository.SkillSnapshotRepository;
-import com.amalitech.analytics.service.repository.TaskSubmissionLogRepository;
-import com.amalitech.analytics.service.repository.UserAggregateStatsRepository;
-import com.amalitech.analytics.service.repository.UserSkillProgressRepository;
+import com.amalitech.analytics.service.repository.*;
+import com.amalitech.analytics.service.service.interfaces.AnalyticsReadServiceInterface;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
 import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collectors;
 
-
-
 /**
- * Read-only service for building analytics dashboards and time-series data.
- * <p>
- * All methods are {@code @Transactional(readOnly = true)} and optimized to avoid N+1 queries.
- * Uses JDBC for complex aggregations (trajectory) and JPA for simple fetches.
- * </p>
+ * Default implementation of {@link AnalyticsReadServiceInterface}.
+ *
+ * <p>Provides optimized, read-only analytics queries using a blend of
+ * JPA repositories and direct JDBC access for aggregation tasks.
+ * Each method is transactional and read-only, ensuring data consistency
+ * without incurring write-locking overhead.</p>
+ *
+ * <p><strong>Performance Notes:</strong></p>
+ * <ul>
+ *   <li>All repository methods are batch-optimized to avoid N + 1 issues.</li>
+ *   <li>JDBC is used selectively for time-series and aggregated computations.</li>
+ * </ul>
+ *
+ * @since 1.0
  */
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
-public class AnalyticsReadService {
+public class AnalyticsReadService implements AnalyticsReadServiceInterface {
 
     private final UserAggregateStatsRepository aggregateStatsRepository;
     private final UserSkillProgressRepository skillProgressRepository;
@@ -36,16 +42,11 @@ public class AnalyticsReadService {
     private final JdbcTemplate jdbcTemplate;
     private final TaskSubmissionLogRepository logRepository;
 
-    /**
-     * Assembles the comprehensive dashboard for a user.
-     *
-     * @param userId the ID of the user
-     * @return fully populated {@link DashboardDTO}
-     */
+    /** {@inheritDoc} */
+    @Override
     public DashboardDTO buildDashboard(UUID userId) {
         UserStatsDTO userStats = getUserStats(userId);
         List<SkillProgressDTO> skillProgress = getSkillProgress(userId);
-
         List<GoalStatusDTO> goalStatus = List.of();
         List<SkillGapDTO> skillGaps = List.of();
         GlobalRankDTO globalRank = null;
@@ -54,10 +55,11 @@ public class AnalyticsReadService {
     }
 
     /**
-     * Retrieves aggregate user statistics.
+     * Retrieves aggregate user statistics including total tasks,
+     * current streak, and longest streak.
      *
      * @param userId the user ID
-     * @return {@link UserStatsDTO} with streak and task counts
+     * @return {@link UserStatsDTO} representing summarized stats
      */
     private UserStatsDTO getUserStats(UUID userId) {
         return aggregateStatsRepository.findById(userId)
@@ -70,10 +72,8 @@ public class AnalyticsReadService {
     }
 
     /**
-     * Fetches all skill progress for a user and enriches with level/XP data.
-     * <p>
-     * Avoids N+1 by loading all progress first, then batch-fetching snapshots.
-     * </p>
+     * Loads all skill progress for the specified user and enriches
+     * with corresponding snapshot data to compute XP thresholds and levels.
      *
      * @param userId the user ID
      * @return list of {@link SkillProgressDTO}
@@ -84,7 +84,6 @@ public class AnalyticsReadService {
             return List.of();
         }
 
-        // Batch fetch all required snapshots
         Set<UUID> skillIds = progresses.stream()
                 .map(UserSkillProgress::getSkillId)
                 .collect(Collectors.toSet());
@@ -93,50 +92,48 @@ public class AnalyticsReadService {
                 .stream()
                 .collect(Collectors.toMap(SkillSnapShot::getId, s -> s));
 
-        return progresses.stream()
-                .map(progress -> {
-                    SkillSnapShot snapshot = snapshotMap.get(progress.getSkillId());
-                    if (snapshot == null) {
-                        throw new IllegalStateException("Skill snapshot not found: " + progress.getSkillId());
-                    }
+        return progresses.stream().map(progress -> {
+            SkillSnapShot snapshot = snapshotMap.get(progress.getSkillId());
+            if (snapshot == null) {
+                throw new IllegalStateException("Skill snapshot not found: " + progress.getSkillId());
+            }
 
-                    Map<String, Long> xpMap = snapshot.getLevelXpMap();
-                    SkillDetailsDTO details = new SkillDetailsDTO(
-                            snapshot.getId(),
-                            snapshot.getName(),
-                            xpMap.getOrDefault("INTERMEDIATE", 0L).intValue(),
-                            xpMap.getOrDefault("ADVANCED", 0L).intValue()
-                    );
+            Map<String, Long> xpMap = snapshot.getLevelXpMap();
+            SkillDetailsDTO details = new SkillDetailsDTO(
+                    snapshot.getId(),
+                    snapshot.getName(),
+                    xpMap.getOrDefault("INTERMEDIATE", 0L).intValue(),
+                    xpMap.getOrDefault("ADVANCED", 0L).intValue()
+            );
 
-                    int currentXp = progress.getTotalXpEarned();
-                    String currentLevel = details.getCurrentLevel(currentXp);
-                    String nextLevel = details.getNextLevel(currentLevel);
-                    int xpForNextLevel = details.getXpForLevel(nextLevel);
-                    int xpForCurrentLevel = details.getXpForLevel(currentLevel);
-                    int xpToNextLevel = Math.max(0, xpForNextLevel - currentXp);
-                    int currentLevelTotalXp = Math.max(0, xpForNextLevel - xpForCurrentLevel);
+            int currentXp = progress.getTotalXpEarned();
+            String currentLevel = details.getCurrentLevel(currentXp);
+            String nextLevel = details.getNextLevel(currentLevel);
+            int xpForNextLevel = details.getXpForLevel(nextLevel);
+            int xpForCurrentLevel = details.getXpForLevel(currentLevel);
+            int xpToNextLevel = Math.max(0, xpForNextLevel - currentXp);
+            int currentLevelTotalXp = Math.max(0, xpForNextLevel - xpForCurrentLevel);
 
-                    return new SkillProgressDTO(
-                            progress.getSkillId(),
-                            details.skillName(),
-                            progress.getAverageXpEarned(),
-                            progress.getProficiency(),
-                            progress.getTasksCompleted(),
-                            currentXp,
-                            currentLevel,
-                            nextLevel,
-                            xpToNextLevel,
-                            currentLevelTotalXp
-                    );
-                })
-                .collect(Collectors.toList());
+            return new SkillProgressDTO(
+                    progress.getSkillId(),
+                    details.skillName(),
+                    progress.getAverageXpEarned(),
+                    progress.getProficiency(),
+                    progress.getTasksCompleted(),
+                    currentXp,
+                    currentLevel,
+                    nextLevel,
+                    xpToNextLevel,
+                    currentLevelTotalXp
+            );
+        }).collect(Collectors.toList());
     }
 
     /**
-     * Maps {@link Granularity} to PostgreSQL {@code DATE_TRUNC} unit.
+     * Maps {@link Granularity} values to PostgreSQL {@code DATE_TRUNC} units.
      *
-     * @param granularity the desired aggregation level
-     * @return PostgreSQL time unit string
+     * @param granularity desired aggregation level
+     * @return SQL-compatible time unit string
      * @throws IllegalArgumentException if granularity is unsupported
      */
     private String mapGranularityToPostgresUnit(Granularity granularity) {
@@ -144,18 +141,11 @@ public class AnalyticsReadService {
             case DAILY -> "day";
             case WEEKLY -> "week";
             case MONTHLY -> "month";
-            default -> throw new IllegalArgumentException("Unsupported granularity: " + granularity);
         };
     }
 
-    /**
-     * Retrieves skill trajectory (average score and task count) over time.
-     *
-     * @param userId      the user ID
-     * @param skillId     the skill ID
-     * @param granularity aggregation level
-     * @return list of {@link TrajectoryPointDTO} ordered by date
-     */
+    /** {@inheritDoc} */
+    @Override
     public List<TrajectoryPointDTO> getSkillTrajectory(UUID userId, UUID skillId, Granularity granularity) {
         if (granularity == Granularity.DAILY) {
             String dailySql = """
@@ -201,12 +191,8 @@ public class AnalyticsReadService {
         );
     }
 
-    /**
-     * Returns all dates in the current ongoing practice streak.
-     *
-     * @param userId the user ID
-     * @return ordered list of dates from most recent to streak start
-     */
+    /** {@inheritDoc} */
+    @Override
     public List<LocalDate> getCurrentStreakDays(UUID userId) {
         List<LocalDate> allPracticeDays = logRepository.findAllDistinctPracticeDaysByUserId(userId);
         if (allPracticeDays.isEmpty()) {
@@ -225,12 +211,8 @@ public class AnalyticsReadService {
         return streak;
     }
 
-    /**
-     * Returns all unique practice days for calendar heatmap.
-     *
-     * @param userId the user ID
-     * @return unordered list of practice dates
-     */
+    /** {@inheritDoc} */
+    @Override
     public List<LocalDate> getAllPracticeDays(UUID userId) {
         return logRepository.findAllDistinctPracticeDaysByUserId(userId);
     }

@@ -1,18 +1,48 @@
 package com.amalitech.analytics.service.config;
 
-
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 
+/**
+ * Configuration class for customizing the Jackson {@link ObjectMapper}.
+ * <p>
+ * This configuration registers the {@link JavaTimeModule} to ensure proper
+ * serialization and deserialization of Java 8 Date and Time API classes
+ * (e.g., {@link java.time.LocalDate}, {@link java.time.LocalDateTime}, etc.).
+ * <p>
+ * The configured {@link ObjectMapper} bean will be managed by Spring's
+ * application context, allowing it to be injected wherever JSON processing
+ * is required within the application.
+ * </p>
+ *
+ * <p><b>Usage example:</b></p>
+ * <pre>{@code
+ * @Autowired
+ * private ObjectMapper objectMapper;
+ * }</pre>
+ *
+ * @author
+ * @since 1.0
+ */
 @Configuration
 public class ObjectMapperConfig {
 
+    /**
+     * Creates and configures an {@link ObjectMapper} bean with support for Java 8 time types.
+     * <p>
+     * By registering the {@link JavaTimeModule}, this mapper can correctly handle
+     * serialization and deserialization of classes such as {@link java.time.LocalDateTime}.
+     * </p>
+     *
+     * @return a configured {@link ObjectMapper} instance
+     */
     @Bean
+    @Primary
     public ObjectMapper objectMapper() {
         ObjectMapper mapper = new ObjectMapper();
-        // Register module to handle Java 8 Date/Time types like Instant, LocalDate
         mapper.registerModule(new JavaTimeModule());
         return mapper;
     }
