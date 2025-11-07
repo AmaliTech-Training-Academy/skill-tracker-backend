@@ -2,6 +2,7 @@ package com.amalitech.notification.service.listener;
 
 import com.amalitech.common.event.events.SubmissionEvaluatedEvent;
 import com.amalitech.common.event.events.SubmissionExecutedEvent;
+import com.amalitech.common.event.events.TaskGenerationSucceededEvent;
 import com.amalitech.notification.service.config.RabbitMQConfig;
 import com.amalitech.notification.service.service.NotificationService;
 import lombok.RequiredArgsConstructor;
@@ -54,8 +55,28 @@ public class SubmissionEventListener {
             log.info("Successfully processed SubmissionEvaluatedEvent for submission: {}", 
                     event.getSubmissionId());
         } catch (Exception e) {
-            log.error("Error processing SubmissionEvaluatedEvent for submission: {}", 
+            log.error("Error processing SubmissionEvaluatedEvent for submission: {}",
                     event.getSubmissionId(), e);
+        }
+    }
+
+    /**
+     * Handles the TaskGenerationSucceededEvent.
+     * This method is triggered when task generation completes for a user.
+     * It notifies the user that new tasks are now available.
+     * @param event The event containing task generation completion details.
+     */
+    @RabbitListener(queues = RabbitMQConfig.TASK_GENERATION_QUEUE)
+    public void handleTaskGenerationSucceeded(TaskGenerationSucceededEvent event) {
+        log.info("Received TaskGenerationSucceededEvent for user: {}", event.getUserId());
+
+        try {
+            notificationService.sendTaskGenerationNotification(event);
+            log.info("Successfully processed TaskGenerationSucceededEvent for user: {}",
+                    event.getUserId());
+        } catch (Exception e) {
+            log.error("Error processing TaskGenerationSucceededEvent for user: {}",
+                    event.getUserId(), e);
         }
     }
 }

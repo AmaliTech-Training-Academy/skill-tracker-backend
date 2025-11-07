@@ -2,8 +2,10 @@ package com.amalitech.notification.service.service;
 
 import com.amalitech.common.event.events.SubmissionEvaluatedEvent;
 import com.amalitech.common.event.events.SubmissionExecutedEvent;
+import com.amalitech.common.event.events.TaskGenerationSucceededEvent;
 import com.amalitech.notification.service.dto.ExecutionResultMessage;
 import com.amalitech.notification.service.dto.FeedbackMessage;
+import com.amalitech.notification.service.dto.TaskGenerationMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -104,5 +106,29 @@ public class NotificationService {
         );
 
         log.info("Evaluation feedback sent successfully to user: {}", event.getUserId());
+    }
+
+    /**
+     * Sends a notification when task generation completes for a user.
+     * This informs the frontend that new tasks are now available.
+     * @param event The event containing task generation completion details.
+     */
+    public void sendTaskGenerationNotification(TaskGenerationSucceededEvent event) {
+        log.info("Sending task generation completion notification to user: {}", event.getUserId());
+
+        TaskGenerationMessage message = TaskGenerationMessage.builder()
+                .userId(event.getUserId().toString())
+                .status("COMPLETED")
+                .message("New tasks have been generated and are now available for you.")
+                .completedAt(java.time.LocalDateTime.now())
+                .build();
+
+        messagingTemplate.convertAndSendToUser(
+                event.getUserId().toString(),
+                "/queue/tasks",
+                message
+        );
+
+        log.info("Task generation notification sent successfully to user: {}", event.getUserId());
     }
 }

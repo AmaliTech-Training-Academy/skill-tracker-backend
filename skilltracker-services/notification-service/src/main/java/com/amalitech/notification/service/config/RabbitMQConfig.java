@@ -21,8 +21,10 @@ public class RabbitMQConfig {
     public static final String SUBMISSION_EXCHANGE = "submission.exchange";
     public static final String EXECUTED_QUEUE = "submission.executed.notification.q";
     public static final String EVALUATED_QUEUE = "submission.evaluated.notification.q";
+    public static final String TASK_GENERATION_QUEUE = "task.generation.notification.q";
     public static final String EXECUTED_ROUTING_KEY = "submission.executed";
     public static final String EVALUATED_ROUTING_KEY = "submission.evaluated";
+    public static final String TASK_GENERATION_ROUTING_KEY = "task.generation.succeeded";
 
     /**
      * Creates the topic exchange for submission events.
@@ -52,6 +54,15 @@ public class RabbitMQConfig {
     }
 
     /**
+     * Creates the queue for task generation completion events.
+     * @return The Queue bean for task generation notifications.
+     */
+    @Bean
+    public Queue taskGenerationQueue() {
+        return new Queue(TASK_GENERATION_QUEUE, true);
+    }
+
+    /**
      * Binds the executed queue to the submission exchange with the executed routing key.
      * @param executedQueue The queue for executed events.
      * @param submissionExchange The submission topic exchange.
@@ -75,6 +86,19 @@ public class RabbitMQConfig {
         return BindingBuilder.bind(evaluatedQueue)
                 .to(submissionExchange)
                 .with(EVALUATED_ROUTING_KEY);
+    }
+
+    /**
+     * Binds the task generation queue to the submission exchange with the task generation routing key.
+     * @param taskGenerationQueue The queue for task generation events.
+     * @param submissionExchange The submission topic exchange.
+     * @return The Binding bean.
+     */
+    @Bean
+    public Binding taskGenerationBinding(Queue taskGenerationQueue, TopicExchange submissionExchange) {
+        return BindingBuilder.bind(taskGenerationQueue)
+                .to(submissionExchange)
+                .with(TASK_GENERATION_ROUTING_KEY);
     }
 
     /**
