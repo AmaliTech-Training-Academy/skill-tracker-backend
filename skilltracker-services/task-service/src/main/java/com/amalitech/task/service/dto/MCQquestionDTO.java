@@ -21,10 +21,9 @@ public class MCQquestionDTO {
     private String question_text;
     private int question_duration;
     private String question_difficulty;
-    private TaskDefinition taskDefinition;
     private List<String> options;
-    private Integer xpReward;
     private String hint;
     private String correct_answer;
+    private Integer xpReward;
     private String explanation;
 }
