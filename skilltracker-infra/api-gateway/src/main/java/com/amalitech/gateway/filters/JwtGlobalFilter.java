@@ -28,14 +28,20 @@ import java.util.List;
  * <p>The filter performs the following operations:
  * <ul>
  *   <li>Checks if the request path is whitelisted (public endpoints)</li>
- *   <li>Extracts JWT token from the accessToken cookie</li>
+ *   <li>Extracts JWT token from Authorization header, query param, or accessToken cookie</li>
  *   <li>Validates the token using the configured JWT decoder</li>
  *   <li>Enriches the request with user ID and roles from the token</li>
- *   <li>Returns UNAUTHORIZED for invalid or missing tokens</li>
+ *   <li>Returns UNAUTHORIZED for invalid or missing tokens on protected paths</li>
  * </ul>
  *
- * <p>This filter runs with high priority (order -1) to ensure authentication
- * happens before other filters.
+ * <p>Special handling for WebSocket connections (/ws):
+ * <ul>
+ *   <li>Requires authentication (token must be present)</li>
+ *   <li>Enriches request with X-User-Id and X-User-Roles headers</li>
+ *   <li>Allows downstream services to identify authenticated users</li>
+ * </ul>
+ *
+ * <p>This filter runs with highest priority to ensure authentication happens before other filters.
  */
 @Component
 public class JwtGlobalFilter implements GlobalFilter, Ordered {
@@ -58,11 +64,9 @@ public class JwtGlobalFilter implements GlobalFilter, Ordered {
      *
      * <p>The filter logic:
      * <ol>
-     *   <li>Checks if the request path matches any whitelisted pattern</li>
-     *   <li>If whitelisted, allows the request to proceed without validation</li>
-     *   <li>If not whitelisted, extracts the JWT token from the accessToken cookie</li>
-     *   <li>Validates the token and enriches the request with X-User-Id and X-User-Roles headers</li>
-     *   <li>Returns 401 UNAUTHORIZED if the token is missing or invalid</li>
+     *   <li>WebSocket paths (/ws/**): Always require authentication and enrich headers</li>
+     *   <li>Whitelisted paths: Allow without authentication</li>
+     *   <li>Protected paths: Require authentication</li>
      * </ol>
      *
      * @param exchange the current server web exchange
@@ -71,53 +75,107 @@ public class JwtGlobalFilter implements GlobalFilter, Ordered {
      */
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
-
         ServerHttpRequest request = exchange.getRequest();
         String path = request.getPath().value();
 
+        if (path.startsWith("/ws")) {
+            return handleWebSocketRequest(exchange, chain, request, path);
+        }
+
         if (isWhitelisted(path)) {
+            log.debug("Path {} is whitelisted, skipping authentication", path);
             return chain.filter(exchange);
         }
 
+        return handleProtectedRequest(exchange, chain, request, path);
+    }
+
+    /**
+     * Handles WebSocket connection requests with required authentication.
+     *
+     * @param exchange the current server web exchange
+     * @param chain the gateway filter chain
+     * @param request the HTTP request
+     * @param path the request path
+     * @return a {@link Mono} that completes when processing is done
+     */
+    private Mono<Void> handleWebSocketRequest(ServerWebExchange exchange, GatewayFilterChain chain,
+                                              ServerHttpRequest request, String path) {
         String token = extractToken(request);
 
         if (token == null) {
-            log.warn("Missing Authorization header or '{}' cookie for non-whitelisted path: {}", ACCESS_TOKEN_COOKIE_NAME, path);
+            log.warn("WebSocket connection attempt without token for path: {}", path);
             return unauthorized(exchange);
         }
 
         return this.jwtDecoder.decode(token)
                 .flatMap(jwt -> {
                     ServerHttpRequest enrichedRequest = enrichRequest(request, jwt);
-
                     return chain.filter(exchange.mutate().request(enrichedRequest).build());
                 })
                 .onErrorResume(e -> {
-                    log.error("Invalid token: {}", e.getMessage());
+                    log.error("WebSocket authentication failed for path {}: {}", path, e.getMessage());
                     return unauthorized(exchange);
                 });
     }
 
     /**
-     * Extracts the JWT token from the "accessToken" cookie in the request.
+     * Handles protected (non-whitelisted) requests that require authentication.
+     *
+     * @param exchange the current server web exchange
+     * @param chain the gateway filter chain
+     * @param request the HTTP request
+     * @param path the request path
+     * @return a {@link Mono} that completes when processing is done
+     */
+    private Mono<Void> handleProtectedRequest(ServerWebExchange exchange, GatewayFilterChain chain,
+                                              ServerHttpRequest request, String path) {
+        String token = extractToken(request);
+
+        if (token == null) {
+            log.warn("Missing Authorization header or '{}' cookie for non-whitelisted path: {}",
+                    ACCESS_TOKEN_COOKIE_NAME, path);
+            return unauthorized(exchange);
+        }
+
+        return this.jwtDecoder.decode(token)
+                .flatMap(jwt -> {
+                    ServerHttpRequest enrichedRequest = enrichRequest(request, jwt);
+                    return chain.filter(exchange.mutate().request(enrichedRequest).build());
+                })
+                .onErrorResume(e -> {
+                    log.error("Invalid token for path {}: {}", path, e.getMessage());
+                    return unauthorized(exchange);
+                });
+    }
+
+    /**
+     * Extracts the JWT token from the request in the following order:
+     * 1. Authorization header (Bearer token)
+     * 2. Query parameter (token=...)
+     * 3. Cookie (accessToken)
      *
      * @param request the incoming HTTP request
-     * @return the JWT token string, or {@code null} if the cookie is not present
+     * @return the JWT token string, or {@code null} if not found
      */
     private String extractToken(ServerHttpRequest request) {
-
+        // Try Authorization header first (standard approach)
         String authHeader = request.getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
         if (StringUtils.hasText(authHeader) && authHeader.startsWith("Bearer ")) {
             return authHeader.substring(7);
         }
 
+        // Try query parameter (useful for WebSocket connections)
         String queryToken = request.getQueryParams().getFirst("token");
         if (StringUtils.hasText(queryToken)) {
+            log.debug("Token extracted from query parameter");
             return queryToken;
         }
 
+        // Try cookie (for browser-based clients)
         HttpCookie accessTokenCookie = request.getCookies().getFirst(ACCESS_TOKEN_COOKIE_NAME);
         if (accessTokenCookie != null) {
+            log.debug("Token extracted from cookie");
             return accessTokenCookie.getValue();
         }
 
@@ -148,7 +206,6 @@ public class JwtGlobalFilter implements GlobalFilter, Ordered {
      * @return a new {@link ServerHttpRequest} with added user information headers
      */
     private ServerHttpRequest enrichRequest(ServerHttpRequest request, Jwt jwt) {
-
         String userId = jwt.getClaim("userId");
         if (userId == null) {
             userId = jwt.getId();
@@ -189,7 +246,7 @@ public class JwtGlobalFilter implements GlobalFilter, Ordered {
      * Returns the order of this filter in the filter chain.
      * A lower value indicates a higher priority.
      *
-     * @return -2147483648, ensuring this filter runs early in the filter chain
+     * @return {@link Ordered#HIGHEST_PRECEDENCE}, ensuring this filter runs early in the filter chain
      */
     @Override
     public int getOrder() {
