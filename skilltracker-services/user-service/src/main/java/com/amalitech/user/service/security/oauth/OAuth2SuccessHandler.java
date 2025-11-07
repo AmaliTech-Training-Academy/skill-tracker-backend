@@ -96,6 +96,7 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
         newUser.setUsername(name != null ? name : email.split("@")[0]);
         newUser.setRole(Role.USER);
         newUser.setState(UserState.REGISTERED);
+        newUser.setIsVerified(true);
 
         UserProfile profile = new UserProfile();
         profile.setEmailNotifications(true);
