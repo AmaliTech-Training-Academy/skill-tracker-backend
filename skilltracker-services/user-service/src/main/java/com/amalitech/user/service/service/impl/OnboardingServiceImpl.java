@@ -18,11 +18,13 @@ import com.amalitech.user.service.repository.UserSkillRepository;
 import com.amalitech.user.service.service.OnboardingService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.*;
 import java.util.function.Function;
@@ -86,6 +88,39 @@ public class OnboardingServiceImpl implements OnboardingService {
 
         return userMapper.toOnboardingResponseDTO(savedUser);
     }
+
+    @Override
+    @Transactional
+    @PreAuthorize("hasAuthority('USER') and #userId == authentication.principal.user.id")
+    public void retryTaskGeneration(UUID userId) {
+        log.info("Attempting to retry task generation for user: {}", userId);
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new EntityNotFoundException("User not found with id: " + userId));
+
+        if (user.getTaskGenerationStatus() == TaskGenerationStatus.PENDING) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Task generation is already in progress.");
+        }
+        if (user.getTaskGenerationStatus() == TaskGenerationStatus.COMPLETED) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Tasks have already been generated successfully.");
+        }
+        if (user.getTaskGenerationStatus() != TaskGenerationStatus.FAILED) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Retry is only available for users in a FAILED state.");
+        }
+
+        user.setTaskGenerationStatus(TaskGenerationStatus.PENDING);
+        userRepository.save(user);
+
+        List<UserSkill> userSkills = userSkillRepository.findByUserId(userId);
+        if (userSkills.isEmpty()) {
+            log.error("User {} is in FAILED state but has no saved skills. Cannot retry.", userId);
+            throw new IllegalStateException("Cannot retry: No skills found for user.");
+        }
+
+        log.info("Re-publishing UserOnboardingCompletedEvent for user: {}", userId);
+        buildAndRegisterOnboardingEvent(userId, userSkills);
+    }
+
 
     /**
      * Finds the user and validates they are in a state to be onboarded.

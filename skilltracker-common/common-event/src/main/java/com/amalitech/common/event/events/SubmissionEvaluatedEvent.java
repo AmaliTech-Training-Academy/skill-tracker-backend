@@ -29,6 +29,7 @@ public class SubmissionEvaluatedEvent {
     private boolean isCorrect;
     private String feedbackType;
     private String overallFeedback;
+    private String detailedFeedback;
     private String stdout;
     private String stderr;
     private List<TestResultData> testResults;

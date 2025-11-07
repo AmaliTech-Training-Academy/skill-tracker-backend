@@ -24,12 +24,22 @@ public class PromptTemplateConfig {
     }
 
     /**
-     * Simple feedback prompt as fallback when detailed evaluation fails.
-     */
+    * Simple feedback prompt as fallback when detailed evaluation fails.
+    */
     @Bean
     public PromptTemplate simpleFeedbackPromptTemplate(
-            @Value("classpath:prompts/coding/simple_feedback_prompt.txt") Resource simpleFeedbackPromptResource
+    @Value("classpath:prompts/coding/simple_feedback_prompt.txt") Resource simpleFeedbackPromptResource
     ) {
-        return new PromptTemplate(simpleFeedbackPromptResource);
+    return new PromptTemplate(simpleFeedbackPromptResource);
+    }
+
+    /**
+     * Essay evaluation prompt for written assessment tasks.
+     */
+    @Bean
+    public PromptTemplate writtenEvaluationPromptTemplate(
+            @Value("classpath:prompts/written/written_evaluation_prompt.txt") Resource writtenEvaluationPromptResource
+    ) {
+        return new PromptTemplate(writtenEvaluationPromptResource);
     }
 }

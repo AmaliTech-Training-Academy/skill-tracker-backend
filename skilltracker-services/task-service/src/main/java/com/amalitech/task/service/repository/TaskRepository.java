@@ -49,20 +49,36 @@ public interface TaskRepository extends JpaRepository<Task, UUID> {
     );
 
     /**
-     * Finds tasks by skill, difficulty, and type.
-     */
+    * Finds tasks by skill, difficulty, and type.
+    */
     @Query("SELECT t FROM Task t " +
-            "JOIN FETCH t.taskDefinition td " +
+    "JOIN FETCH t.taskDefinition td " +
+    "WHERE td.skill.id = :skillId " +
+    "AND t.difficulty = :difficulty " +
+    "AND t.type = :type " +
+    "AND t.isPublished = :isPublished " +
+    "ORDER BY t.createdAt DESC")
+    List<Task> findBySkillIdAndDifficultyAndType(
+    @Param("skillId") UUID skillId,
+    @Param("difficulty") TaskDifficulty difficulty,
+    @Param("type") TaskType type,
+    @Param("isPublished") boolean isPublished,
+    Pageable pageable
+    );
+
+    /**
+     * Counts tasks by skill, difficulty, and type.
+     */
+    @Query("SELECT COUNT(t) FROM Task t " +
+            "JOIN t.taskDefinition td " +
             "WHERE td.skill.id = :skillId " +
             "AND t.difficulty = :difficulty " +
             "AND t.type = :type " +
-            "AND t.isPublished = :isPublished " +
-            "ORDER BY t.createdAt DESC")
-    List<Task> findBySkillIdAndDifficultyAndType(
+            "AND t.isPublished = :isPublished")
+    long countBySkillAndDifficultyAndType(
             @Param("skillId") UUID skillId,
             @Param("difficulty") TaskDifficulty difficulty,
             @Param("type") TaskType type,
-            @Param("isPublished") boolean isPublished,
-            Pageable pageable
+            @Param("isPublished") boolean isPublished
     );
 }

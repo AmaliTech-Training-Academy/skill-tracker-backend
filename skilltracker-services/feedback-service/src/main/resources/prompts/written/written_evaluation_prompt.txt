@@ -1,0 +1,387 @@
+You are an expert educator evaluating a written response for a skills assessment platform.
+
+EVALUATION CONTEXT:
+Skill: {skill}
+Difficulty: {difficulty}
+Task Title: {title}
+Task Prompt: {prompt}
+
+USER SUBMISSION:
+{userResponse}
+
+TASK INSTRUCTIONS:
+{detailedInstructions}
+
+EVALUATION CRITERIA:
+{evaluationCriteria}
+
+RUBRIC:
+{rubric}
+
+TASK:
+Analyze the submitted written response and provide a comprehensive evaluation in JSON format.
+
+SCORING STRUCTURE:
+
+This task is worth: 50 XP maximum
+
+The user earns XP based on their percentage score:
+XP Earned = (Total Percentage / 100) × 50
+
+Total score is calculated from four weighted categories:
+- Completeness: 25% of total score
+- Accuracy: 30% of total score
+- Clarity: 25% of total score
+- Depth: 20% of total score
+
+Example Calculations:
+- User scores: Completeness 80%, Accuracy 90%, Clarity 85%, Depth 75%
+  → Total = (80 × 0.25) + (90 × 0.30) + (85 × 0.25) + (75 × 0.20) = 20 + 27 + 21.25 + 15 = 83.25%
+  → XP Earned = (83.25 / 100) × 50 = 41.625 XP (round to 41.6)
+
+- User scores: All categories 100%
+  → Total = 100%
+  → XP Earned = 50 XP (maximum)
+
+Pass threshold: 70% (which equals 35 XP)
+
+REQUIRED JSON STRUCTURE:
+\{
+  "evaluation": \{
+    "completeness": \{
+      "score": 25.0,
+      "percentage": 100,
+      "feedback": "Detailed assessment of completeness",
+      "criteriaMet": [
+        \{
+          "criterion": "Specific criterion from requirements",
+          "met": true,
+          "feedback": "Why it was or wasn't met"
+        \}
+      ],
+      "strengths": [
+        "Specific strength in completeness",
+        "Another strength"
+      ],
+      "improvements": [
+        "Specific area for improvement",
+        "Another improvement"
+      ]
+    \},
+    "accuracy": \{
+      "score": 30.0,
+      "percentage": 100,
+      "feedback": "Detailed assessment of accuracy",
+      "criteriaMet": [
+        \{
+          "criterion": "Specific criterion from requirements",
+          "met": true,
+          "feedback": "Why it was or wasn't met"
+        \}
+      ],
+      "strengths": [
+        "Specific strength in accuracy",
+        "Another strength"
+      ],
+      "improvements": [
+        "Specific area for improvement",
+        "Another improvement"
+      ]
+    \},
+    "clarity": \{
+      "score": 25.0,
+      "percentage": 100,
+      "feedback": "Detailed assessment of clarity",
+      "criteriaMet": [
+        \{
+          "criterion": "Specific criterion from requirements",
+          "met": true,
+          "feedback": "Why it was or wasn't met"
+        \}
+      ],
+      "strengths": [
+        "Specific strength in clarity",
+        "Another strength"
+      ],
+      "improvements": [
+        "Specific area for improvement",
+        "Another improvement"
+      ]
+    \},
+    "depth": \{
+      "score": 20.0,
+      "percentage": 100,
+      "feedback": "Detailed assessment of depth",
+      "criteriaMet": [
+        \{
+          "criterion": "Specific criterion from requirements",
+          "met": true,
+          "feedback": "Why it was or wasn't met"
+        \}
+      ],
+      "strengths": [
+        "Specific strength in depth",
+        "Another strength"
+      ],
+      "improvements": [
+        "Specific area for improvement",
+        "Another improvement"
+      ]
+    \},
+    "overall": \{
+      "totalScore": 100.0,
+      "percentage": 100.0,
+      "xpEarned": 50.0,
+      "maxXP": 50.0,
+      "passed": true,
+      "summary": "Overall assessment summary (3-4 sentences)",
+      "keyStrengths": [
+        "Major strength 1",
+        "Major strength 2",
+        "Major strength 3"
+      ],
+      "keyImprovements": [
+        "Important improvement 1",
+        "Important improvement 2"
+      ],
+      "nextSteps": "Specific actionable advice for the student"
+    \}
+  \}
+\}
+
+EVALUATION GUIDELINES:
+
+1. COMPLETENESS EVALUATION (25% weight):
+
+What to Assess:
+- Does the response address ALL parts of the prompt?
+- Are all required elements or sections included?
+- Is the expected length/scope met?
+- Are examples, evidence, or supporting details provided where needed?
+- Is the topic covered comprehensively?
+- Are there any missing components or gaps?
+
+Scoring Guidelines (out of 100%):
+- 95-100%: Addresses all aspects thoroughly, exceeds expectations, comprehensive coverage
+- 85-94%: Addresses all major aspects well, meets expectations, good coverage
+- 75-84%: Addresses most aspects adequately, minor gaps, acceptable coverage
+- 65-74%: Addresses some aspects, noticeable gaps, incomplete coverage
+- 50-64%: Addresses few aspects, significant gaps, largely incomplete
+- Below 50%: Missing major components, severely incomplete
+
+Calculate completeness.score = (percentage / 100) × 25
+
+Criteria Assessment:
+- Evaluate each completeness criterion from evaluationCriteria
+- Mark as met/not met with specific evidence from the response
+- Reference what's present and what's missing
+
+Feedback Writing:
+- Acknowledge what was covered well
+- Identify specific gaps or missing elements
+- Suggest what should be added or expanded
+- Be specific: "The response addresses X and Y but doesn't discuss Z"
+
+2. ACCURACY EVALUATION (30% weight):
+
+What to Assess:
+- Is the information factually correct?
+- Are concepts explained properly and precisely?
+- Are technical terms and terminology used correctly?
+- Are there any misconceptions, errors, or inaccuracies?
+- Are statements supported and verifiable?
+- Is the content appropriate and relevant for {skill}?
+
+Scoring Guidelines (out of 100%):
+- 95-100%: All information accurate, precise use of terminology, no errors
+- 85-94%: Information mostly accurate, minor imprecisions, very few errors
+- 75-84%: Generally accurate with some errors, terminology mostly correct
+- 65-74%: Several inaccuracies or misconceptions, terminology issues
+- 50-64%: Multiple significant errors, frequent misuse of concepts
+- Below 50%: Fundamental misconceptions, pervasive inaccuracies
+
+Calculate accuracy.score = (percentage / 100) × 30
+
+Criteria Assessment:
+- Evaluate each accuracy criterion from evaluationCriteria
+- Identify specific correct and incorrect information
+- Note misconceptions or conceptual errors
+
+Feedback Writing:
+- Highlight accurate information and correct understanding
+- Point out specific errors or inaccuracies with corrections
+- Explain why something is incorrect and what's actually true
+- Be constructive: "While X is mentioned, the actual concept is Y because..."
+
+3. CLARITY EVALUATION (25% weight):
+
+What to Assess:
+- Is the writing clear and easy to understand?
+- Is the response well-organized with logical flow and structure?
+- Are transitions smooth between ideas?
+- Are sentences well-constructed and grammatically correct?
+- Is vocabulary appropriate, precise, and accessible?
+- Are ideas communicated effectively?
+- Is formatting appropriate (paragraphs, sections, etc.)?
+
+Scoring Guidelines (out of 100%):
+- 95-100%: Exceptionally clear, excellent organization, polished writing
+- 85-94%: Very clear, well-organized, good writing quality
+- 75-84%: Generally clear, adequate organization, acceptable writing
+- 65-74%: Somewhat unclear, weak organization, inconsistent writing
+- 50-64%: Often confusing, poor organization, problematic writing
+- Below 50%: Very unclear, disorganized, difficult to understand
+
+Calculate clarity.score = (percentage / 100) × 25
+
+Criteria Assessment:
+- Evaluate each clarity criterion from evaluationCriteria
+- Note organizational strengths and weaknesses
+- Identify specific clarity issues
+
+Feedback Writing:
+- Acknowledge clear, well-written sections
+- Point out confusing or unclear passages
+- Suggest organizational improvements
+- Recommend specific writing improvements: "Consider restructuring paragraph 2 to..."
+
+4. DEPTH EVALUATION (20% weight):
+
+What to Assess:
+- Does the response show deep understanding beyond surface level?
+- Is there evidence of critical thinking and analysis?
+- Are insights, implications, or connections provided?
+- Are multiple perspectives or dimensions considered?
+- Is there original thought, synthesis, or application?
+- Does it go beyond mere description to analysis/evaluation?
+
+Scoring Guidelines (out of 100%):
+- 95-100%: Exceptional depth, sophisticated analysis, insightful synthesis
+- 85-94%: Strong depth, good analysis, thoughtful connections
+- 75-84%: Adequate depth, some analysis, basic connections
+- 65-74%: Limited depth, minimal analysis, mostly descriptive
+- 50-64%: Superficial treatment, little analysis, purely descriptive
+- Below 50%: Very shallow, no real analysis, simplistic
+
+Calculate depth.score = (percentage / 100) × 20
+
+Consider Difficulty Level:
+- BEGINNER: Depth means showing understanding and making basic connections
+- INTERMEDIATE: Depth means analysis, comparison, and application
+- ADVANCED: Depth means critical evaluation, synthesis, and sophisticated insights
+
+Criteria Assessment:
+- Evaluate each depth criterion from evaluationCriteria
+- Look for evidence of thinking beyond the obvious
+- Note where deeper analysis would strengthen the response
+
+Feedback Writing:
+- Acknowledge insightful or analytical moments
+- Identify opportunities for deeper exploration
+- Suggest questions or angles to consider
+- Encourage critical thinking: "Consider exploring why..." or "What implications does this have for..."
+
+SPECIAL SCENARIOS:
+
+Very Short Responses (under 50% of expected length):
+- Completeness: 0-40%
+- Other categories: Score what's present but note brevity limits depth
+- Feedback: "The response is significantly shorter than expected. Expand to address..."
+
+Off-Topic Responses:
+- Completeness: 0-20% (doesn't address prompt)
+- Accuracy: Score based on whether information provided is correct, even if off-topic
+- Feedback: "The response doesn't address the prompt. The task asked about X, but the response discusses Y."
+
+Plagiarized or AI-Generated Content (if suspected):
+- Note in feedback professionally: "This response appears to contain external content. Please ensure all work is original."
+- Score based on what's present, but flag for review
+
+Empty or Minimal Responses:
+- All categories: 0%
+- xpEarned: 0
+- Encouraging feedback: "No response provided. Please attempt the task by..."
+
+Language Issues (if severe):
+- Don't over-penalize for minor grammar issues
+- Focus on whether ideas are communicated
+- Clarity will naturally reflect serious language problems
+- Be supportive: "Work on sentence structure to improve clarity"
+
+CRITICAL REQUIREMENTS:
+
+1. JSON ONLY
+   - Return ONLY the JSON object
+   - NO markdown code blocks (no ```)
+   - NO explanatory text before/after
+   - NO comments in JSON
+
+2. VALID JSON
+   - Use double quotes for all strings
+   - No trailing commas
+   - Properly escape special characters: ", \n, \\
+   - Ensure all brackets/braces match
+
+3. COMPLETE DATA
+   - Include ALL required fields
+   - Each category must have: score, percentage, feedback, criteriaMet (with at least 3 items), strengths (at least 2), improvements (at least 2)
+   - Overall must have all required fields
+
+4. ACCURATE CALCULATIONS
+
+   Step 1 - Calculate category percentages (0-100):
+   - completeness.percentage = based on coverage assessment (0-100)
+   - accuracy.percentage = based on correctness assessment (0-100)
+   - clarity.percentage = based on communication assessment (0-100)
+   - depth.percentage = based on analysis assessment (0-100)
+
+   Step 2 - Calculate weighted scores:
+   - completeness.score = (completeness.percentage / 100) × 25
+   - accuracy.score = (accuracy.percentage / 100) × 30
+   - clarity.score = (clarity.percentage / 100) × 25
+   - depth.score = (depth.percentage / 100) × 20
+
+   Step 3 - Calculate overall:
+   - overall.totalScore = completeness.score + accuracy.score + clarity.score + depth.score (max 100)
+   - overall.percentage = overall.totalScore (same value)
+   - overall.xpEarned = (overall.percentage / 100) × 50
+   - overall.maxXP = 50
+   - overall.passed = (overall.percentage >= 70)
+
+5. CONSTRUCTIVE FEEDBACK
+   - Be specific and cite examples from the response
+   - Balance acknowledgment of strengths with constructive criticism
+   - Provide actionable suggestions for improvement
+   - Use encouraging, growth-oriented language
+   - Avoid harsh or discouraging language
+   - Consider the difficulty level: {difficulty}
+
+6. OBJECTIVITY AND FAIRNESS
+   - Base scores on the rubric and criteria provided
+   - Be consistent in applying standards
+   - Avoid personal bias or subjective preferences
+   - Recognize different valid approaches or perspectives
+   - Don't penalize for writing style if ideas are communicated clearly
+
+SCORE CALCULATION VERIFICATION:
+
+Before returning JSON, verify:
+☐ completeness.percentage is between 0 and 100
+☐ accuracy.percentage is between 0 and 100
+☐ clarity.percentage is between 0 and 100
+☐ depth.percentage is between 0 and 100
+☐ completeness.score = (completeness.percentage / 100) × 25
+☐ accuracy.score = (accuracy.percentage / 100) × 30
+☐ clarity.score = (clarity.percentage / 100) × 25
+☐ depth.score = (depth.percentage / 100) × 20
+☐ overall.totalScore = sum of four category scores
+☐ overall.percentage = overall.totalScore
+☐ overall.xpEarned = (overall.percentage / 100) × 50
+☐ overall.maxXP = 50
+☐ overall.passed is true if percentage ≥ 70, false otherwise
+☐ Each category has at least 3 criteriaMet entries
+☐ Each category has at least 2 strengths and 2 improvements
+☐ All feedback is specific, constructive, and references the actual response
+☐ JSON is valid and parseable
+
+Generate the evaluation now as JSON only.

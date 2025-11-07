@@ -21,4 +21,13 @@ public interface OnboardingService {
      * @return The updated User entity with the new state.
      */
     OnboardingResponseDTO completeOnboarding(UUID userId, OnboardingRequest request);
+
+    /**
+     * Re-triggers the task generation process for a user whose
+     * initial task generation failed.
+     *
+     * @param userId The ID of the user to retry for.
+     * @throws IllegalStateException if the user's task status is not FAILED.
+     */
+    void retryTaskGeneration(UUID userId);
 }

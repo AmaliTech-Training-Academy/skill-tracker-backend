@@ -7,16 +7,23 @@ Difficulty: {difficulty}
 TASK:
 Generate exactly {quantity} high-quality coding challenges in JSON format following the structure below.
 
-XP DISTRIBUTION:
+XP AND SCORING STRUCTURE:
 
-Total XP pool: 50 XP (fixed)
-Base XP per challenge: floor(50 / {quantity})
-Remainder: 50 % {quantity}
-Distribution rule: First remainder challenges get (Base XP + 1), remaining challenges get Base XP
-Examples:
-    - 3 challenges: [17, 17, 16] = 50 XP
-    - 5 challenges: [10, 10, 10, 10, 10] = 50 XP
-    - 7 challenges: [8, 8, 8, 8, 7, 7, 7] = 50 XP
+Each challenge is worth: 50 XP maximum
+- A user earns the full 50 XP by achieving 100% score
+- Partial XP is awarded based on percentage: (percentage / 100) × 50 XP
+
+Scoring breakdown per challenge (totals 100%):
+- Correctness: 50% of total score
+- Efficiency: 30% of total score
+- Style: 20% of total score
+
+XP Calculation Example:
+- If a user scores 80% overall: 0.80 × 50 = 40 XP earned
+- If a user scores 100% overall: 1.00 × 50 = 50 XP earned
+- If a user scores 60% overall: 0.60 × 50 = 30 XP earned
+
+Total XP available for {quantity} challenges: {quantity} × 50 = Total XP
 
 REQUIRED JSON STRUCTURE:
 \{
@@ -56,27 +63,37 @@ REQUIRED JSON STRUCTURE:
         "Hint 2: Another strategic hint"
       ],
       "estimatedDuration": 15,
-      "maxXP": 10,
-      "difficulty": "BEGINNER"
+      "maxXP": 50,
+      "difficulty": "{difficulty}"
     \}
   ]
 \}
 
-
 CRITICAL REQUIREMENTS - NON-NEGOTIABLE:
-1. Generate EXACTLY {quantity} coding challenges (Total: 50 XP)
-2. Calculate XP per challenge as follows:
-   - Base XP = floor(50 / {quantity})
-   - Remainder = 50 % {quantity}
-   - Assign (Base XP + 1) to the first remainder challenges
-   - Assign Base XP to the remaining challenges
-   - Verify total equals exactly 50 XP
-3. estimatedDuration should be realistic: 10-20 minutes per challenge
-4. Include 4-6 test cases per challenge (mix of visible and hidden)
-5. At least 2 test cases must have isHidden: true (for evaluation integrity)
-6. All {quantity} challenges MUST cover DIFFERENT concepts/problem types
-7. ALL challenges MUST match the specified difficulty level: {difficulty}
-8. Each challenge must have 3+ criteria for EACH evaluation category
+
+1. Generate EXACTLY {quantity} coding challenges
+
+2. EVERY challenge must have maxXP: 50 (fixed value)
+
+3. Each challenge is scored out of 100% total:
+   - Correctness: 50%
+   - Efficiency: 30%
+   - Style: 20%
+   - Final XP = (total percentage / 100) × 50
+
+4. Pass threshold per challenge: 70% (which equals 35 XP)
+
+5. estimatedDuration should be realistic: 10-20 minutes per challenge
+
+6. Include 4-6 test cases per challenge (mix of visible and hidden)
+
+7. At least 2 test cases must have isHidden: true (for evaluation integrity)
+
+8. All {quantity} challenges MUST cover DIFFERENT concepts/problem types
+
+9. ALL challenges MUST match the specified difficulty level: {difficulty}
+
+10. Each challenge must have 3+ criteria for EACH evaluation category
 
 DIFFICULTY LEVEL DEFINITIONS:
 
@@ -131,21 +148,22 @@ Test Cases:
 - Each test must have clear description of what it validates
 
 Evaluation Criteria:
-CORRECTNESS (50% weight):
+
+CORRECTNESS (50% of total score):
 - Does the solution pass all test cases?
 - Are edge cases handled properly?
 - Is the output format exactly as specified?
 - Are error conditions managed appropriately?
 - Does it work for boundary values?
 
-EFFICIENCY (30% weight):
+EFFICIENCY (30% of total score):
 - What is the time complexity? (specify expected: O(n), O(n log n), etc.)
 - What is the space complexity?
 - Are there unnecessary loops or redundant operations?
 - Is the algorithm choice optimal for the problem?
 - Are built-in optimized methods used where appropriate?
 
-STYLE (20% weight):
+STYLE (20% of total score):
 - Are variables and functions named descriptively?
 - Is the code properly formatted and readable?
 - Are there appropriate comments for complex logic?
@@ -188,14 +206,16 @@ OUTPUT REQUIREMENTS:
 FINAL VALIDATION CHECKLIST:
 ☐ Exactly {quantity} challenges in the array
 ☐ Every challenge has all required fields
-☐ maxXP values follow calculated distribution (first remainder challenges get floor(50/{quantity})+1, remaining get floor(50/{quantity})) totaling exactly 50 XP
+☐ EVERY challenge has maxXP: 50 (fixed, not variable)
+☐ Total available XP: {quantity} × 50 = Total XP
 ☐ Every challenge has 4-6 test cases
 ☐ At least 2 hidden test cases per challenge
-☐ Every challenge has 3+ criteria in each evaluation category
-☐ All {quantity} challenges match the specified difficulty level
+☐ Every challenge has 3+ criteria in each evaluation category (correctness, efficiency, style)
+☐ All {quantity} challenges match the specified difficulty level: {difficulty}
 ☐ All {quantity} challenges test different concepts
 ☐ Starter code is functional (no syntax errors)
 ☐ Test cases are well-designed and comprehensive
+☐ difficulty field in each challenge matches {difficulty} exactly
 ☐ JSON is valid with no syntax errors
 ☐ No extraneous text outside the JSON object
 

@@ -84,7 +84,6 @@ public class DetailedEvaluationResponse {
         private int percentage;
         private int xpEarned;
         private boolean passed;
-        private String grade;
         private String summary;
         private List<String> keyStrengths;
         private List<String> keyImprovements;

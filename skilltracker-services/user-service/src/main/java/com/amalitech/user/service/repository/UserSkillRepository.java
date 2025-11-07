@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.UUID;
 
 @Repository
@@ -19,4 +20,9 @@ public interface UserSkillRepository extends JpaRepository<UserSkill, UUID> {
     @Transactional
     @Query("DELETE FROM UserSkill us WHERE us.user.id = :userId")
     void deleteByUserId(UUID userId);
+
+    /**
+     * Finds all UserSkill records associated with a specific user.
+     */
+    List<UserSkill> findByUserId(UUID userId);
 }

@@ -1,0 +1,263 @@
+You are an expert educator creating essay and written assessment tasks for a skills assessment platform.
+
+CONTEXT:
+Skill: {skill}
+Difficulty: {difficulty}
+
+TASK:
+Generate exactly {quantity} high-quality essay/written tasks in JSON format following the structure below.
+
+XP AND SCORING STRUCTURE:
+
+Each task is worth: 50 XP maximum
+- A user earns the full 50 XP by achieving 100% score
+- Partial XP is awarded based on percentage: (percentage / 100) × 50 XP
+
+Scoring breakdown per task (totals 100%):
+- Completeness: 25% of total score
+- Accuracy: 30% of total score
+- Clarity: 25% of total score
+- Depth: 20% of total score
+
+XP Calculation Example:
+- If a user scores 85% overall: 0.85 × 50 = 42.5 XP earned
+- If a user scores 100% overall: 1.00 × 50 = 50 XP earned
+- If a user scores 70% overall: 0.70 × 50 = 35 XP earned
+
+Total XP available for {quantity} tasks: {quantity} × 50 = Total XP
+
+REQUIRED JSON STRUCTURE:
+\{
+  "tasks": [
+    \{
+      "title": "Clear, engaging task title (max 80 chars)",
+      "description": "Brief overview of what the task requires (2-3 sentences)",
+      "prompt": "The main question or writing prompt that the user will respond to",
+      "detailedInstructions": "Comprehensive instructions including format, length, specific requirements, and any constraints",
+      "evaluationCriteria": \{
+        "completeness": [
+          "Criterion 1: Specific completeness requirement",
+          "Criterion 2: Another completeness aspect",
+          "Criterion 3: Coverage expectation"
+        ],
+        "accuracy": [
+          "Criterion 1: Factual correctness requirement",
+          "Criterion 2: Technical accuracy expectation",
+          "Criterion 3: Precision requirement"
+        ],
+        "clarity": [
+          "Criterion 1: Communication clarity requirement",
+          "Criterion 2: Organization expectation",
+          "Criterion 3: Readability requirement"
+        ],
+        "depth": [
+          "Criterion 1: Analysis depth requirement",
+          "Criterion 2: Critical thinking expectation",
+          "Criterion 3: Insight requirement"
+        ]
+      \},
+      "rubric": \{
+        "completeness": \{
+          "excellent": "Description of what excellent completeness looks like (90-100%)",
+          "good": "Description of good completeness (75-89%)",
+          "satisfactory": "Description of satisfactory completeness (60-74%)",
+          "needsImprovement": "Description of incomplete work (below 60%)"
+        \},
+        "accuracy": \{
+          "excellent": "Description of what excellent accuracy looks like (90-100%)",
+          "good": "Description of good accuracy (75-89%)",
+          "satisfactory": "Description of satisfactory accuracy (60-74%)",
+          "needsImprovement": "Description of inaccurate work (below 60%)"
+        \},
+        "clarity": \{
+          "excellent": "Description of what excellent clarity looks like (90-100%)",
+          "good": "Description of good clarity (75-89%)",
+          "satisfactory": "Description of satisfactory clarity (60-74%)",
+          "needsImprovement": "Description of unclear work (below 60%)"
+        \},
+        "depth": \{
+          "excellent": "Description of what excellent depth looks like (90-100%)",
+          "good": "Description of good depth (75-89%)",
+          "satisfactory": "Description of satisfactory depth (60-74%)",
+          "needsImprovement": "Description of shallow work (below 60%)"
+        \}
+      \},
+      "hints": [
+        "Hint 1: Helpful guidance without giving away the answer",
+        "Hint 2: Strategic suggestion for approach",
+        "Hint 3: Consideration or angle to explore"
+      ],
+      "expectedLength": "200-400 words",
+      "estimatedDuration": 20,
+      "maxXP": 50,
+      "difficulty": "{difficulty}",
+      "taskType": "ESSAY"
+    \}
+  ]
+\}
+
+CRITICAL REQUIREMENTS - NON-NEGOTIABLE:
+
+1. Generate EXACTLY {quantity} essay/written tasks
+
+2. EVERY task must have maxXP: 50 (fixed value)
+
+3. Each task is scored out of 100% total:
+   - Completeness: 25%
+   - Accuracy: 30%
+   - Clarity: 25%
+   - Depth: 20%
+   - Final XP = (total percentage / 100) × 50
+
+4. Pass threshold per task: 70% (which equals 35 XP)
+
+5. estimatedDuration should be realistic: 15-30 minutes per task depending on length
+
+6. expectedLength should be appropriate for difficulty and task complexity
+
+7. All {quantity} tasks MUST cover DIFFERENT aspects/topics of the skill
+
+8. ALL tasks MUST match the specified difficulty level: {difficulty}
+
+9. Each evaluation category must have 3+ specific criteria
+
+10. Each rubric category must have all 4 performance levels defined
+
+11. taskType must be set to "ESSAY" for all tasks
+
+DIFFICULTY LEVEL DEFINITIONS:
+
+BEGINNER:
+- Fundamental concepts and basic understanding
+- Simple explanations and descriptions
+- Shorter responses (150-300 words)
+- Focus on recall and comprehension
+- Straightforward prompts with clear expectations
+- Examples: "Explain what X is", "Describe the basic steps of Y", "List the main benefits of Z"
+
+INTERMEDIATE:
+- Application and analysis of concepts
+- Comparison, contrast, and connection of ideas
+- Medium-length responses (300-500 words)
+- Focus on understanding and application
+- Requires integration of multiple concepts
+- Examples: "Compare X and Y", "Explain how to solve Z problem", "Analyze the advantages and disadvantages of W"
+
+ADVANCED:
+- Critical evaluation and synthesis
+- Complex analysis and argumentation
+- Longer responses (500-800 words)
+- Focus on evaluation, synthesis, and creation
+- Requires deep understanding and original thinking
+- Examples: "Evaluate the effectiveness of X approach", "Design a solution for Y scenario", "Critically analyze Z considering multiple perspectives"
+
+TASK DESIGN STANDARDS:
+
+Prompt Design:
+- Clear, specific, and unambiguous
+- Focused on a single main question or topic
+- Appropriate scope for the expected length
+- Encourages demonstration of knowledge and skills
+- Avoids yes/no questions unless followed by "explain why"
+- Relates to real-world applications when possible
+
+Detailed Instructions:
+- Specify format requirements (essay, list, structured response, etc.)
+- Indicate expected length range
+- List any required elements or sections
+- Mention any sources, examples, or references to include/avoid
+- Clarify any constraints or limitations
+- Provide context if needed for the prompt
+
+Evaluation Criteria Design:
+
+COMPLETENESS (25% weight):
+- Does the response address all parts of the prompt?
+- Are all required elements included?
+- Is the expected length/scope met?
+- Are examples or evidence provided where needed?
+- Is the topic covered comprehensively?
+
+ACCURACY (30% weight):
+- Is the information factually correct?
+- Are concepts explained properly?
+- Are technical terms used correctly?
+- Are there any misconceptions or errors?
+- Is the content appropriate for {skill}?
+
+CLARITY (25% weight):
+- Is the writing clear and easy to understand?
+- Is the response well-organized with logical flow?
+- Are sentences well-constructed?
+- Is vocabulary appropriate and precise?
+- Are ideas communicated effectively?
+
+DEPTH (20% weight):
+- Does the response show deep understanding?
+- Is there evidence of critical thinking?
+- Are insights or analysis provided beyond surface level?
+- Are connections made between concepts?
+- Is there original thought or synthesis?
+
+Rubric Design:
+- Provide clear, measurable descriptors for each performance level
+- Make distinctions between levels obvious and meaningful
+- Use specific, observable criteria rather than vague terms
+- Align with the evaluation criteria
+- Help users understand what's expected at each level
+
+Hints:
+- Provide 3-4 strategic hints that guide thinking
+- Point toward key concepts or frameworks to consider
+- Suggest structure or organization approaches
+- Highlight important aspects to address
+- Don't give away specific answers or content
+
+DIVERSITY & COVERAGE:
+- Each task MUST test a DIFFERENT aspect or topic of the skill
+- Vary task types across the set:
+  * Explanatory essays (explain a concept or process)
+  * Analytical essays (analyze and evaluate)
+  * Comparative essays (compare and contrast)
+  * Problem-solving responses (propose solutions)
+  * Reflective writing (connect theory to practice)
+  * Argumentative essays (take and defend a position)
+- If specific topic provided, explore {quantity} different angles within it
+- If topic is broad, cover {quantity} fundamental areas of the skill
+
+LANGUAGE AND TONE CONSIDERATIONS:
+- Use clear, professional academic language
+- Tailor complexity to difficulty level
+- Be specific about expectations
+- Use inclusive, accessible language
+- Avoid jargon unless it's part of the skill being assessed
+- Provide context for technical terms when necessary
+
+OUTPUT REQUIREMENTS:
+- Return ONLY valid, parseable JSON
+- NO markdown code fences (```)
+- NO explanatory text before or after the JSON
+- NO comments or trailing commas
+- Use double quotes for all strings
+- Properly escape special characters in strings
+- Use \n for line breaks in multi-line text
+- Ensure clean formatting for readability
+
+FINAL VALIDATION CHECKLIST:
+☐ Exactly {quantity} tasks in the array
+☐ Every task has all required fields
+☐ EVERY task has maxXP: 50 (fixed, not variable)
+☐ EVERY task has taskType: "ESSAY"
+☐ Total available XP: {quantity} × 50 = Total XP
+☐ Every task has 3+ criteria in each evaluation category (completeness, accuracy, clarity, depth)
+☐ Every rubric has all 4 performance levels for each category (excellent, good, satisfactory, needsImprovement)
+☐ All {quantity} tasks match the specified difficulty level: {difficulty}
+☐ All {quantity} tasks test different topics/aspects
+☐ Prompts are clear, specific, and appropriate for difficulty
+☐ Expected length is appropriate for difficulty and task
+☐ Hints are helpful without giving away answers
+☐ difficulty field in each task matches {difficulty} exactly
+☐ JSON is valid with no syntax errors
+☐ No extraneous text outside the JSON object
+
+Generate the {quantity} essay/written tasks now.

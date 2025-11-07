@@ -7,6 +7,7 @@ import com.amalitech.user.service.security.CustomUserDetails;
 import com.amalitech.user.service.service.OnboardingService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -49,5 +50,28 @@ public class OnboardingController {
                 response,
                 null
         ));
+    }
+
+    /**
+     * Retries the asynchronous task generation process for the authenticated user.
+     * This endpoint should only be called if the user's 'taskGenerationStatus'
+     * is FAILED.
+     *
+     * @param userDetails The authenticated user principal.
+     * @return A 202 ACCEPTED response indicating the retry has been queued.
+     */
+    @PostMapping("/retry-task-generation")
+    public ResponseEntity<ApiResponse<Void>> retryTaskGeneration(
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        onboardingService.retryTaskGeneration(userDetails.getUser().getId());
+
+        ApiResponse<Void> apiResponse = ApiResponse.success(
+                "Task generation retry has been queued.",
+                null,
+                null
+        );
+
+        return ResponseEntity.status(HttpStatus.ACCEPTED).body(apiResponse);
     }
 }

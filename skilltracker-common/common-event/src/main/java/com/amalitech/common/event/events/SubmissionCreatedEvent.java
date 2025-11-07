@@ -2,6 +2,7 @@ package com.amalitech.common.event.events;
 
 import lombok.Builder;
 import lombok.Data;
+
 import java.util.List;
 import java.util.UUID;
 
@@ -52,13 +53,14 @@ public class SubmissionCreatedEvent {
     private String taskType;
     
     /**
-     * Source code submitted by the user for CODING tasks.
-     * This code will be executed against test cases using Judge0.
-     * 
-     * <p>Only populated for CODING task types. Null for other types.</p>
+     * Content submitted by the user for evaluation.
+     * The content type depends on the task type:
+     * - CODING tasks: Contains the source code
+     * - ESSAY tasks: Contains the written response
+     * - MCQ tasks: Contains the selected answer
      */
-    private String codeToEvaluate;
-    
+    private String contentToEvaluate;
+
     /**
      * Judge0 language identifier for code execution.
      * Examples:
@@ -68,28 +70,69 @@ public class SubmissionCreatedEvent {
      *   <li>63 - JavaScript (Node.js)</li>
      *   <li>54 - C++</li>
      * </ul>
-     * 
+     *
      * <p>Only required for CODING tasks. Null for other types.</p>
-     * 
+     *
      * @see <a href="https://ce.judge0.com/languages">Judge0 Language List</a>
      */
     private Integer languageId;
-    
+
     /**
      * List of test cases to execute against the submitted code.
      * Each test case contains input and expected output for validation.
-     * 
+     *
      * <p>Only populated for CODING tasks. Empty or null for other types.</p>
      */
     private List<TestCaseData> testCases;
 
     /**
-     * Essay text submitted by the user for ESSAY tasks.
-     * This will be evaluated by AI for quality, relevance, and coherence.
-     * 
+     * Name of the skill associated with this task.
+     * Used for contextual AI evaluation.
+     * <p>Populated for all task types to provide evaluation context.</p>
+     */
+    private String skillName;
+
+    /**
+     * Difficulty level of the task.
+     * Used for contextual AI evaluation.
+     * <p>Populated for all task types to provide evaluation context.</p>
+     */
+    private String difficulty;
+
+    /**
+     * Title of the task.
+     * Used for contextual AI evaluation.
+     * <p>Populated for all task types to provide evaluation context.</p>
+     */
+    private String taskTitle;
+
+    /**
+     * Description/prompt of the task.
+     * Used for contextual AI evaluation.
+     * <p>Populated for all task types to provide evaluation context.</p>
+     */
+    private String taskDescription;
+
+    /**
+     * Detailed instructions for the task.
+     * Used for contextual AI evaluation.
      * <p>Only populated for ESSAY task types. Null for other types.</p>
      */
-    private String essayToEvaluate;
+    private String detailedInstructions;
+
+    /**
+     * Evaluation criteria for the task.
+     * Used by AI to understand how to evaluate submissions.
+     * <p>Only populated for ESSAY task types. Null for other types.</p>
+     */
+    private String evaluationCriteria;
+
+    /**
+     * Grading rubric for the task.
+     * Used by AI to understand performance levels.
+     * <p>Only populated for ESSAY task types. Null for other types.</p>
+     */
+    private String rubric;
 
     /**
      * Test case data containing input and expected output for code validation.
