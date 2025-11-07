@@ -5,8 +5,6 @@ import com.amalitech.task.service.dto.TaskDTO;
 import com.amalitech.task.service.dto.request.GenerateTaskRequest;
 import com.amalitech.task.service.dto.response.AdminTaskDetailResponse;
 import com.amalitech.task.service.dto.response.AdminTaskSummaryResponse;
-import com.amalitech.task.service.dto.request.McqRequestTaskDTO;
-import com.amalitech.task.service.dto.response.McqResponseTaskDTO;
 import com.amalitech.task.service.dto.request.McqRequestDTO;
 import com.amalitech.task.service.dto.response.McqResponseDTO;
 import com.amalitech.task.service.exception.ResourceNotFoundException;
