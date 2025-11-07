@@ -399,28 +399,6 @@ public class TaskServiceImpl implements TaskService {
         return gson.toJson(jsonObject);
     }
 
-    public static String updateField (String jsonString, String field, String value){
-        return updateFields(jsonString, Map.of(field, value));
-    }
-
-    public static String cleanMarkdownJson (String response){
-        String cleaned = response.trim();
-
-        // Remove opening markdown code block
-        if (cleaned.startsWith("```json")) {
-            cleaned = cleaned.substring(7);
-        } else if (cleaned.startsWith("```")) {
-            cleaned = cleaned.substring(3);
-        }
-
-        // Remove closing markdown code block
-        if (cleaned.endsWith("```")) {
-            cleaned = cleaned.substring(0, cleaned.length() - 3);
-        }
-
-        return cleaned.trim();
-    }
-
     public static List<MCQquestionDTO> parseJsonToMcqList (String jsonArrayString){
         Gson gson = new GsonBuilder().setStrictness(Strictness.LENIENT).create();
 

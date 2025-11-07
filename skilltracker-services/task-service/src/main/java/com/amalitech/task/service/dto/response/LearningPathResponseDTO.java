@@ -1,8 +1,8 @@
 package com.amalitech.task.service.dto.response;
 
+import com.amalitech.task.service.dto.request.UserProfileRequestDTO;
 import lombok.*;
-import org.gentle.mcqgenerator.dto.TaskOutputDTO;
-import org.gentle.mcqgenerator.dto.request.UserProfileRequestDTO;
+
 
 @Builder
 @Getter
