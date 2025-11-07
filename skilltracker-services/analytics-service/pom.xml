@@ -32,6 +32,12 @@
             <artifactId>spring-boot-starter-amqp</artifactId>
             <version>3.5.3</version>
         </dependency>
+        <dependency>
+            <groupId>io.projectreactor.netty</groupId>
+            <artifactId>reactor-netty</artifactId>
+            <version>1.1.19</version> <!-- Compatible with Spring Boot 3.5.x -->
+        </dependency>
+
 
         <dependency>
             <groupId>org.springframework.cloud</groupId>
@@ -65,8 +71,24 @@
             <groupId>org.springframework.cloud</groupId>
             <artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
         </dependency>
+        <!-- wEBsOCKET Dependencies -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-websocket</artifactId>
+        </dependency>
 
         <!-- Security dependencies -->
+
+        <dependency>
+            <groupId>com.amalitech</groupId>
+            <artifactId>common-event</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.amalitech</groupId>
+            <artifactId>common-security</artifactId>
+            <version>${project.version}</version>
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-security</artifactId>

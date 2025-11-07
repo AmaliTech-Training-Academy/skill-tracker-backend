@@ -1,6 +1,7 @@
 package com.amalitech.analytics.service.security.config;
 
 import com.amalitech.analytics.service.security.filter.JwtAuthenticationFilter;
+import com.amalitech.common.security.filter.HeaderAuthenticationFilter;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,7 +26,12 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public HeaderAuthenticationFilter headerAuthenticationFilter() {
+        return new HeaderAuthenticationFilter();
+    }
+
+    @Bean
+    public SecurityFilterChain securityFilterChain(HttpSecurity http, HeaderAuthenticationFilter headerAuthenticationFilter) throws Exception {
         http
                 .csrf(csrf -> csrf.disable()) // Lambda: Replaces deprecated chaining
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -36,7 +42,7 @@ public class SecurityConfig {
                         .requestMatchers("/error").permitAll()
                         .anyRequest().authenticated()
                 )
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(headerAuthenticationFilter , UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
 }
