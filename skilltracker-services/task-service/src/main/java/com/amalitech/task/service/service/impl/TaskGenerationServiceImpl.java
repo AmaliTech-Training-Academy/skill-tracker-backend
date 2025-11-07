@@ -73,34 +73,53 @@ public class TaskGenerationServiceImpl implements TaskGenerationService {
     @Transactional
     @Override
     public void processBatchGeneration(BatchGenerationRequest request) {
-        if (request.taskType() != TaskType.CODING) {
-            log.warn("Received BATCH request for non-CODING task type: {}. Skipping.", request.taskType());
-            return;
-        }
+        UUID requesterUserId = request.userId();
 
-        String lockKey = LOCK_PREFIX + request.skillName() + ":" + request.difficulty() + ":" + TaskType.CODING;
+        String lockKey = LOCK_PREFIX + request.skillName() + ":" + request.difficulty() + ":" + request.taskType();
         Boolean lockAcquired = redisTemplate.opsForValue()
                 .setIfAbsent(lockKey, "in-progress", LOCK_TIMEOUT);
 
         if (Boolean.FALSE.equals(lockAcquired)) {
             log.warn("Batch job for {} is already in progress. Skipping.", lockKey);
+
+            TaskGenerationFailedEvent failEvent = new TaskGenerationFailedEvent(
+                    requesterUserId,
+                    "Batch job for this skill/type is already in progress."
+            );
+            replyEventProducer.publishTaskGenerationFailed(failEvent);
             return;
         }
 
         try {
-            log.info("Acquired lock {}. Generating {} CODING tasks in a single batch...", lockKey, request.requiredCount());
+            log.info("Acquired lock {}. Generating {} {} tasks in a single batch...", lockKey, request.requiredCount(), request.taskType());
             SkillView skill = skillViewRepository.findByName(request.skillName())
                     .orElseThrow(() -> new RuntimeException("Skill not found: " + request.skillName()));
 
-            contentGeneratorService.generateCodingTask(
-                    skill,
-                    request.difficulty(),
-                    request.requiredCount()
-            );
+            switch (request.taskType()) {
+                case CODING:
+                    contentGeneratorService.generateCodingTask(skill, request.difficulty(), request.requiredCount());
+                    break;
+                case ESSAY:
+                    contentGeneratorService.generateEssayTask(skill, request.difficulty(), request.requiredCount());
+                    break;
+                case MULTIPLE_CHOICE:
+                default:
+                    log.warn("Batch generation for {} not yet implemented for skill: {}", request.taskType(), skill.getName());
+                    throw new UnsupportedOperationException("Generation for " + request.taskType() + " is not supported.");
+            }
 
             log.info("Batch generation complete for {}", lockKey);
+            TaskGenerationSucceededEvent successEvent = new TaskGenerationSucceededEvent(requesterUserId);
+            replyEventProducer.publishTaskGenerationSucceeded(successEvent);
+
         } catch (Exception e) {
-            log.error("Failed to generate BATCH CODING tasks for {}: {}", lockKey, e.getMessage(), e);
+            log.error("Failed to generate BATCH tasks for {}: {}", lockKey, e.getMessage(), e);
+            TaskGenerationFailedEvent failEvent = new TaskGenerationFailedEvent(
+                    requesterUserId,
+                    "Batch generation failed: " + e.getMessage()
+            );
+            replyEventProducer.publishTaskGenerationFailed(failEvent);
+
         } finally {
             redisTemplate.delete(lockKey);
             log.info("Released lock {}.", lockKey);
@@ -114,28 +133,39 @@ public class TaskGenerationServiceImpl implements TaskGenerationService {
     @Transactional
     @Override
     public void processAdminGeneration(GenerateTaskRequest request) {
-        if (request.taskType() != TaskType.CODING) {
-            log.warn("Received ADMIN request for non-CODING task type: {}. Skipping.", request.taskType());
-            return;
-        }
+        UUID requesterUserId = request.userId();
 
         try {
             SkillView skill = skillViewRepository.findByName(request.skillName())
                     .orElseThrow(() -> new RuntimeException("Skill not found: " + request.skillName()));
 
-            log.info("Generating ADMIN CODING task (1) for topic '{}'...", request.topic());
+            log.info("Generating ADMIN {} task (1) for topic '{}'...", request.taskType(), request.topic());
 
-            contentGeneratorService.generateCodingTask(
-                    skill,
-                    request.difficulty(),
-                    1
-            );
+            switch (request.taskType()) {
+                case CODING:
+                    contentGeneratorService.generateCodingTask(skill, request.difficulty(), 1);
+                    break;
+                case ESSAY:
+                    contentGeneratorService.generateEssayTask(skill, request.difficulty(), 1
+                    );
+                    break;
+                case MULTIPLE_CHOICE:
+                default:
+                    log.warn("Admin generation for {} not yet implemented for skill: {}", request.taskType(), skill.getName());
+                    throw new UnsupportedOperationException("Generation for " + request.taskType() + " is not supported.");
+            }
 
-            log.info("Admin CODING task generation complete for {}", request.topic());
+            log.info("Admin {} task generation complete for {}", request.taskType(), request.topic());
+            TaskGenerationSucceededEvent successEvent = new TaskGenerationSucceededEvent(requesterUserId);
+            replyEventProducer.publishTaskGenerationSucceeded(successEvent);
 
-            
         } catch (Exception e) {
-            log.error("Failed to generate ADMIN CODING task {}: {}", request, e.getMessage(), e);
+            log.error("Failed to generate ADMIN task...", e);
+            TaskGenerationFailedEvent failEvent = new TaskGenerationFailedEvent(
+                    requesterUserId,
+                    "Admin generation failed: " + e.getMessage()
+            );
+            replyEventProducer.publishTaskGenerationFailed(failEvent);
         }
     }
 

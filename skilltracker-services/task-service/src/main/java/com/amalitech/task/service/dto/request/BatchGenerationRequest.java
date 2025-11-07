@@ -2,11 +2,12 @@ package com.amalitech.task.service.dto.request;
 
 import com.amalitech.task.service.model.enums.TaskDifficulty;
 import com.amalitech.task.service.model.enums.TaskType;
-
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+
 import java.io.Serializable;
+import java.util.UUID;
 
 /**
  * An immutable data carrier (DTO) used by clients (or other services)
@@ -22,6 +23,9 @@ import java.io.Serializable;
  * @param taskType The preferred format for the generated tasks, defined by the {@link TaskType} enum (e.g., CODING_CHALLENGE, MCQ, VERBAL). Optional; if null, the system may default or generate mixed types.
  */
 public record BatchGenerationRequest(
+        @NotNull(message = "User ID is required")
+        UUID userId,
+
         @NotBlank(message = "Skill name is required")
         String skillName,
 
@@ -34,5 +38,4 @@ public record BatchGenerationRequest(
 
         TaskType taskType
 
-) implements Serializable {
-}
+) implements Serializable {}

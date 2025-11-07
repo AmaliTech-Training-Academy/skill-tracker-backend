@@ -1,9 +1,9 @@
 package com.amalitech.notification.service.config;
 
 import com.amalitech.common.security.filter.HeaderAuthenticationFilter;
-
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -22,10 +22,10 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @EnableMethodSecurity
 public class WebSocketSecurityConfig {
 
-    private final HeaderAuthenticationFilter headerAuthenticationFilter;
 
-    public WebSocketSecurityConfig(HeaderAuthenticationFilter headerAuthenticationFilter) {
-        this.headerAuthenticationFilter = headerAuthenticationFilter;
+    @Bean
+    public HeaderAuthenticationFilter headerAuthenticationFilter() {
+        return new HeaderAuthenticationFilter();
     }
 
     /**
@@ -38,7 +38,8 @@ public class WebSocketSecurityConfig {
      * @throws Exception If an error occurs during configuration.
      */
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http,
+                                                   HeaderAuthenticationFilter headerAuthenticationFilter) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -50,5 +51,19 @@ public class WebSocketSecurityConfig {
                 .addFilterBefore(headerAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
+    }
+
+    /**
+     * Provides a no-op AuthenticationManager to prevent Spring Security
+     * from auto-configuring an in-memory user with generated password.
+     *
+     * <p>This service uses HeaderAuthenticationFilter for authentication,
+     * not traditional AuthenticationManager-based authentication.</p>
+     *
+     * @return A pass-through authentication manager
+     */
+    @Bean
+    public AuthenticationManager authenticationManager() {
+        return authentication -> authentication;
     }
 }
