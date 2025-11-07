@@ -7,15 +7,12 @@ import com.amalitech.task.service.dto.request.BatchGenerationRequest;
 import com.amalitech.task.service.dto.request.GenerateTaskRequest;
 import com.amalitech.task.service.dto.response.AdminTaskDetailResponse;
 import com.amalitech.task.service.dto.response.AdminTaskSummaryResponse;
-import com.amalitech.task.service.dto.request.McqRequestTaskDTO;
-import com.amalitech.task.service.dto.response.McqResponseTaskDTO;
 import com.amalitech.task.service.dto.request.McqRequestDTO;
 import com.amalitech.task.service.dto.response.McqResponseDTO;
 import com.amalitech.task.service.events.RabbitMQEventProducer;
 import com.amalitech.task.service.exception.ResourceNotFoundException;
 import com.amalitech.task.service.mapper.TaskMapper;
 import com.amalitech.task.service.model.Task;
-import com.amalitech.task.service.model.content.TaskContent;
 import com.amalitech.task.service.model.content.impl.McqTaskContent;
 import com.amalitech.task.service.model.UserSkillProfile;
 import com.amalitech.task.service.model.enums.TaskDifficulty;
@@ -77,7 +74,6 @@ public class TaskServiceImpl implements TaskService {
     private final RabbitMQEventProducer taskEventProducer;
     private final TaskMapper taskMapper;
     private final StringRedisTemplate redisTemplate;
-    private final String model = "gemini-2.5-flash";
 
     /**
      * Minimum number of tasks required per difficulty level before triggering generation.
@@ -348,6 +344,7 @@ public class TaskServiceImpl implements TaskService {
                 );
 
 
+        String model = "gemini-2.5-flash";
         GenerateContentResponse response =
                 client.models.generateContent(
                         model,
