@@ -1,159 +1,155 @@
 package com.amalitech.analytics.service.service;
 
-import com.amalitech.analytics.service.client.FeedbackServiceClient;
-import com.amalitech.analytics.service.client.TaskServiceClient;
-import com.amalitech.analytics.service.dto.response.*;
-import com.amalitech.analytics.service.events.NotificationEventPublisher;
-import com.amalitech.analytics.service.model.SkillProgress;
-import com.amalitech.analytics.service.model.UserGoal;
-import com.amalitech.analytics.service.model.enums.GoalStatus;
-import com.amalitech.analytics.service.model.enums.TaskType;
-import com.amalitech.analytics.service.repository.SkillProgressRepository;
-import com.amalitech.analytics.service.repository.UserGoalRepository;
+import com.amalitech.analytics.service.dto.TaskCompletedEvent;
+import com.amalitech.analytics.service.dto.TaskSubmissionRequestDTO;
+import com.amalitech.analytics.service.events.AnalyticsUpdateEvent;
+import com.amalitech.analytics.service.model.SkillTrajectorySnapshot;
+import com.amalitech.analytics.service.model.TaskSubmissionLog;
+import com.amalitech.analytics.service.model.UserAggregateStats;
+import com.amalitech.analytics.service.model.UserSkillProgress;
+import com.amalitech.analytics.service.repository.SkillTrajectorySnapshotRepository;
+import com.amalitech.analytics.service.repository.TaskSubmissionLogRepository;
+import com.amalitech.analytics.service.repository.UserAggregateStatsRepository;
+import com.amalitech.analytics.service.repository.UserSkillProgressRepository;
+import com.amalitech.analytics.service.service.interfaces.AnalyticsServiceInterface;
 import lombok.RequiredArgsConstructor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.util.*;
-import java.util.stream.Collectors;
+import java.time.ZoneOffset;
 
+/**
+ * Default implementation of {@link AnalyticsServiceInterface}.
+ *
+ * <p>This service handles all write and update operations for analytics,
+ * including task completions, progress tracking, and aggregate updates.
+ * It also publishes internal domain events to notify other layers (e.g., WebSocket push).</p>
+ *
+ * <p>All operations are transactional and ensure consistency across
+ * progress tracking, trajectory snapshots, and aggregate statistics.</p>
+ *
+ * @since 1.0
+ */
+@Slf4j
 @Service
 @RequiredArgsConstructor
-public class AnalyticsService {
-    private static final Logger log = LoggerFactory.getLogger(AnalyticsService.class);
+public class AnalyticsService implements AnalyticsServiceInterface {
 
-    private final SkillProgressRepository progressRepository;
-    private final TaskServiceClient taskServiceClient;
-    private final UserGoalRepository goalRepository;
-    private final NotificationEventPublisher notificationPublisher;
-    private final FeedbackServiceClient feedbackServiceClient;
+    private final TaskSubmissionLogRepository logRepository;
+    private final UserSkillProgressRepository skillProgressRepository;
+    private final UserAggregateStatsRepository aggregateStatsRepository;
+    private final SkillTrajectorySnapshotRepository trajectoryRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     /**
-     * Basic dashboard data fetch. No filtering yet.
+     * {@inheritDoc}
      */
-    public DashboardResponse getDashboardData(
-            UUID userId,
-            Optional<UUID> skillId,
-            Optional<LocalDate> startDate,
-            Optional<LocalDate> endDate) {
+    @Override
+    @Transactional
+    public void processTaskCompletion(TaskCompletedEvent event) {
+        log.info("Processing TaskCompletedEvent for user: {}", event.userId());
 
-        log.info(userId.toString());
-        LocalDateTime startDateTime = startDate.map(LocalDate::atStartOfDay).orElse(LocalDateTime.now().minusDays(90));
-        LocalDateTime endDateTime = endDate.map(d -> d.atTime(23, 59, 59)).orElse(LocalDateTime.now());
+        UserSkillProgress progress = updateSkillProgress(event);
+        updateUserAggregateStats(event);
+        logSubmission(event);
+        updateTrajectorySnapshot(progress);
 
-        List<SkillProgress> progressData = progressRepository.findUserData(
-                userId,
-                skillId,
-                startDateTime,
-                endDateTime);
+        eventPublisher.publishEvent(new AnalyticsUpdateEvent(this, event.userId()));
+    }
 
-        List<SkillProgressSummary> summaries = buildSkillSummaries(progressData);
-        log.info(summaries.toString());
-        List<GoalProgress> goalProgressList = buildGoalProgress(userId, summaries);
-        List<Recommendation> recommendations;
-        try {
-            recommendations = feedbackServiceClient.getRecommendations(summaries);
-        } catch (Exception e) {
-            log.warn("Could not fetch AI recommendations for user {}: {}", userId, e.getMessage());
-            recommendations = Collections.emptyList();
-        }
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    @Transactional
+    public void submitTaskDirectly(TaskSubmissionRequestDTO request) {
+        log.warn("DIRECT SUBMISSION API USED: Bypassing message queue for user {}", request.userId());
+        TaskCompletedEvent event = request.toEvent();
+        this.processTaskCompletion(event);
+    }
 
-        return DashboardResponse.builder()
-                .skillSummaries(summaries)
-                .goalProgress(goalProgressList)
+    /**
+     * Retrieves or creates a {@link UserSkillProgress} record and updates it
+     * based on the completed task event.
+     *
+     * @param event the task completion event
+     * @return the updated {@link UserSkillProgress} entity
+     */
+    private UserSkillProgress updateSkillProgress(TaskCompletedEvent event) {
+        UserSkillProgress progress = skillProgressRepository
+                .findByUserIdAndSkillId(event.userId(), event.skillId())
+                .orElseGet(() -> {
+                    UserSkillProgress newProgress = new UserSkillProgress();
+                    newProgress.setUserId(event.userId());
+                    newProgress.setSkillId(event.skillId());
+                    newProgress.setTasksCompleted(0);
+                    newProgress.setTotalXpEarned(0);
+                    newProgress.setAverageXpEarned(0.0);
+                    newProgress.setProficiency(0.0);
+                    return newProgress;
+                });
+
+        progress.updateProgress(event.totalXpEarned());
+        return skillProgressRepository.save(progress);
+    }
+
+    /**
+     * Updates or creates a trajectory snapshot entry for the user’s skill
+     * on the current date, reflecting the latest progress state.
+     *
+     * @param progress the current user skill progress
+     */
+    private void updateTrajectorySnapshot(UserSkillProgress progress) {
+        LocalDate today = LocalDate.now(ZoneOffset.UTC);
+
+        SkillTrajectorySnapshot snapshot = trajectoryRepository
+                .findByUserIdAndSkillIdAndSnapshotDate(progress.getUserId(), progress.getSkillId(), today)
+                .orElseGet(() -> SkillTrajectorySnapshot.fromProgress(progress, today));
+
+        trajectoryRepository.save(snapshot);
+    }
+
+    /**
+     * Updates the aggregate user statistics such as total tasks completed
+     * and streak information.
+     *
+     * @param event the completed task event
+     * @return the updated {@link UserAggregateStats} entity
+     */
+    private UserAggregateStats updateUserAggregateStats(TaskCompletedEvent event) {
+        LocalDate practiceDate = event.completedAt().atZone(ZoneOffset.UTC).toLocalDate();
+
+        UserAggregateStats stats = aggregateStatsRepository.findById(event.userId())
+                .orElseGet(() -> new UserAggregateStats(event.userId()));
+
+        stats.updateStreak(practiceDate);
+        return aggregateStatsRepository.save(stats);
+    }
+
+    /**
+     * Logs a task submission by persisting a {@link TaskSubmissionLog} record.
+     *
+     * <p>This log provides an immutable audit trail of user submissions
+     * for analytical and compliance purposes.</p>
+     *
+     * @param event the completed task event
+     */
+    private void logSubmission(TaskCompletedEvent event) {
+        TaskSubmissionLog submissionLog = TaskSubmissionLog.builder()
+                .userId(event.userId())
+                .skillId(event.skillId())
+                .taskId(event.taskId())
+                .totalXpEarned(event.totalXpEarned())
+                .passed(event.passed())
+                .taskType(event.taskType())
+                .rubricsScores(event.rubricsScores())
+                .completedAt(event.completedAt())
                 .build();
-    }
 
-    /**
-     * This method is triggered by the TaskEventListener.
-     * It saves new progress and checks for milestone completion.
-     */
-    public void processNewProgress(UUID userId, UUID skillId, UUID taskId, Double score,
-                                   TaskType taskType, Map<String, Double> rubricsScores) {
-        SkillProgress newProgress = new SkillProgress(
-                userId, skillId, taskId, score,
-                taskType, rubricsScores
-        );
-        progressRepository.save(newProgress);
-
-
-        List<UserGoal> activeGoals = goalRepository.findByUserIdAndSkillIdAndStatus(
-                userId, skillId, GoalStatus.ACTIVE
-        );
-
-        for (UserGoal goal : activeGoals) {
-            if (score >= goal.getTargetScore()) {
-                goal.setStatus(GoalStatus.COMPLETED);
-                goalRepository.save(goal);
-
-
-                notificationPublisher.publishMilestoneEvent(userId,
-                        "Goal Achieved!",
-                        "You've completed your goal: " + goal.getGoalDescription());
-            }
-        }
-    }
-
-    private List<SkillProgressSummary> buildSkillSummaries(List<SkillProgress> progressData) {
-
-        Map<UUID, List<SkillProgress>> groupedBySkill = progressData.stream()
-                .collect(Collectors.groupingBy(SkillProgress::getSkillId));
-
-        return groupedBySkill.entrySet().stream().map(entry -> {
-            UUID skillId = entry.getKey();
-            List<SkillProgress> skillEvents = entry.getValue();
-
-            String skillName = taskServiceClient.getSkillName(skillId);
-
-
-            List<DataPoint> dataPoints = skillEvents.stream()
-                    .map(sp -> new DataPoint(sp.getTimestamp(), sp.getScore(), sp.getTaskType(), sp.getRubricsScores()))
-                    .collect(Collectors.toList());
-
-            return SkillProgressSummary.builder()
-                    .skillId(skillId)
-                    .skillName(skillName)
-                    .currentScore(skillEvents.get(skillEvents.size() - 1).getScore())
-                    .historicalData(dataPoints)
-                    .build();
-        }).collect(Collectors.toList());
-    }
-
-    public UserGoal createUserGoal(UUID userId, UserGoalDto goalDto) {
-        UserGoal goal = new UserGoal();
-        goal.setUserId(userId);
-        goal.setSkillId(goalDto.getSkillId());
-        goal.setGoalDescription(goalDto.getGoalDescription());
-        goal.setTargetScore(goalDto.getTargetScore());
-        goal.setTargetDate(goalDto.getTargetDate());
-        goal.setStatus(GoalStatus.ACTIVE);
-
-        return goalRepository.save(goal);
-    }
-
-    public List<UserGoal> getActiveGoals(UUID userId) {
-        return goalRepository.findByUserIdAndStatus(userId, GoalStatus.ACTIVE);
-    }
-
-    private List<GoalProgress> buildGoalProgress(UUID userId, List<SkillProgressSummary> summaries) {
-        Map<UUID, Double> currentScores = summaries.stream()
-                .collect(Collectors.toMap(SkillProgressSummary::getSkillId, SkillProgressSummary::getCurrentScore));
-
-        List<UserGoal> activeGoals = getActiveGoals(userId);
-
-        return activeGoals.stream().map(goal -> {
-            Double currentScore = currentScores.getOrDefault(goal.getSkillId(), 0.0);
-            Double percentage = (currentScore / goal.getTargetScore()) * 100.0;
-
-            return GoalProgress.builder()
-                    .goalDescription(goal.getGoalDescription())
-                    .currentScore(currentScore)
-                    .targetScore(goal.getTargetScore())
-                    .percentageComplete(Math.min(percentage, 100.0))
-                    .build();
-        }).collect(Collectors.toList());
+        logRepository.save(submissionLog);
+        log.debug("Logged new task submission for user {} and skill {}", event.userId(), event.skillId());
     }
 }

@@ -38,7 +38,7 @@ public class UserTourController {
 
         UUID userId = extractUserId(userDetails);
 
-        UserStatusDTO updatedUser = userTourService.updateTourStatus(userId, request.guidedTourStatus());
+        UserStatusDTO updatedUser = userTourService.updateTourStatus(userId, request.tourStatus());
         return ResponseEntity.ok(ApiResponse.success("Tour status updated successfully", updatedUser, null));
     }
 
