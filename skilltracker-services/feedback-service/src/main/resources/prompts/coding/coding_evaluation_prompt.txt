@@ -207,7 +207,6 @@ Feedback Writing:
 - Identify root causes: logic error, edge case, wrong algorithm
 - Give actionable advice: "Check your loop condition" or "Handle the empty string case"
 
-
 ⚠️ CHECKPOINT: After calculating correctness.percentage, check if it equals 0. If YES, skip sections 2 and 3 below and set their values as specified in the CORRECTNESS GATE rule above.
 
 2. EFFICIENCY EVALUATION (30% weight):
