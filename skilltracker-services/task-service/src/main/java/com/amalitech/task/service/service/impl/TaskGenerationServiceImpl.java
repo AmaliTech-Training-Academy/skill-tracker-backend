@@ -132,6 +132,8 @@ public class TaskGenerationServiceImpl implements TaskGenerationService {
             );
 
             log.info("Admin CODING task generation complete for {}", request.topic());
+
+            
         } catch (Exception e) {
             log.error("Failed to generate ADMIN CODING task {}: {}", request, e.getMessage(), e);
         }
