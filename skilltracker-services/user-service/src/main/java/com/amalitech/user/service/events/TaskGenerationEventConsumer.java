@@ -3,7 +3,7 @@ package com.amalitech.user.service.events;
 import com.amalitech.common.event.events.TaskGenerationFailedEvent;
 import com.amalitech.common.event.events.TaskGenerationSucceededEvent;
 import com.amalitech.user.service.model.User;
-import com.amalitech.user.service.model.enums.UserState;
+import com.amalitech.user.service.model.enums.TaskGenerationStatus;
 import com.amalitech.user.service.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -31,14 +31,9 @@ public class TaskGenerationEventConsumer {
         User user = userRepository.findById(event.getUserId())
                 .orElseThrow(() -> new EntityNotFoundException("User not found: " + event.getUserId()));
 
-        if (user.getState() == UserState.PENDING_TASKS) {
-            user.setState(UserState.ONBOARDED);
-            userRepository.save(user);
-            log.info("User {} state finalized to ONBOARDED.", user.getId());
-        } else {
-            log.warn("Received task success event for user {} in unexpected state: {}",
-                    user.getId(), user.getState());
-        }
+        user.setTaskGenerationStatus(TaskGenerationStatus.COMPLETED);
+        userRepository.save(user);
+        log.info("User {} task status finalized to COMPLETED.", user.getId());
     }
 
     /**
@@ -54,13 +49,8 @@ public class TaskGenerationEventConsumer {
         User user = userRepository.findById(event.getUserId())
                 .orElseThrow(() -> new EntityNotFoundException("User not found: " + event.getUserId()));
 
-        if (user.getState() == UserState.PENDING_TASKS) {
-            user.setState(UserState.REGISTERED);
-            userRepository.save(user);
-            log.warn("User {} state has been ROLLED BACK to REGISTERED.", user.getId());
-        } else {
-            log.warn("Received task failure event for user {} in unexpected state: {}",
-                    user.getId(), user.getState());
-        }
+        user.setTaskGenerationStatus(TaskGenerationStatus.FAILED);
+        userRepository.save(user);
+        log.warn("User {} task status has been set to FAILED.", user.getId());
     }
 }

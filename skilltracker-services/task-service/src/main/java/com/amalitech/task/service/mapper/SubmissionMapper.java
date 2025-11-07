@@ -7,7 +7,8 @@ import com.amalitech.task.service.model.TaskSubmission;
 import com.amalitech.task.service.model.content.impl.CodingTaskContent;
 import com.amalitech.task.service.model.submission.impl.CodingSubmissionAnswer;
 import com.amalitech.task.service.model.submission.impl.EssaySubmissionAnswer;
-
+import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -21,7 +22,14 @@ import java.util.List;
  * over the wire (API response) or pushed to a message broker (Event Bus).
  */
 @Component
+@Slf4j
 public class SubmissionMapper {
+
+    private final ObjectMapper objectMapper;
+
+    public SubmissionMapper(ObjectMapper objectMapper) {
+        this.objectMapper = objectMapper;
+    }
 
     /**
      * Converts the internal persistence entity {@link TaskSubmission} into the public
@@ -75,13 +83,12 @@ public class SubmissionMapper {
                 SubmissionCreatedEvent.builder()
                         .submissionId(submission.getId())
                         .userId(submission.getUserId())
-                        .taskId(submission.getTask().getId());
+                        .taskId(submission.getTask().getId())
+                        .taskType(submission.getTask().getType().name());
 
         if (submission.getAnswer() instanceof CodingSubmissionAnswer answer &&
                 submission.getTask().getContent() instanceof CodingTaskContent content) {
-
-            builder.taskType("CODING");
-            builder.codeToEvaluate(answer.getCode());
+            builder.contentToEvaluate(answer.getCode());
             builder.languageId(answer.getLanguageId());
 
             List<SubmissionCreatedEvent.TestCaseData> testCaseData = content.getExamples().stream()
@@ -90,13 +97,51 @@ public class SubmissionMapper {
                             .expectedOutput(ex.getOutput())
                             .build())
                     .toList();
+
             builder.testCases(testCaseData);
+
+            populateCommonTaskFields(builder, submission.getTask());
         }
         else if (submission.getAnswer() instanceof EssaySubmissionAnswer answer) {
-            builder.taskType("ESSAY");
-            builder.essayToEvaluate(answer.getSubmissionText());
+            builder.contentToEvaluate(answer.getSubmissionText());
+
+            populateCommonTaskFields(builder, submission.getTask());
+
+
+            if (submission.getTask() != null &&
+                    submission.getTask().getContent() instanceof com.amalitech.task.service.model.content.impl.EssayTaskContent essayContent) {
+                builder.detailedInstructions(essayContent.getDetailedInstructions());
+
+                try {
+                    String evaluationCriteria = objectMapper.writeValueAsString(essayContent.getEvaluationCriteria());
+                    String rubric = objectMapper.writeValueAsString(essayContent.getRubric());
+
+                    builder.evaluationCriteria(evaluationCriteria);
+                    builder.rubric(rubric);
+                } catch (Exception e) {
+                    log.warn("Failed to serialize essay evaluation criteria/rubric for task {}: {}",
+                            submission.getTask().getId(), e.getMessage());
+                }
+            }
         }
 
         return builder.build();
+    }
+
+    /**
+     * Populates common task fields that are needed for AI evaluation context.
+     * These fields are populated for all task types.
+     *
+     * @param builder the event builder
+     * @param task the task entity
+     */
+    private void populateCommonTaskFields(SubmissionCreatedEvent.SubmissionCreatedEventBuilder builder, Task task) {
+        if (task != null) {
+            builder.skillName(task.getTaskDefinition() != null && task.getTaskDefinition().getSkill() != null ?
+                    task.getTaskDefinition().getSkill().getName() : null);
+            builder.difficulty(task.getDifficulty() != null ? task.getDifficulty().name() : null);
+            builder.taskTitle(task.getTitle());
+            builder.taskDescription(task.getDescription());
+        }
     }
 }

@@ -21,5 +21,4 @@ public class CodingSubmissionFeedback implements SubmissionFeedback {
     private String efficiencyFeedback;
     private String styleFeedback;
     private String overallSuggestion;
-    private String aiModelUsed;
 }

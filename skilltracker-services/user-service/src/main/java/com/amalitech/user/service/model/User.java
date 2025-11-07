@@ -1,19 +1,18 @@
 package com.amalitech.user.service.model;
 
-import com.amalitech.user.service.model.enums.GuidedTourStatus;
-import com.amalitech.user.service.model.enums.PremiumTier;
-import com.amalitech.user.service.model.enums.Role;
-import com.amalitech.user.service.model.enums.UserState;
-
+import com.amalitech.user.service.model.enums.*;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
-import java.util.UUID;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 /**
  * The core entity representing a user in the system.
@@ -71,6 +70,10 @@ public class User {
 
     @Column(name = "is_verified")
     private Boolean isVerified = false;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "task_generation_status")
+    private TaskGenerationStatus taskGenerationStatus;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "premium_tier", nullable = false)

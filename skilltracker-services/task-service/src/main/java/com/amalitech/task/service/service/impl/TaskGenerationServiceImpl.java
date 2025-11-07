@@ -10,6 +10,7 @@ import com.amalitech.task.service.model.enums.TaskDifficulty;
 import com.amalitech.task.service.model.enums.TaskType;
 import com.amalitech.task.service.model.view.SkillView;
 import com.amalitech.task.service.repository.SkillViewRepository;
+import com.amalitech.task.service.repository.TaskRepository;
 import com.amalitech.task.service.service.ContentGeneratorService;
 import com.amalitech.task.service.service.TaskGenerationService;
 import lombok.extern.slf4j.Slf4j;
@@ -33,6 +34,7 @@ public class TaskGenerationServiceImpl implements TaskGenerationService {
 
     private final StringRedisTemplate redisTemplate;
     private final SkillViewRepository skillViewRepository;
+    private final TaskRepository taskRepository;
     private final ContentGeneratorService contentGeneratorService;
     private final TaskReplyEventProducer replyEventProducer;
 
@@ -46,6 +48,7 @@ public class TaskGenerationServiceImpl implements TaskGenerationService {
     public TaskGenerationServiceImpl(
             StringRedisTemplate redisTemplate,
             SkillViewRepository skillViewRepository,
+            TaskRepository taskRepository,
             ContentGeneratorService contentGeneratorService,
             TaskReplyEventProducer replyEventProducer,
             @Value("${app.task.onboarding-quantity.coding:5}") int codingOnboardingQuantity,
@@ -54,6 +57,7 @@ public class TaskGenerationServiceImpl implements TaskGenerationService {
     ) {
         this.redisTemplate = redisTemplate;
         this.skillViewRepository = skillViewRepository;
+        this.taskRepository = taskRepository;
         this.contentGeneratorService = contentGeneratorService;
         this.replyEventProducer = replyEventProducer;
         this.codingOnboardingQuantity = codingOnboardingQuantity;
@@ -195,20 +199,29 @@ public class TaskGenerationServiceImpl implements TaskGenerationService {
 
         TaskDifficulty difficulty = TaskDifficulty.valueOf(skillData.getDifficultyLevel().toUpperCase());
 
+        // Check if sufficient tasks already exist before generating new ones
+        long existingTaskCount = taskRepository.countBySkillAndDifficultyAndType(
+                skill.getId(), difficulty, taskType, true);
+
+        if (existingTaskCount >= quantity) {
+            log.info("Sufficient {} {} tasks already exist ({} found, {} requested). Skipping generation.",
+                    taskType, difficulty, existingTaskCount, quantity);
+            return;
+        }
+
+        int tasksToGenerate = quantity - (int) existingTaskCount;
+        log.info("Found {} existing {} {} tasks. Generating {} additional tasks.",
+                existingTaskCount, taskType, difficulty, tasksToGenerate);
+
         switch (taskType) {
             case CODING:
-                log.info("Requesting batch of {} CODING tasks for skill: {}", quantity, skill.getName());
-                contentGeneratorService.generateCodingTask(
-                        skill,
-                        difficulty,
-                        quantity
-                );
+                contentGeneratorService.generateCodingTask(skill, difficulty, tasksToGenerate);
+                break;
+            case ESSAY:
+                contentGeneratorService.generateEssayTask(skill, difficulty, tasksToGenerate);
                 break;
             case MULTIPLE_CHOICE:
                 log.warn("MCQ generation not yet implemented for skill: {}", skill.getName());
-                break;
-            case ESSAY:
-                log.warn("Essay generation not yet implemented for skill: {}", skill.getName());
                 break;
         }
     }

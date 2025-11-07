@@ -10,7 +10,7 @@ USER SUBMISSION:
 CHALLENGE REQUIREMENTS:
 {requirements}
 
-TEST CASES:
+TEST EXECUTION RESULTS:
 {testCases}
 
 EVALUATION CRITERIA:
@@ -19,35 +19,57 @@ EVALUATION CRITERIA:
 TASK:
 Analyze the submitted code and provide a comprehensive evaluation in JSON format.
 
+SCORING STRUCTURE:
+
+This challenge is worth: 50 XP maximum
+
+The user earns XP based on their percentage score:
+XP Earned = (Total Percentage / 100) × 50
+
+Total score is calculated from three weighted categories:
+- Correctness: 50% of total score
+- Efficiency: 30% of total score
+- Style: 20% of total score
+
+Example Calculations:
+- User scores: Correctness 90%, Efficiency 80%, Style 70%
+  → Total = (90 × 0.50) + (80 × 0.30) + (70 × 0.20) = 45 + 24 + 14 = 83%
+  → XP Earned = (83 / 100) × 50 = 41.5 XP
+
+- User scores: Correctness 100%, Efficiency 100%, Style 100%
+  → Total = 100%
+  → XP Earned = 50 XP (maximum)
+
+Pass threshold: 70% (which equals 35 XP)
+
 REQUIRED JSON STRUCTURE:
 \{
   "evaluation": \{
     "correctness": \{
-      "score": 25.0,
-      "maxScore": 25.0,
+      "score": 50.0,
       "percentage": 100,
       "feedback": "Detailed assessment of correctness",
       "testResults": [
         \{
-          "testCase": "Description of test",
+          "testCase": "Test case description",
           "passed": true,
           "input": "Input used",
           "expectedOutput": "Expected result",
           "actualOutput": "What the code produced",
+          "error": null,
           "feedback": "Specific feedback for this test"
         \}
       ],
       "criteriaMet": [
         \{
-          "criterion": "The specific criterion from requirements",
+          "criterion": "Specific criterion from requirements",
           "met": true,
           "feedback": "Why it was or wasn't met"
         \}
       ]
     \},
     "efficiency": \{
-      "score": 15.0,
-      "maxScore": 15.0,
+      "score": 30.0,
       "percentage": 100,
       "feedback": "Detailed assessment of efficiency",
       "timeComplexity": "O(n)",
@@ -55,230 +77,326 @@ REQUIRED JSON STRUCTURE:
       "analysis": "Explanation of complexity and optimizations",
       "criteriaMet": [
         \{
-          "criterion": "The specific criterion from requirements",
+          "criterion": "Specific criterion from requirements",
           "met": true,
           "feedback": "Why it was or wasn't met"
         \}
       ]
     \},
     "style": \{
-      "score": 10.0,
-      "maxScore": 10.0,
+      "score": 20.0,
       "percentage": 100,
       "feedback": "Detailed assessment of code style",
       "strengths": [
-        "Specific positive aspect of the code",
+        "Specific positive aspect",
         "Another strength"
       ],
       "improvements": [
-        "Specific suggestion for improvement",
+        "Specific suggestion",
         "Another suggestion"
       ],
       "criteriaMet": [
         \{
-          "criterion": "The specific criterion from requirements",
+          "criterion": "Specific criterion from requirements",
           "met": true,
           "feedback": "Why it was or wasn't met"
         \}
       ]
     \},
     "overall": \{
-      "totalScore": 50.0,
-      "maxScore": 50.0,
-      "percentage": 100,
-      "xpEarned": 50,
+      "totalScore": 100.0,
+      "percentage": 100.0,
+      "xpEarned": 50.0,
+      "maxXP": 50.0,
       "passed": true,
-      "grade": "A",
-      "summary": "Overall summary of the submission (2-3 sentences)",
+      "summary": "Overall summary (2-3 sentences)",
       "keyStrengths": [
         "Major strength 1",
         "Major strength 2"
       ],
       "keyImprovements": [
-        "Most important improvement 1",
-        "Most important improvement 2"
+        "Important improvement 1",
+        "Important improvement 2"
       ]
     \}
   \}
 \}
 
-SCORING SYSTEM:
 
-Maximum Scores per Category:
-- Correctness: 25 XP (50% of 50 XP)
-- Efficiency: 15 XP (30% of 50 XP)
-- Style: 10 XP (20% of 50 XP)
-- TOTAL: 50 XP
+CRITICAL EVALUATION RULE - CORRECTNESS GATE
 
-Pass Threshold: 35 XP (70%)
+STEP 1: Evaluate correctness first
+- Calculate correctness.percentage (0-100) based on test results
+- Calculate correctness.score = (correctness.percentage / 100) × 50
 
-Grade Scale:
-- A: 90-100% (45-50 XP)
-- B: 80-89% (40-44 XP)
-- C: 70-79% (35-39 XP) - PASS
-- D: 60-69% (30-34 XP) - FAIL
-- F: Below 60% (Below 30 XP) - FAIL
+STEP 2: Apply the correctness gate
+IF correctness.percentage = 0 (zero tests passed):
+  → Set efficiency.score = 0.0, efficiency.percentage = 0
+  → Set style.score = 0.0, style.percentage = 0
+  → Set overall.totalScore = 0.0, overall.percentage = 0.0
+  → Set overall.xpEarned = 0.0, overall.passed = false, overall.grade = "F"
+  → Set efficiency.feedback = "Efficiency cannot be evaluated because the code fails all test cases. Focus on correctness first."
+  → Set style.feedback = "Style cannot be evaluated because the code fails all test cases. Focus on correctness first."
+  → Set efficiency.timeComplexity = "N/A", efficiency.spaceComplexity = "N/A"
+  → Set efficiency.criteriaMet = [], style.strengths = [], style.improvements = [], style.criteriaMet = []
+  → Provide feedback focused ONLY on fixing correctness issues
+  → DO NOT analyze efficiency or style
+
+ELSE IF correctness.percentage > 0 (at least one test passed):
+  → Evaluate efficiency normally (0-100%)
+  → Evaluate style normally (0-100%)
+  → Calculate overall score from all three categories
+
+RATIONALE: Code that fails all tests cannot be meaningfully evaluated for efficiency or style. Users must achieve at least some correctness before other aspects matter.
 
 EVALUATION GUIDELINES:
 
-1. CORRECTNESS EVALUATION (25 XP max):
+1. CORRECTNESS EVALUATION (50% weight):
 
-Test Execution:
-- Run ALL provided test cases (both visible and hidden)
-- Record actual output for each test
-- Compare actual vs expected output with precision
-- Note any runtime errors, exceptions, or crashes
+Test Execution Analysis:
+The TEST EXECUTION RESULTS section contains Judge0 execution results with:
+- Status: Execution status (e.g., "Accepted", "Wrong Answer", "Runtime Error", "Compilation Error")
+- Output: Actual program output (stdout)
+- Error: Any error messages (stderr or compile output)
 
-Scoring Approach:
-- Award full points (25 XP) if ALL tests pass
-- Deduct proportionally for failed tests
-- If 4/5 tests pass: 20 XP (80% of correctness score)
-- If 3/5 tests pass: 15 XP (60% of correctness score)
-- Critical failures (crashes, wrong algorithm): 0-10 XP
+Your Task:
+- Analyze each test result carefully
+- Infer what each test was checking based on output and errors
+- Determine if the code logic is fundamentally correct
+- Identify specific failures (logic errors, edge cases, wrong output format)
+
+Scoring Guidelines (out of 100%):
+- 100%: All tests show "Accepted" status
+- 90-95%: 1 minor edge case fails
+- 80-85%: 1 major test fails or 2 minor ones
+- 70-75%: 2 major tests fail
+- 60%: Core logic works, multiple failures
+- 40%: Partially correct, major issues
+- 20%: Severe errors, minimal correctness
+- 10%: Runs but mostly wrong
+- 0%: Compilation errors or completely wrong
+
+Calculate correctness.score = (percentage / 100) × 50
+
+Status Code Interpretation:
+- Status ID 3 = "Accepted" → Test passed
+- Status ID 4 = "Wrong Answer" → Logic error
+- Status ID 5 = "Time Limit Exceeded" → Inefficiency
+- Status ID 6 = "Compilation Error" → Syntax error
+- Status ID 11 = "Runtime Error" → Crash/exception
+- Other statuses → Various failures
+
+Creating Test Results Array:
+For each test in TEST EXECUTION RESULTS:
+- Extract the status, output, and error
+- Create a testCase description based on what you can infer
+- Set passed = true if status is "Accepted", false otherwise
+- Populate input, expectedOutput, actualOutput based on available information
+- If input/expected are unknown, make reasonable inferences from the context
+- Provide specific, actionable feedback
 
 Criteria Assessment:
-- Check each correctness criterion from the challenge
-- Mark as met/not met with specific evidence
-- Edge case handling is crucial
-- Output format must match exactly
+- Generate 3-5 correctness criteria based on the requirements
+- Examples: "Handles empty input", "Produces correct output format", "Returns accurate results"
+- Mark each as met/not met based on test results
+- Provide evidence-based feedback
 
-Feedback Guidelines:
-- Be specific about what works and what doesn't
-- Explain WHY tests fail (logic error, edge case missed, wrong approach)
-- Provide actionable guidance for fixes
-- Acknowledge correct logic even if implementation has issues
+Feedback Writing:
+- Start with what works (if anything)
+- Explain specific failures: "Test 2 failed because the output '5' didn't match expected '10'"
+- Identify root causes: logic error, edge case, wrong algorithm
+- Give actionable advice: "Check your loop condition" or "Handle the empty string case"
 
-2. EFFICIENCY EVALUATION (15 XP max):
 
-Complexity Analysis:
-- Determine actual time complexity (Big O notation)
-- Determine actual space complexity
-- Compare against expected complexity from criteria
-- Consider both average and worst-case scenarios
+⚠️ CHECKPOINT: After calculating correctness.percentage, check if it equals 0. If YES, skip sections 2 and 3 below and set their values as specified in the CORRECTNESS GATE rule above.
 
-Scoring Approach:
-- Full points (15 XP): Meets or exceeds expected complexity
-- Good (12-14 XP): Slightly suboptimal but reasonable
-- Acceptable (9-11 XP): Works but noticeably inefficient
-- Poor (6-8 XP): Very inefficient, multiple optimization opportunities
-- Unacceptable (0-5 XP): Extremely inefficient or crashes on large inputs
+2. EFFICIENCY EVALUATION (30% weight):
+⚠️ ONLY EVALUATE IF correctness.percentage > 0
+
+Analysis Approach:
+- Examine the code structure for complexity indicators
+- Count nested loops (indicates O(n²) or worse)
+- Look for recursive calls and their depth
+- Check data structure choices (arrays vs hash maps vs sets)
+- Identify redundant operations
+
+Scoring Guidelines (out of 100%):
+- 100%: Optimal or near-optimal complexity
+- 90%: Slightly suboptimal but reasonable
+- 80%: Minor inefficiencies
+- 70%: Noticeably inefficient but acceptable
+- 50%: Very inefficient
+- 30%: Brute force when optimization expected
+- 0%: Infinite loops or crashes on large inputs
+
+Calculate efficiency.score = (percentage / 100) × 30
+
+Time Complexity Determination:
+- No loops: O(1)
+- Single loop through n items: O(n)
+- Nested loops: O(n²), O(n³), etc.
+- Binary search pattern: O(log n)
+- Recursion with memoization: Often O(n)
+- Recursion without memoization: Often exponential
+
+Space Complexity:
+- No extra data structures: O(1)
+- One array/list of size n: O(n)
+- Hash map with n entries: O(n)
+- Recursion depth d: O(d)
+
+Status Clues:
+- "Time Limit Exceeded" = likely inefficient algorithm
+- "Accepted" with slow execution = could be more efficient
+
+Criteria Assessment:
+- Generate 3-4 efficiency criteria from requirements
+- Examples: "Uses optimal time complexity O(n)", "Minimizes space usage", "Avoids redundant operations"
+- Mark and explain each
+
+Feedback Writing:
+- State actual complexities clearly
+- Explain why: "The nested loops create O(n²) time"
+- Suggest improvements: "Use a hash map to reduce lookups from O(n) to O(1)"
+- Consider difficulty level expectations
+
+3. STYLE EVALUATION (20% weight):
+⚠️ ONLY EVALUATE IF correctness.percentage > 0
+
+Assessment Areas:
+- Naming: Are variables/functions descriptive? (goodCount vs x)
+- Formatting: Consistent indentation, spacing
+- Organization: Logical structure, readable flow
+- Comments: Helpful for complex logic (not obvious code)
+- Best practices: DRY principle, no magic numbers
+- Language idioms: Uses {skill} conventions properly
+
+Scoring Guidelines (out of 100%):
+- 100%: Professional, exemplary code
+- 90%: Excellent, very minor issues
+- 80%: Good, readable
+- 70%: Acceptable, some improvements needed
+- 60%: Poor naming/organization
+- 40%: Hard to read
+- 20%: Very poor style
+- 0%: Unreadable
+
+Calculate style.score = (percentage / 100) × 20
 
 What to Look For:
-- Unnecessary nested loops
-- Redundant operations or calculations
-- Inefficient data structure choices
-- Missing opportunities for optimization
-- Use of appropriate built-in methods
-- Memory leaks or excessive memory usage
+✓ Good: descriptive names, consistent style, clear logic, appropriate comments
+✗ Bad: single-letter names (except loop counters), inconsistent formatting, duplicated code, no structure
 
 Criteria Assessment:
-- Check each efficiency criterion from the challenge
-- Provide concrete analysis with examples
-- Explain performance implications
+- Generate 3-4 style criteria
+- Examples: "Uses descriptive variable names", "Code is well-organized", "Follows language conventions"
+- Be constructive, not prescriptive about personal preferences
 
-Feedback Guidelines:
-- State the actual complexity clearly
-- Explain why the complexity is what it is
-- Suggest specific optimizations if applicable
-- Balance between working solution and optimal solution
+Feedback Writing:
+- Highlight 2-3 strengths
+- Suggest 2-3 improvements with examples
+- Consider difficulty: be more lenient for BEGINNER
+- Don't penalize style preferences unless they hurt readability
 
-3. STYLE EVALUATION (10 XP max):
+SPECIAL SCENARIOS:
 
-Code Readability:
-- Variable and function naming (descriptive vs cryptic)
-- Code organization and structure
-- Proper indentation and formatting
-- Logical flow and clarity
+Compilation Errors:
+- correctness.percentage: 0-10%
+- efficiency.percentage: 0%
+- style.percentage: 0-20% (if code structure is visible)
+- feedback: Explain the compilation error clearly
+- Be constructive: "Fix the syntax error on line X, then resubmit"
 
-Best Practices:
-- DRY principle (Don't Repeat Yourself)
-- Single Responsibility Principle
-- Appropriate use of comments
-- Magic numbers avoided (use constants)
-- Error handling where appropriate
+Runtime Errors:
+- Moderate correctness deduction based on severity
+- Explain what causes the error (null pointer, array out of bounds, etc.)
+- Suggest how to fix
 
-Scoring Approach:
-- Excellent (9-10 XP): Professional-quality, exemplary style
-- Good (7-8 XP): Clean, readable, minor improvements possible
-- Acceptable (5-6 XP): Functional but could be much cleaner
-- Poor (3-4 XP): Difficult to read, poor practices
-- Very Poor (0-2 XP): Unreadable, severe style issues
+Partial Solutions:
+- Score what's implemented
+- Note missing functionality in feedback
+- Encourage completion
 
-Criteria Assessment:
-- Check each style criterion from the challenge
-- Be constructive in feedback
-- Distinguish between preferences and actual problems
-
-Feedback Guidelines:
-- Highlight specific good practices observed
-- Suggest concrete improvements with examples
-- Don't penalize personal style preferences unless they impact readability
-- Consider the difficulty level (more lenient for beginners)
-
-SPECIAL EVALUATION SCENARIOS:
-
-Incomplete Submission:
-- If code doesn't run: Maximum 5 XP total (for effort/partial logic)
-- If only partially implemented: Score what's there, note what's missing
-- If empty/unchanged starter code: 0 XP
-
-Plagiarism/External Code:
-- If code appears to be copied: Note in feedback
-- Focus on understanding demonstrated
-- If appropriate, score based on adaptation and understanding
-
-Over-Engineering:
-- Don't penalize clever solutions that work
-- Consider simplicity as a virtue
-- Balance complexity against the problem requirements
+Empty/Unchanged Code:
+- All percentages: 0%
+- xpEarned: 0
+- Encouraging feedback: "Give it a try! Start by..."
 
 CRITICAL REQUIREMENTS:
 
-1. Be OBJECTIVE and CONSISTENT
-   - Apply the same standards to all submissions
-   - Base scores on measurable criteria
+1. JSON ONLY
+   - Return ONLY the JSON object
+   - NO markdown code blocks (no ```)
+   - NO explanatory text before/after
+   - NO comments in JSON
+
+2. VALID JSON
+   - Use double quotes for all strings
+   - No trailing commas
+   - Properly escape special characters: ", \n, \\
+   - Ensure all brackets/braces match
+
+3. COMPLETE DATA
+   - Include ALL required fields
+   - Don't use null unless specified as acceptable
+   - testResults array must have at least 1 entry
+   - criteriaMet arrays must have at least 3 entries each
+
+4. ACCURATE CALCULATIONS
+
+   Step 1 - Calculate category percentages (0-100):
+   - correctness.percentage = based on test results (0-100)
+   - efficiency.percentage = based on complexity analysis (0-100)
+   - style.percentage = based on code quality (0-100)
+
+   Step 2 - Calculate weighted scores:
+   - correctness.score = (correctness.percentage / 100) × 50
+   - efficiency.score = (efficiency.percentage / 100) × 30
+   - style.score = (style.percentage / 100) × 20
+
+   Step 3 - Calculate overall:
+   - overall.totalScore = correctness.score + efficiency.score + style.score (max 100)
+   - overall.percentage = overall.totalScore (same value)
+   - overall.xpEarned = (overall.percentage / 100) × 50
+   - overall.maxXP = 50
+   - overall.passed = (overall.percentage >= 70)
+
+   Step 4 - Assign grade:
+   - if percentage >= 90: grade = "A"
+   - else if percentage >= 80: grade = "B"
+   - else if percentage >= 70: grade = "C"
+   - else if percentage >= 60: grade = "D"
+   - else: grade = "F"
+
+5. CONSTRUCTIVE FEEDBACK
+   - Be specific and actionable
+   - Balance strengths with improvements
+   - Reference actual code/results
+   - Use encouraging, growth-oriented language
+   - Consider difficulty level: {difficulty}
+
+6. OBJECTIVITY
+   - Base scores on observable criteria
+   - Be consistent across submissions
    - Avoid subjective bias
+   - Multiple valid approaches may exist
 
-2. Be SPECIFIC in feedback
-   - Reference actual code lines when possible
-   - Provide examples of improvements
-   - Explain the "why" behind deductions
+SCORE CALCULATION VERIFICATION:
 
-3. Be CONSTRUCTIVE
-   - Balance criticism with acknowledgment of strengths
-   - Frame improvements as learning opportunities
-   - Encourage good practices observed
+Before returning JSON, verify:
+☐ correctness.percentage is between 0 and 100
+☐ efficiency.percentage is between 0 and 100
+☐ style.percentage is between 0 and 100
+☐ correctness.score = (correctness.percentage / 100) × 50
+☐ efficiency.score = (efficiency.percentage / 100) × 30
+☐ style.score = (style.percentage / 100) × 20
+☐ overall.totalScore = correctness.score + efficiency.score + style.score
+☐ overall.percentage = overall.totalScore
+☐ overall.xpEarned = (overall.percentage / 100) × 50
+☐ overall.maxXP = 50
+☐ overall.passed is true if percentage ≥ 70, false otherwise
+☐ All arrays (testResults, criteriaMet, strengths, improvements, keyStrengths, keyImprovements) are populated
+☐ All feedback fields are specific and constructive
+☐ JSON is valid and parseable
 
-4. Be ACCURATE
-   - Actually trace through the code logic
-   - Don't assume behavior without verification
-   - Test edge cases mentally if can't run code
-
-5. Be FAIR
-   - Consider the difficulty level
-   - Don't expect perfection from beginners
-   - Recognize different valid approaches
-
-OUTPUT REQUIREMENTS:
-- Return ONLY valid, parseable JSON
-- NO markdown code fences (```)
-- NO explanatory text before or after the JSON
-- Ensure all scores are calculated correctly
-- Verify percentage = (score/maxScore) × 100
-- Verify xpEarned = overall percentage × 50 / 100
-- Verify passed = (xpEarned >= 35)
-- All feedback must be professional and constructive
-
-FINAL VALIDATION CHECKLIST:
-☐ All test cases executed and recorded
-☐ Each criterion assessed with feedback
-☐ Scores add up correctly (correctness + efficiency + style = total)
-☐ Percentages calculated correctly
-☐ Grade assigned based on percentage
-☐ Pass/fail determined correctly (>= 35 XP = pass)
-☐ Feedback is specific, actionable, and constructive
-☐ All required JSON fields present
-☐ JSON is valid with no syntax errors
-☐ No extraneous text outside JSON object
-
-Evaluate the code submission now.
+Generate the evaluation now as JSON only.

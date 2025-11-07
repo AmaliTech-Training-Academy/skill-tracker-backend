@@ -6,16 +6,18 @@ import com.amalitech.task.service.dto.TaskSubmissionDTO;
 import com.amalitech.task.service.dto.request.SubmitAnswerRequest;
 import com.amalitech.task.service.events.EventProducer;
 import com.amalitech.task.service.exception.ResourceNotFoundException;
+import com.amalitech.task.service.mapper.FallbackFeedbackMapper;
 import com.amalitech.task.service.mapper.SubmissionMapper;
 import com.amalitech.task.service.model.Task;
 import com.amalitech.task.service.model.TaskSubmission;
 import com.amalitech.task.service.model.enums.SubmissionStatus;
+import com.amalitech.task.service.model.feedback.SubmissionFeedback;
 import com.amalitech.task.service.model.feedback.impl.CodingSubmissionFeedback;
+import com.amalitech.task.service.model.feedback.impl.EssaySubmissionFeedback;
 import com.amalitech.task.service.repository.TaskRepository;
 import com.amalitech.task.service.repository.TaskSubmissionRepository;
 import com.amalitech.task.service.service.SubmissionService;
-
-import lombok.RequiredArgsConstructor;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,7 +25,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 /**
  * Implementation of the {@link SubmissionService} interface, handling the business logic
@@ -34,7 +35,6 @@ import java.util.stream.Collectors;
  * persistence layer. It serves as a command/query gateway for submission data.
  */
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class SubmissionServiceImpl implements SubmissionService {
 
@@ -42,6 +42,22 @@ public class SubmissionServiceImpl implements SubmissionService {
     private final TaskRepository taskRepository;
     private final EventProducer eventProducer;
     private final SubmissionMapper submissionMapper;
+    private final ObjectMapper objectMapper;
+    private final FallbackFeedbackMapper fallbackMapper;
+
+    public SubmissionServiceImpl(TaskSubmissionRepository submissionRepository,
+                                 TaskRepository taskRepository,
+                                 EventProducer eventProducer,
+                                 SubmissionMapper submissionMapper,
+                                 ObjectMapper objectMapper,
+                                 FallbackFeedbackMapper fallbackMapper) {
+        this.submissionRepository = submissionRepository;
+        this.taskRepository = taskRepository;
+        this.eventProducer = eventProducer;
+        this.submissionMapper = submissionMapper;
+        this.objectMapper = objectMapper;
+        this.fallbackMapper = fallbackMapper;
+    }
 
     /**
      * Creates a new task submission record in the database and publishes a creation event
@@ -114,43 +130,33 @@ public class SubmissionServiceImpl implements SubmissionService {
             existingSubmission.setStatus(SubmissionStatus.COMPLETED);
         }
 
-        if ("CODING".equals(event.getFeedbackType())) {
-            CodingSubmissionFeedback feedback = new CodingSubmissionFeedback();
-            feedback.setAllPassed(event.isCorrect());
+        if (event.getDetailedFeedback() != null && !event.getDetailedFeedback().trim().isEmpty()) {
+            try {
+                SubmissionFeedback detailedFeedback = objectMapper.readValue(
+                        event.getDetailedFeedback(),
+                        SubmissionFeedback.class
+                );
+                existingSubmission.setFeedback(detailedFeedback);
 
-            int passedCount = event.getTestResults() != null
-                    ? (int) event.getTestResults().stream().filter(SubmissionEvaluatedEvent.TestResultData::isPassed).count()
-                    : 0;
-            int totalCount = event.getTestResults() != null ? event.getTestResults().size() : 0;
-
-            feedback.setTestCasesPassed(passedCount);
-            feedback.setTestCasesTotal(totalCount);
-            feedback.setStdout(event.getStdout());
-            feedback.setStderr(event.getStderr());
-
-            if (event.getTestResults() != null && !event.getTestResults().isEmpty()) {
-                List<CodingSubmissionFeedback.TestCaseResult> testResults = event.getTestResults().stream()
-                        .map(tr -> {
-                            CodingSubmissionFeedback.TestCaseResult tcr = new CodingSubmissionFeedback.TestCaseResult();
-                            tcr.setPassed(tr.isPassed());
-                            tcr.setExpected(tr.getExpectedOutput());
-                            tcr.setActual(tr.getActualOutput());
-                            tcr.setExecutionTimeMs(tr.getExecutionTimeMs() != null ? tr.getExecutionTimeMs() : 0);
-                            return tcr;
-                        })
-                        .collect(Collectors.toList());
-                feedback.setTestCaseResults(testResults);
+            } catch (Exception e) {
+                log.warn("Failed to parse detailed feedback JSON, falling back to basic: {}", e.getMessage());
+                if ("CODING".equals(event.getFeedbackType())) {
+                    existingSubmission.setFeedback(fallbackMapper.createBasicCodingFeedback(event));
+                } else if ("ESSAY".equals(event.getFeedbackType())) {
+                    existingSubmission.setFeedback(fallbackMapper.createBasicEssayFeedback(event));
+                }
             }
-
-            if (event.getOverallFeedback() != null) {
-                feedback.setLintingReport(event.getOverallFeedback());
+        }
+        else {
+            log.warn("No detailed feedback found for event, delegating to fallback mapper.");
+            if ("CODING".equals(event.getFeedbackType())) {
+                existingSubmission.setFeedback(fallbackMapper.createBasicCodingFeedback(event));
+            } else if ("ESSAY".equals(event.getFeedbackType())) {
+                existingSubmission.setFeedback(fallbackMapper.createBasicEssayFeedback(event));
             }
-
-            existingSubmission.setFeedback(feedback);
         }
 
         TaskSubmission updatedSubmission = submissionRepository.save(existingSubmission);
-
         log.info("Submission {} updated with feedback and results.", updatedSubmission.getId());
     }
 
@@ -173,5 +179,19 @@ public class SubmissionServiceImpl implements SubmissionService {
                 .orElseThrow(() -> new ResourceNotFoundException("Submission not found: " + submissionId));
 
         return submissionMapper.toDTO(submission);
+    }
+
+    /**
+     * Creates basic essay feedback when detailed feedback is not available.
+     */
+    private EssaySubmissionFeedback createBasicEssayFeedback(SubmissionEvaluatedEvent event) {
+        EssaySubmissionFeedback essayFeedback = new EssaySubmissionFeedback();
+
+        essayFeedback.setGrammarScore(0.0);
+        essayFeedback.setRelevanceScore(event.getScore() / 100.0);
+        essayFeedback.setToneAnalysis("Essay evaluation completed");
+        essayFeedback.setSuggestions(List.of());
+
+        return essayFeedback;
     }
 }

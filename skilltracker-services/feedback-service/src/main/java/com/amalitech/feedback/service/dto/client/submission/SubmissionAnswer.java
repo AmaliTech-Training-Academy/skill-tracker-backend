@@ -1,6 +1,7 @@
 package com.amalitech.feedback.service.dto.client.submission;
 
 import com.amalitech.feedback.service.dto.client.submission.impl.CodingSubmissionAnswer;
+import com.amalitech.feedback.service.dto.client.submission.impl.EssaySubmissionAnswer;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
@@ -9,7 +10,8 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "answerType")
 @JsonSubTypes({
-        @JsonSubTypes.Type(value = CodingSubmissionAnswer.class, name = "CODING")
+        @JsonSubTypes.Type(value = CodingSubmissionAnswer.class, name = "CODING"),
+        @JsonSubTypes.Type(value = EssaySubmissionAnswer.class, name = "ESSAY")
 })
 public interface SubmissionAnswer {
 }

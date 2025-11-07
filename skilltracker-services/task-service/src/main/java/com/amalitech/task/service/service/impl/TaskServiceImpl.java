@@ -12,12 +12,13 @@ import com.amalitech.task.service.model.Task;
 import com.amalitech.task.service.model.enums.TaskDifficulty;
 import com.amalitech.task.service.model.enums.TaskType;
 import com.amalitech.task.service.model.view.SkillView;
-import com.amalitech.task.service.repository.SkillViewRepository;
 import com.amalitech.task.service.repository.TaskRepository;
 import com.amalitech.task.service.repository.TaskSubmissionRepository;
+import com.amalitech.task.service.service.SkillService;
 import com.amalitech.task.service.service.TaskService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -43,7 +44,7 @@ import java.util.stream.Collectors;
 public class TaskServiceImpl implements TaskService {
 
     private final TaskRepository taskRepository;
-    private final SkillViewRepository skillViewRepository;
+    private final SkillService skillService;
     private final TaskSubmissionRepository submissionRepository;
     private final RabbitMQEventProducer taskEventProducer;
     private final TaskMapper taskMapper;
@@ -60,13 +61,13 @@ public class TaskServiceImpl implements TaskService {
     private static final Duration FETCH_LOCK_TIMEOUT = Duration.ofMinutes(1);
 
     public TaskServiceImpl(TaskRepository taskRepository,
-                           SkillViewRepository skillViewRepository,
+                           SkillService skillService,
                            TaskSubmissionRepository submissionRepository,
                            RabbitMQEventProducer taskEventProducer,
                            TaskMapper taskMapper, StringRedisTemplate redisTemplate
     ) {
         this.taskRepository = taskRepository;
-        this.skillViewRepository = skillViewRepository;
+        this.skillService = skillService;
         this.submissionRepository = submissionRepository;
         this.taskEventProducer = taskEventProducer;
         this.taskMapper = taskMapper;
@@ -80,12 +81,12 @@ public class TaskServiceImpl implements TaskService {
     public List<TaskDTO> getPersonalizedTasks(UUID userId, String skillName, int limit) {
         log.info("Fetching personalized tasks for user: {}, skill: {}", userId, skillName);
 
-        SkillView skill = getSkillByName(skillName);
+        SkillView skill = skillService.getSkillByName(skillName);
         TaskDifficulty difficulty = determineUserDifficulty(userId, skill.getId());
         log.debug("Determined difficulty: {} for user: {}", difficulty, userId);
 
         List<Task> tasks = getOrGenerateTasksForSkillAndDifficulty(
-                skill, difficulty, limit
+                skill, difficulty, TaskType.CODING, limit
         );
 
         return tasks.stream()
@@ -97,13 +98,14 @@ public class TaskServiceImpl implements TaskService {
      * {@inheritDoc}
      */
     @Override
+    @Cacheable(cacheNames = "tasks-public-cache", key = "#skillName + '_' + #difficulty + '_' + #limit")
     public List<TaskDTO> getTasksForSkillAndDifficulty(String skillName, TaskDifficulty difficulty, int limit) {
         log.info("Getting tasks for skill: {}, difficulty: {}, limit: {}", skillName, difficulty, limit);
 
-        SkillView skill = getSkillByName(skillName);
+        SkillView skill = skillService.getSkillByName(skillName);
 
         List<Task> tasks = getOrGenerateTasksForSkillAndDifficulty(
-                skill, difficulty, limit
+                skill, difficulty, TaskType.CODING, limit
         );
 
         return tasks.stream()
@@ -116,6 +118,7 @@ public class TaskServiceImpl implements TaskService {
      */
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(cacheNames = "tasks-public-cache", key = "#taskId")
     public TaskDTO getTaskById(UUID taskId) {
         log.info("Fetching task by ID: {}", taskId);
 
@@ -158,8 +161,7 @@ public class TaskServiceImpl implements TaskService {
      */
     @Override
     public TaskAvailabilityDTO checkTaskAvailability(String skillName, TaskDifficulty difficulty) {
-        SkillView skill = skillViewRepository.findByName(skillName)
-                .orElseThrow(() -> new ResourceNotFoundException("Skill not found: " + skillName));
+        SkillView skill = skillService.getSkillByName(skillName);
 
         long availableCount = taskRepository.countBySkillAndDifficulty(
                 skill.getId(), difficulty, true
@@ -184,14 +186,12 @@ public class TaskServiceImpl implements TaskService {
      * @return a list of tasks from the cache (may be less than the requested limit)
      */
     private List<Task> getOrGenerateTasksForSkillAndDifficulty(
-            SkillView skill, TaskDifficulty difficulty, int limit) {
-
-        TaskType neededType = TaskType.CODING;
+            SkillView skill, TaskDifficulty difficulty, TaskType taskType, int limit) {
 
         List<Task> cachedTasks = taskRepository.findBySkillIdAndDifficultyAndType(
                 skill.getId(),
                 difficulty,
-                neededType,
+                taskType,
                 true,
                 PageRequest.of(0, limit)
         );
@@ -221,7 +221,7 @@ public class TaskServiceImpl implements TaskService {
                     skill.getName(),
                     difficulty,
                     minTasksPerDifficulty,
-                    neededType
+                    taskType
             );
 
             taskEventProducer.requestBatchTaskGeneration(request);
@@ -232,18 +232,6 @@ public class TaskServiceImpl implements TaskService {
         }
 
         return cachedTasks;
-    }
-
-    /**
-     * Retrieves a skill view by its name.
-     *
-     * @param skillName the name of the skill to retrieve
-     * @return the skill view entity
-     * @throws ResourceNotFoundException if no skill is found with the specified name
-     */
-    private SkillView getSkillByName(String skillName) {
-        return skillViewRepository.findByName(skillName)
-                .orElseThrow(() -> new ResourceNotFoundException("Skill not found: " + skillName));
     }
 
     /**

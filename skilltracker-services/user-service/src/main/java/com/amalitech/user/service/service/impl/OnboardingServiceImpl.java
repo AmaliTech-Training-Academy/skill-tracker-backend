@@ -3,25 +3,28 @@ package com.amalitech.user.service.service.impl;
 import com.amalitech.common.event.events.UserOnboardingCompletedEvent;
 import com.amalitech.user.service.dto.request.OnboardingRequest;
 import com.amalitech.user.service.dto.request.SkillSelection;
+import com.amalitech.user.service.dto.response.OnboardingResponseDTO;
 import com.amalitech.user.service.events.EventProducer;
 import com.amalitech.user.service.exception.OnboardingAlreadyCompletedException;
+import com.amalitech.user.service.mapper.UserMapper;
 import com.amalitech.user.service.model.Skill;
 import com.amalitech.user.service.model.User;
 import com.amalitech.user.service.model.UserSkill;
+import com.amalitech.user.service.model.enums.TaskGenerationStatus;
 import com.amalitech.user.service.model.enums.UserState;
 import com.amalitech.user.service.repository.SkillRepository;
 import com.amalitech.user.service.repository.UserRepository;
 import com.amalitech.user.service.repository.UserSkillRepository;
 import com.amalitech.user.service.service.OnboardingService;
-
 import jakarta.persistence.EntityNotFoundException;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.*;
 import java.util.function.Function;
@@ -38,7 +41,6 @@ import java.util.stream.Collectors;
  * 3. Validation: Validating all skill IDs upfront.
  */
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class OnboardingServiceImpl implements OnboardingService {
 
@@ -46,6 +48,19 @@ public class OnboardingServiceImpl implements OnboardingService {
     private final SkillRepository skillRepository;
     private final UserSkillRepository userSkillRepository;
     private final EventProducer eventProducer;
+    private final UserMapper userMapper;
+
+    public OnboardingServiceImpl(UserRepository userRepository,
+                                 SkillRepository skillRepository,
+                                 UserSkillRepository userSkillRepository,
+                                 EventProducer eventProducer,
+                                 UserMapper userMapper) {
+        this.userRepository = userRepository;
+        this.skillRepository = skillRepository;
+        this.userSkillRepository = userSkillRepository;
+        this.eventProducer = eventProducer;
+        this.userMapper = userMapper;
+    }
 
     /**
      * {@inheritDoc}
@@ -58,15 +73,54 @@ public class OnboardingServiceImpl implements OnboardingService {
     @Override
     @Transactional
     @PreAuthorize("hasAuthority('USER') and #userId == authentication.principal.user.id")
-    public void completeOnboarding(UUID userId, OnboardingRequest request) {
+    public OnboardingResponseDTO completeOnboarding(UUID userId, OnboardingRequest request) {
 
         User user = findAndValidateUser(userId);
         Map<UUID, Skill> foundSkillsMap = validateAndFetchSkills(request);
 
-        List<UserSkill> newUserSkills = persistOnboardingData(user, request, foundSkillsMap);
+        List<UserSkill> newUserSkills = persistUserSkills(user, request, foundSkillsMap);
 
-        buildAndRegisterOnboardingEvent(user.getId(), newUserSkills);
+        user.setState(UserState.ONBOARDED);
+        user.setTaskGenerationStatus(TaskGenerationStatus.PENDING);
+        User savedUser = userRepository.save(user);
+
+        buildAndRegisterOnboardingEvent(savedUser.getId(), newUserSkills);
+
+        return userMapper.toOnboardingResponseDTO(savedUser);
     }
+
+    @Override
+    @Transactional
+    @PreAuthorize("hasAuthority('USER') and #userId == authentication.principal.user.id")
+    public void retryTaskGeneration(UUID userId) {
+        log.info("Attempting to retry task generation for user: {}", userId);
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new EntityNotFoundException("User not found with id: " + userId));
+
+        if (user.getTaskGenerationStatus() == TaskGenerationStatus.PENDING) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Task generation is already in progress.");
+        }
+        if (user.getTaskGenerationStatus() == TaskGenerationStatus.COMPLETED) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Tasks have already been generated successfully.");
+        }
+        if (user.getTaskGenerationStatus() != TaskGenerationStatus.FAILED) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Retry is only available for users in a FAILED state.");
+        }
+
+        user.setTaskGenerationStatus(TaskGenerationStatus.PENDING);
+        userRepository.save(user);
+
+        List<UserSkill> userSkills = userSkillRepository.findByUserId(userId);
+        if (userSkills.isEmpty()) {
+            log.error("User {} is in FAILED state but has no saved skills. Cannot retry.", userId);
+            throw new IllegalStateException("Cannot retry: No skills found for user.");
+        }
+
+        log.info("Re-publishing UserOnboardingCompletedEvent for user: {}", userId);
+        buildAndRegisterOnboardingEvent(userId, userSkills);
+    }
+
 
     /**
      * Finds the user and validates they are in a state to be onboarded.
@@ -77,10 +131,6 @@ public class OnboardingServiceImpl implements OnboardingService {
 
         if (user.getState() == UserState.ONBOARDED) {
             throw new OnboardingAlreadyCompletedException(user.getState().name());
-        }
-
-        if (user.getState() == UserState.PENDING_TASKS) {
-            throw new OnboardingAlreadyCompletedException("Onboarding is already in progress.");
         }
 
         return user;
@@ -112,7 +162,7 @@ public class OnboardingServiceImpl implements OnboardingService {
      * records for the user before inserting the new ones. This cleans up
      * any orphaned data from a previously failed onboarding (Saga rollback).
      */
-    private List<UserSkill> persistOnboardingData(User user, OnboardingRequest request, Map<UUID, Skill> foundSkillsMap) {
+    private List<UserSkill> persistUserSkills(User user, OnboardingRequest request, Map<UUID, Skill> foundSkillsMap) {
 
         log.info("Deleting existing UserSkill records for user: {}", user.getId());
         userSkillRepository.deleteByUserId(user.getId());
@@ -124,12 +174,7 @@ public class OnboardingServiceImpl implements OnboardingService {
                 })
                 .collect(Collectors.toList());
 
-        userSkillRepository.saveAll(newUserSkills);
-
-        user.setState(UserState.PENDING_TASKS);
-        userRepository.save(user);
-
-        return newUserSkills;
+        return userSkillRepository.saveAll(newUserSkills);
     }
 
     /**
