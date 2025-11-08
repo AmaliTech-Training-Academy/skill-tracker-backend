@@ -18,13 +18,19 @@ import org.springframework.context.annotation.Configuration;
 @EnableRabbit
 public class RabbitMQConfig {
 
+    // --- Exchange for Submissions ---
     public static final String SUBMISSION_EXCHANGE = "submission.exchange";
     public static final String EXECUTED_QUEUE = "submission.executed.notification.q";
     public static final String EVALUATED_QUEUE = "submission.evaluated.notification.q";
-    public static final String TASK_GENERATION_QUEUE = "task.generation.notification.q";
     public static final String EXECUTED_ROUTING_KEY = "submission.executed";
     public static final String EVALUATED_ROUTING_KEY = "submission.evaluated";
+
+    // --- Exchange for Task Generation ---
+    public static final String TASK_GENERATION_EXCHANGE = "task.generation.exchange";
+    public static final String TASK_GENERATION_QUEUE = "task.generation.notification.q";
+    public static final String TASK_GENERATION_FAILED_QUEUE = "task.generation.failed.notification.q";
     public static final String TASK_GENERATION_ROUTING_KEY = "task.generation.succeeded";
+    public static final String TASK_GENERATION_FAILED_ROUTING_KEY = "task.generation.failed";
 
     /**
      * Creates the topic exchange for submission events.
@@ -35,24 +41,24 @@ public class RabbitMQConfig {
         return new TopicExchange(SUBMISSION_EXCHANGE);
     }
 
-    /**
-     * Creates the queue for consuming submission executed events.
-     * @return The Queue bean for executed events.
-     */
+    // --- Bean for Task Generation Exchange ---
+    @Bean
+    public TopicExchange taskGenerationExchange() {
+        return new TopicExchange(TASK_GENERATION_EXCHANGE);
+    }
+
+    // --- Submission Queue Beans ---
     @Bean
     public Queue executedQueue() {
         return new Queue(EXECUTED_QUEUE, true);
     }
 
-    /**
-     * Creates the queue for consuming submission evaluated events.
-     * @return The Queue bean for evaluated events.
-     */
     @Bean
     public Queue evaluatedQueue() {
         return new Queue(EVALUATED_QUEUE, true);
     }
 
+    // --- Task Generation Queue Beans ---
     /**
      * Creates the queue for task generation completion events.
      * @return The Queue bean for task generation notifications.
@@ -63,11 +69,15 @@ public class RabbitMQConfig {
     }
 
     /**
-     * Binds the executed queue to the submission exchange with the executed routing key.
-     * @param executedQueue The queue for executed events.
-     * @param submissionExchange The submission topic exchange.
-     * @return The Binding bean.
+     * Creates the queue for task generation failure events.
+     * @return The Queue bean for task generation failure notifications.
      */
+    @Bean
+    public Queue taskGenerationFailedQueue() {
+        return new Queue(TASK_GENERATION_FAILED_QUEUE, true);
+    }
+
+    // --- Bindings for Submission Exchange ---
     @Bean
     public Binding executedBinding(Queue executedQueue, TopicExchange submissionExchange) {
         return BindingBuilder.bind(executedQueue)
@@ -75,12 +85,6 @@ public class RabbitMQConfig {
                 .with(EXECUTED_ROUTING_KEY);
     }
 
-    /**
-     * Binds the evaluated queue to the submission exchange with the evaluated routing key.
-     * @param evaluatedQueue The queue for evaluated events.
-     * @param submissionExchange The submission topic exchange.
-     * @return The Binding bean.
-     */
     @Bean
     public Binding evaluatedBinding(Queue evaluatedQueue, TopicExchange submissionExchange) {
         return BindingBuilder.bind(evaluatedQueue)
@@ -88,17 +92,24 @@ public class RabbitMQConfig {
                 .with(EVALUATED_ROUTING_KEY);
     }
 
-    /**
-     * Binds the task generation queue to the submission exchange with the task generation routing key.
-     * @param taskGenerationQueue The queue for task generation events.
-     * @param submissionExchange The submission topic exchange.
-     * @return The Binding bean.
-     */
     @Bean
     public Binding taskGenerationBinding(Queue taskGenerationQueue, TopicExchange submissionExchange) {
         return BindingBuilder.bind(taskGenerationQueue)
                 .to(submissionExchange)
                 .with(TASK_GENERATION_ROUTING_KEY);
+    }
+
+    /**
+     * Binds the task generation failed queue to the submission exchange with the failure routing key.
+     * @param taskGenerationFailedQueue The queue for task generation failure events.
+     * @param submissionExchange The submission topic exchange.
+     * @return The Binding bean.
+     */
+    @Bean
+    public Binding taskGenerationFailedBinding(Queue taskGenerationFailedQueue, TopicExchange submissionExchange) {
+        return BindingBuilder.bind(taskGenerationFailedQueue)
+                .to(submissionExchange)
+                .with(TASK_GENERATION_FAILED_ROUTING_KEY);
     }
 
     /**

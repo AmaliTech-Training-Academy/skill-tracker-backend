@@ -2,6 +2,7 @@ package com.amalitech.notification.service.listener;
 
 import com.amalitech.common.event.events.SubmissionEvaluatedEvent;
 import com.amalitech.common.event.events.SubmissionExecutedEvent;
+import com.amalitech.common.event.events.TaskGenerationFailedEvent;
 import com.amalitech.common.event.events.TaskGenerationSucceededEvent;
 import com.amalitech.notification.service.config.RabbitMQConfig;
 import com.amalitech.notification.service.service.NotificationService;
@@ -71,11 +72,32 @@ public class SubmissionEventListener {
         log.info("Received TaskGenerationSucceededEvent for user: {}", event.getUserId());
 
         try {
-            notificationService.sendTaskGenerationNotification(event);
+            notificationService.sendTaskGenerationSuccessNotification(event);
             log.info("Successfully processed TaskGenerationSucceededEvent for user: {}",
                     event.getUserId());
         } catch (Exception e) {
             log.error("Error processing TaskGenerationSucceededEvent for user: {}",
+                    event.getUserId(), e);
+        }
+    }
+
+
+    /**
+     * Handles the TaskGenerationFailedEvent.
+     * This method is triggered when task generation fails for a user.
+     * It notifies the user that an error occurred.
+     * @param event The event containing task generation failure details.
+     */
+    @RabbitListener(queues = RabbitMQConfig.TASK_GENERATION_FAILED_QUEUE)
+    public void handleTaskGenerationFailed(TaskGenerationFailedEvent event) {
+        log.info("Received TaskGenerationFailedEvent for user: {}", event.getUserId());
+
+        try {
+            notificationService.sendTaskGenerationFailedNotification(event);
+            log.info("Successfully processed TaskGenerationFailedEvent for user: {}",
+                    event.getUserId());
+        } catch (Exception e) {
+            log.error("Error processing TaskGenerationFailedEvent for user: {}",
                     event.getUserId(), e);
         }
     }
