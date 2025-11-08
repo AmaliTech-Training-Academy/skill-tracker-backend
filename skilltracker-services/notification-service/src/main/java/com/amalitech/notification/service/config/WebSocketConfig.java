@@ -45,8 +45,11 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         registry.addEndpoint("/ws")
-                .setAllowedOrigins("https://dev.dy006p1vkpl2e.amplifyapp.com", "http://localhost:3000")
-                .withSockJS();
+                .setAllowedOrigins(
+                        "https://dev.dy006p1vkpl2e.amplifyapp.com",
+                        "http://localhost:3000",
+                        "http://localhost:8080"
+                );
     }
 
     /**

@@ -2,6 +2,7 @@ package com.amalitech.notification.service.service;
 
 import com.amalitech.common.event.events.SubmissionEvaluatedEvent;
 import com.amalitech.common.event.events.SubmissionExecutedEvent;
+import com.amalitech.common.event.events.TaskGenerationFailedEvent;
 import com.amalitech.common.event.events.TaskGenerationSucceededEvent;
 import com.amalitech.notification.service.dto.ExecutionResultMessage;
 import com.amalitech.notification.service.dto.FeedbackMessage;
@@ -113,7 +114,7 @@ public class NotificationService {
      * This informs the frontend that new tasks are now available.
      * @param event The event containing task generation completion details.
      */
-    public void sendTaskGenerationNotification(TaskGenerationSucceededEvent event) {
+    public void sendTaskGenerationSuccessNotification(TaskGenerationSucceededEvent event) {
         log.info("Sending task generation completion notification to user: {}", event.getUserId());
 
         TaskGenerationMessage message = TaskGenerationMessage.builder()
@@ -130,5 +131,23 @@ public class NotificationService {
         );
 
         log.info("Task generation notification sent successfully to user: {}", event.getUserId());
+    }
+
+    public void sendTaskGenerationFailedNotification(TaskGenerationFailedEvent event) {
+        log.info("Sending task generation failure notification to user: {}", event.getUserId());
+
+        TaskGenerationMessage message = TaskGenerationMessage.builder()
+                .userId(event.getUserId().toString())
+                .status("FAILED")
+                .message("Task generation failed. Please try again later.")
+                .completedAt(java.time.LocalDateTime.now())
+                .build();
+        messagingTemplate.convertAndSendToUser(
+                event.getUserId().toString(),
+                "/queue/tasks",
+                message
+        );
+
+        log.info("Task generation failure notification sent successfully to user: {}", event.getUserId());
     }
 }

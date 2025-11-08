@@ -31,12 +31,12 @@ public class RabbitMQConfig {
     public static final String ONBOARDING_COMPLETED_QUEUE = "user.onboarding.task_service.q";
     public static final String ONBOARDING_COMPLETED_ROUTING_KEY = "user.onboarding.completed";
 
-    // --- Task Generation (Outgoing) ---
+    // --- Task Generation (Incoming Requests & Outgoing Replies) ---
     public static final String TASK_GENERATION_EXCHANGE = "task.generation.exchange";
 
+    // INCOMING Queues (for this service to listen to)
     public static final String BATCH_GENERATION_QUEUE = "task.generation.batch.q";
     public static final String BATCH_GENERATION_ROUTING_KEY = "task.gen.batch";
-
     public static final String ADMIN_GENERATION_QUEUE = "task.generation.admin.q";
     public static final String ADMIN_GENERATION_ROUTING_KEY = "task.gen.admin";
 

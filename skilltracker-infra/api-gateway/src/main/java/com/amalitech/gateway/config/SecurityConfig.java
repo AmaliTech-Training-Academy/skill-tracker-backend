@@ -68,7 +68,8 @@ public class SecurityConfig {
         config.setAllowedOrigins(List.of(
                 "https://dev.dy006p1vkpl2e.amplifyapp.com",
                 "http://localhost:3000",
-                "http://localhost:8080"
+                "http://localhost:8080",
+                "null"
         ));
 
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
