@@ -42,9 +42,10 @@ public class AuthController {
     @PostMapping("/verify-email-otp")
     public ResponseEntity<ApiResponse<UserResponseDTO>> verifyCode(
             @RequestParam("code") String code,
-            @RequestParam("email") String email) {
+            @RequestParam("email") String email,
+            HttpServletResponse response) {
 
-        UserResponseDTO user = authService.verifyCode(code, email).orElseThrow(() ->
+        UserResponseDTO user = authService.verifyCode(code, email, response).orElseThrow(() ->
                 new RuntimeException("Invalid verification code"));
 
         return ResponseEntity.ok(ApiResponse.success("Verification is Successful", user, null));

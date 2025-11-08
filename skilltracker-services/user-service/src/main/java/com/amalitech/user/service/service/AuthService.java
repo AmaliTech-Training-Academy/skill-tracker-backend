@@ -93,6 +93,6 @@ public interface AuthService {
     void logout(HttpServletRequest request, HttpServletResponse response);
 
     UserResponseDTO createUser(@Valid UserRequestDTO userdto);
-    Optional<UserResponseDTO> verifyCode(String code, String email);
+    Optional<UserResponseDTO> verifyCode(String code, String email, HttpServletResponse response);
     void sendVerificationCode(String toEmail);
 }
