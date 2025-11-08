@@ -37,9 +37,10 @@ public class UserSkillProgress {
 
      @param xpEarned XP earned from the completed task.
      */
-    public void updateProgress(int xpEarned) {
+    public void updateProgress(int xpEarned, Double proficiency) {
         this.tasksCompleted++;
-        this.totalXpEarned += xpEarned; // Add XP first
+        this.totalXpEarned += xpEarned;
+        this.proficiency =proficiency;
         this.averageXpEarned = (double) this.totalXpEarned / this.tasksCompleted; // Correct average
         this.lastPracticedAt = Instant.now();
     }
