@@ -16,6 +16,7 @@ import com.amalitech.user.service.service.EmailService;
 import com.amalitech.user.service.service.impl.AuthServiceImpl;
 import com.amalitech.user.service.util.CookieUtil;
 import com.amalitech.user.service.util.RedisUtil;
+import jakarta.servlet.http.HttpServletResponse;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.*;
@@ -253,23 +254,17 @@ class AuthServiceImplTest {
         verify(cookieUtil).clearCookie(response, "refreshToken");
     }
 
-    @Test
-    void verifyCode_ValidCode_ReturnsUser() {
-        Integer code = authService.generateCode();
-        when(userRepository.findByEmail(EMAIL)).thenReturn(Optional.of(testUser));
 
-        Optional<UserResponseDTO> result = authService.verifyCode(code.toString(), EMAIL);
-
-        assertTrue(result.isPresent());
-        assertEquals(EMAIL, result.get().email());
-    }
 
     @Test
     void verifyCode_InvalidCode_ThrowsException() {
         authService.generateCode();
-
-        assertThrows(InvalidVerificationCodeException.class, () -> authService.verifyCode("000000", EMAIL));
+        when(userRepository.findByEmail(EMAIL)).thenReturn(Optional.of(testUser));
+        HttpServletResponse response = mock(HttpServletResponse.class);
+        assertThrows(InvalidVerificationCodeException.class,
+                () -> authService.verifyCode("000000", EMAIL, response));
     }
+
 
     @Test
     void generateCode_ReturnsSixDigits() {

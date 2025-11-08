@@ -294,7 +294,7 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
-    public Optional<UserResponseDTO> verifyCode(String code, String email) {
+    public Optional<UserResponseDTO> verifyCode(String code, String email, HttpServletResponse response) {
         int verificationCode = Integer.parseInt(code);
         User user = userRepository.findByEmail(email).orElseThrow(() -> new UserNotFoundException("User not found"));
 
@@ -309,6 +309,7 @@ public class AuthServiceImpl implements AuthService {
             vo.markAsValidated();
             activeVerifications.remove(verificationCode);
             userRepository.save(user);
+            generateTokens(user, response);
             return userRepository.findByEmail(email)
                     .map(UserMapper::toDto);
         } else {
