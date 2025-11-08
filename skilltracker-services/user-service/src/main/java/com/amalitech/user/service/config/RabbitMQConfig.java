@@ -25,15 +25,13 @@ public class RabbitMQConfig {
     // --- Exchange for events *published* by User Service ---
     public static final String USER_EXCHANGE = "user.exchange";
     public static final String ONBOARDING_COMPLETED_ROUTING_KEY = "user.onboarding.completed";
-
-    // --- For events *consumed* by User Service (replies from task-service) ---
-    public static final String TASK_REPLY_EXCHANGE = "task.reply.exchange";
+    public static final String TASK_GENERATION_EXCHANGE = "task.generation.exchange";
 
     public static final String TASK_SUCCESS_QUEUE = "task.generation.success.user_service.q";
-    public static final String TASK_SUCCESS_ROUTING_KEY = "task.gen.success";
+    public static final String TASK_SUCCESS_ROUTING_KEY = "task.generation.succeeded";
 
     public static final String TASK_FAILED_QUEUE = "task.generation.failed.user_service.q";
-    public static final String TASK_FAILED_ROUTING_KEY = "task.gen.failed";
+    public static final String TASK_FAILED_ROUTING_KEY = "task.generation.failed";
 
 
     @Bean
@@ -42,8 +40,8 @@ public class RabbitMQConfig {
     }
 
     @Bean
-    public TopicExchange taskReplyExchange() {
-        return new TopicExchange(TASK_REPLY_EXCHANGE);
+    public TopicExchange taskGenerationExchange() {
+        return new TopicExchange(TASK_GENERATION_EXCHANGE);
     }
 
     @Bean
@@ -60,9 +58,9 @@ public class RabbitMQConfig {
      * Binds the success queue to the reply exchange.
      */
     @Bean
-    public Binding taskSuccessBinding(TopicExchange taskReplyExchange, Queue taskSuccessQueue) {
+    public Binding taskSuccessBinding(TopicExchange taskGenerationExchange, Queue taskSuccessQueue) {
         return BindingBuilder.bind(taskSuccessQueue)
-                .to(taskReplyExchange)
+                .to(taskGenerationExchange)
                 .with(TASK_SUCCESS_ROUTING_KEY);
     }
 
@@ -70,9 +68,9 @@ public class RabbitMQConfig {
      * Binds the failed queue to the reply exchange.
      */
     @Bean
-    public Binding taskFailedBinding(TopicExchange taskReplyExchange, Queue taskFailedQueue) {
+    public Binding taskFailedBinding(TopicExchange taskGenerationExchange, Queue taskFailedQueue) {
         return BindingBuilder.bind(taskFailedQueue)
-                .to(taskReplyExchange)
+                .to(taskGenerationExchange)
                 .with(TASK_FAILED_ROUTING_KEY);
     }
 

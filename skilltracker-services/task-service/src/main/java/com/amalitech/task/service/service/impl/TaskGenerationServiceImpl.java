@@ -6,11 +6,13 @@ import com.amalitech.common.event.events.UserOnboardingCompletedEvent;
 import com.amalitech.task.service.dto.request.BatchGenerationRequest;
 import com.amalitech.task.service.dto.request.GenerateTaskRequest;
 import com.amalitech.task.service.events.TaskReplyEventProducer;
+import com.amalitech.task.service.model.UserSkillProfile;
 import com.amalitech.task.service.model.enums.TaskDifficulty;
 import com.amalitech.task.service.model.enums.TaskType;
 import com.amalitech.task.service.model.view.SkillView;
 import com.amalitech.task.service.repository.SkillViewRepository;
 import com.amalitech.task.service.repository.TaskRepository;
+import com.amalitech.task.service.repository.UserSkillProfileRepository;
 import com.amalitech.task.service.service.ContentGeneratorService;
 import com.amalitech.task.service.service.TaskGenerationService;
 import lombok.extern.slf4j.Slf4j;
@@ -37,6 +39,7 @@ public class TaskGenerationServiceImpl implements TaskGenerationService {
     private final TaskRepository taskRepository;
     private final ContentGeneratorService contentGeneratorService;
     private final TaskReplyEventProducer replyEventProducer;
+    private final UserSkillProfileRepository userSkillProfileRepository;
 
     private final int codingOnboardingQuantity;
     private final int mcqOnboardingQuantity;
@@ -51,6 +54,7 @@ public class TaskGenerationServiceImpl implements TaskGenerationService {
             TaskRepository taskRepository,
             ContentGeneratorService contentGeneratorService,
             TaskReplyEventProducer replyEventProducer,
+            UserSkillProfileRepository userSkillProfileRepository,
             @Value("${app.task.onboarding-quantity.coding:5}") int codingOnboardingQuantity,
             @Value("${app.task.onboarding-quantity.multiple-choice:10}") int mcqOnboardingQuantity,
             @Value("${app.task.onboarding-quantity.essay:5}") int essayOnboardingQuantity
@@ -60,6 +64,7 @@ public class TaskGenerationServiceImpl implements TaskGenerationService {
         this.taskRepository = taskRepository;
         this.contentGeneratorService = contentGeneratorService;
         this.replyEventProducer = replyEventProducer;
+        this.userSkillProfileRepository = userSkillProfileRepository;
         this.codingOnboardingQuantity = codingOnboardingQuantity;
         this.mcqOnboardingQuantity = mcqOnboardingQuantity;
         this.essayOnboardingQuantity = essayOnboardingQuantity;
@@ -190,6 +195,8 @@ public class TaskGenerationServiceImpl implements TaskGenerationService {
                         TaskType taskType = TaskType.valueOf(taskTypeStr.toUpperCase());
                         int quantity = getTaskQuantity(taskType);
 
+                        saveUserSkillProfile(userId, skillData);
+
                         log.info("Generating {} {} tasks for skill: {}",
                                 quantity, taskType, skillData.getSkillName());
 
@@ -255,6 +262,26 @@ public class TaskGenerationServiceImpl implements TaskGenerationService {
             case MULTIPLE_CHOICE:
                 log.warn("MCQ generation not yet implemented for skill: {}", skill.getName());
                 break;
+        }
+    }
+
+    /**
+     * Helper method to save the replicated user skill data.
+     */
+    private void saveUserSkillProfile(UUID userId, UserOnboardingCompletedEvent.SkillSelectionData skillData) {
+        try {
+            UserSkillProfile.UserSkillId id = new UserSkillProfile.UserSkillId(userId, skillData.getSkillId());
+
+            UserSkillProfile profile = UserSkillProfile.builder()
+                    .id(id)
+                    .skillName(skillData.getSkillName())
+                    .difficulty(TaskDifficulty.valueOf(skillData.getDifficultyLevel().toUpperCase()))
+                    .build();
+
+            userSkillProfileRepository.save(profile);
+            log.info("Saved local user skill profile for user {} and skill {}", userId, skillData.getSkillName());
+        } catch (Exception e) {
+            log.error("Failed to save local user skill profile for user {}: {}", userId, e.getMessage());
         }
     }
 }

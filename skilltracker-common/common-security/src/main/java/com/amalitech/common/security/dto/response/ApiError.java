@@ -29,7 +29,7 @@ public record ApiError(
                 instance,
                 errors,
                 Map.of(
-                        "traceId", traceId != null ? traceId : "....",
+                        "traceId", traceId != null ? traceId : "...",
                         "timestamp", Instant.now().toString()
                 )
         );

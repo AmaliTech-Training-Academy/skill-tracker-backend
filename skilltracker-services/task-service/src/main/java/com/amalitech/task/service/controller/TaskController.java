@@ -2,17 +2,16 @@ package com.amalitech.task.service.controller;
 
 import com.amalitech.common.security.dto.response.ApiResponse;
 import com.amalitech.task.service.dto.TaskDTO;
+import com.amalitech.task.service.model.enums.TaskType;
 import com.amalitech.task.service.service.TaskService;
-
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -52,5 +51,21 @@ public class TaskController {
         );
 
         return ResponseEntity.ok(response);
+    }
+
+    @GetMapping
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ApiResponse<List<TaskDTO>>> getPersonalizedTasks(
+            @RequestParam String skillName,
+            @RequestParam TaskType taskType,
+            @RequestParam(defaultValue = "5") int limit,
+            Authentication authentication
+    ) {
+        UUID userId = UUID.fromString(authentication.getName());
+        List<TaskDTO> tasks = taskService.getPersonalizedTasks(userId, skillName, taskType, limit);
+
+        return ResponseEntity.ok(
+                ApiResponse.success("Tasks retrieved successfully", tasks, null)
+        );
     }
 }
