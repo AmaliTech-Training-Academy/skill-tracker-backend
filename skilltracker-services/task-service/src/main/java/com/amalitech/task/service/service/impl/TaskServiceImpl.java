@@ -10,11 +10,13 @@ import com.amalitech.task.service.events.RabbitMQEventProducer;
 import com.amalitech.task.service.exception.ResourceNotFoundException;
 import com.amalitech.task.service.mapper.TaskMapper;
 import com.amalitech.task.service.model.Task;
+import com.amalitech.task.service.model.UserSkillProfile;
 import com.amalitech.task.service.model.enums.TaskDifficulty;
 import com.amalitech.task.service.model.enums.TaskType;
 import com.amalitech.task.service.model.view.SkillView;
 import com.amalitech.task.service.repository.TaskRepository;
 import com.amalitech.task.service.repository.TaskSubmissionRepository;
+import com.amalitech.task.service.repository.UserSkillProfileRepository;
 import com.amalitech.task.service.service.SkillService;
 import com.amalitech.task.service.service.TaskService;
 import lombok.extern.slf4j.Slf4j;
@@ -45,6 +47,7 @@ import java.util.stream.Collectors;
 public class TaskServiceImpl implements TaskService {
 
     private final TaskRepository taskRepository;
+    private final UserSkillProfileRepository userSkillProfileRepository;
     private final SkillService skillService;
     private final TaskSubmissionRepository submissionRepository;
     private final RabbitMQEventProducer taskEventProducer;
@@ -62,12 +65,14 @@ public class TaskServiceImpl implements TaskService {
     private static final Duration FETCH_LOCK_TIMEOUT = Duration.ofMinutes(1);
 
     public TaskServiceImpl(TaskRepository taskRepository,
+                           UserSkillProfileRepository userSkillProfileRepository,
                            SkillService skillService,
                            TaskSubmissionRepository submissionRepository,
                            RabbitMQEventProducer taskEventProducer,
                            TaskMapper taskMapper, StringRedisTemplate redisTemplate
     ) {
         this.taskRepository = taskRepository;
+        this.userSkillProfileRepository = userSkillProfileRepository;
         this.skillService = skillService;
         this.submissionRepository = submissionRepository;
         this.taskEventProducer = taskEventProducer;
@@ -79,15 +84,24 @@ public class TaskServiceImpl implements TaskService {
      * {@inheritDoc}
      */
     @Override
-    public List<TaskDTO> getPersonalizedTasks(UUID userId, String skillName, int limit) {
+    public List<TaskDTO> getPersonalizedTasks(UUID userId, String skillName, TaskType taskType, int limit) {
         log.info("Fetching personalized tasks for user: {}, skill: {}", userId, skillName);
 
-        SkillView skill = skillService.getSkillByName(skillName);
-        TaskDifficulty difficulty = determineUserDifficulty(userId, skill.getId());
-        log.debug("Determined difficulty: {} for user: {}", difficulty, userId);
+        UserSkillProfile profile = userSkillProfileRepository
+                .findByIdUserIdAndSkillName(userId, skillName)
+                .orElseThrow(() -> new ResourceNotFoundException("User skill profile for " + skillName + " not found."));
+
+        UUID skillId = profile.getId().getSkillId();
+        TaskDifficulty difficulty = profile.getDifficulty();
+        log.debug("Found local profile: skillId={}, difficulty={} for user: {}", skillId, difficulty, userId);
 
         List<Task> tasks = getOrGenerateTasksForSkillAndDifficulty(
-                userId, skill, difficulty, TaskType.CODING, limit
+                userId,
+                profile.getSkillName(),
+                profile.getId().getUserId(),
+                difficulty,
+                taskType,
+                limit
         );
 
         return tasks.stream()
@@ -100,13 +114,19 @@ public class TaskServiceImpl implements TaskService {
      */
     @Override
     @Cacheable(cacheNames = "tasks-public-cache", key = "#skillName + '_' + #difficulty + '_' + #limit")
-    public List<TaskDTO> getTasksForSkillAndDifficulty(String skillName, TaskDifficulty difficulty, int limit) {
+    public List<TaskDTO> getTasksForSkillAndDifficulty(String skillName, TaskDifficulty difficulty, TaskType taskType, int limit) {
         log.info("Getting tasks for skill: {}, difficulty: {}, limit: {}", skillName, difficulty, limit);
 
         SkillView skill = skillService.getSkillByName(skillName);
+        UUID skillId = skill.getId();
 
         List<Task> tasks = getOrGenerateTasksForSkillAndDifficulty(
-                null, skill, difficulty, TaskType.CODING, limit
+                null,
+                skillName,
+                skillId,
+                difficulty,
+                taskType,
+                limit
         );
 
         return tasks.stream()
@@ -177,20 +197,24 @@ public class TaskServiceImpl implements TaskService {
     }
 
     /**
-     * Retrieves cached tasks or triggers generation if insufficient tasks are available.
-     * This method implements a cache-first strategy, checking for existing tasks before
-     * requesting new task generation asynchronously.
+     * --- THIS IS THE ADJUSTED METHOD ---
      *
-     * @param skill the skill view containing skill information
-     * @param difficulty the difficulty level of tasks to retrieve
-     * @param limit the maximum number of tasks to retrieve
-     * @return a list of tasks from the cache (may be less than the requested limit)
+     * Retrieves tasks or triggers generation if needed.
+     * It now uses simple parameters and has a "guard clause" to prevent
+     * generation for anonymous (null) users.
+     *
+     * @param userId The ID of the user (can be null for anonymous requests)
+     * @param skillName The name of the skill (e.g., "PYTHON")
+     * @param difficulty The difficulty level (e.g., "BEGINNER")
+     * @param taskType The type of task (e.g., "CODING")
+     * @param limit The number of tasks to fetch
+     * @return A list of tasks found in the database.
      */
     private List<Task> getOrGenerateTasksForSkillAndDifficulty(
-            UUID userId, SkillView skill, TaskDifficulty difficulty, TaskType taskType, int limit) {
+            UUID userId, String skillName, UUID skillId, TaskDifficulty difficulty, TaskType taskType, int limit) {
 
         List<Task> cachedTasks = taskRepository.findBySkillIdAndDifficultyAndType(
-                skill.getId(),
+                skillId,
                 difficulty,
                 taskType,
                 true,
@@ -199,34 +223,33 @@ public class TaskServiceImpl implements TaskService {
 
         if (cachedTasks.size() >= limit) {
             log.info("Cache hit: Using {} cached tasks for {}/{}",
-                    cachedTasks.size(), skill.getName(), difficulty);
+                    cachedTasks.size(), skillName, difficulty);
             return cachedTasks;
         }
 
         if (userId == null) {
-            log.warn("Cache miss for anonymous request {}/{}. Not triggering generation.",
-                    skill.getName(), difficulty);
+            log.warn("Cache miss for anonymous request {}/{}. Not triggering generation. Returning {} tasks.",
+                    skillName, difficulty, cachedTasks.size());
             return cachedTasks;
         }
 
-        String lockKey = FETCH_LOCK_PREFIX + skill.getName() + ":" + difficulty;
-
+        String lockKey = FETCH_LOCK_PREFIX + skillName + ":" + difficulty + ":" + taskType;
         Boolean lockAcquired = redisTemplate.opsForValue()
                 .setIfAbsent(lockKey, "generating", FETCH_LOCK_TIMEOUT);
 
         if (Boolean.FALSE.equals(lockAcquired)) {
-            log.warn("Cache miss for {}/{}. Generation is already in progress. Returning {} tasks.",
-                    skill.getName(), difficulty, cachedTasks.size());
+            log.warn("Cache miss for user {} on {}/{}. Generation is already in progress. Returning {} tasks.",
+                    userId, skillName, difficulty, cachedTasks.size());
             return cachedTasks;
         }
 
         try {
-            log.info("Cache miss for {}/{}. Acquired lock. Triggering async generation.",
-                    skill.getName(), difficulty);
+            log.info("Cache miss for user {} on {}/{}. Acquired lock. Triggering async generation.",
+                    userId, skillName, difficulty);
 
             BatchGenerationRequest request = new BatchGenerationRequest(
                     userId,
-                    skill.getName(),
+                    skillName,
                     difficulty,
                     minTasksPerDifficulty,
                     taskType
@@ -235,11 +258,10 @@ public class TaskServiceImpl implements TaskService {
             taskEventProducer.requestBatchTaskGeneration(request);
 
         } catch (Exception e) {
-            log.error("Failed to publish task generation request for {}: {}. Lock will remain for {}s.",
-                    lockKey, e.getMessage(), FETCH_LOCK_TIMEOUT.toSeconds(), e);
+            log.error("Failed to publish task generation request for {}: {}. Releasing lock.",
+                    lockKey, e.getMessage(), e);
             redisTemplate.delete(lockKey);
         }
-
         return cachedTasks;
     }
 

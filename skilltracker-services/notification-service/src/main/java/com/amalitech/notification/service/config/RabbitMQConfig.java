@@ -93,22 +93,22 @@ public class RabbitMQConfig {
     }
 
     @Bean
-    public Binding taskGenerationBinding(Queue taskGenerationQueue, TopicExchange submissionExchange) {
+    public Binding taskGenerationBinding(Queue taskGenerationQueue, TopicExchange taskGenerationExchange) {
         return BindingBuilder.bind(taskGenerationQueue)
-                .to(submissionExchange)
+                .to(taskGenerationExchange)
                 .with(TASK_GENERATION_ROUTING_KEY);
     }
 
     /**
      * Binds the task generation failed queue to the submission exchange with the failure routing key.
      * @param taskGenerationFailedQueue The queue for task generation failure events.
-     * @param submissionExchange The submission topic exchange.
+     * @param taskGenerationExchange The submission topic exchange.
      * @return The Binding bean.
      */
     @Bean
-    public Binding taskGenerationFailedBinding(Queue taskGenerationFailedQueue, TopicExchange submissionExchange) {
+    public Binding taskGenerationFailedBinding(Queue taskGenerationFailedQueue, TopicExchange taskGenerationExchange) {
         return BindingBuilder.bind(taskGenerationFailedQueue)
-                .to(submissionExchange)
+                .to(taskGenerationExchange)
                 .with(TASK_GENERATION_FAILED_ROUTING_KEY);
     }
 
