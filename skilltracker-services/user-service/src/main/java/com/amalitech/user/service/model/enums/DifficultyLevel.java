@@ -16,5 +16,4 @@ public enum DifficultyLevel {
     DifficultyLevel(int level) {
         this.level = level;
     }
-
 }

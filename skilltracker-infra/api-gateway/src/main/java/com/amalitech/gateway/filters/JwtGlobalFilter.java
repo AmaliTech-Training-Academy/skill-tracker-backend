@@ -10,8 +10,11 @@ import org.springframework.http.HttpCookie;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.server.reactive.ServerHttpRequest;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.ReactiveSecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.ReactiveJwtDecoder;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Component;
 import org.springframework.util.AntPathMatcher;
 import org.springframework.util.StringUtils;
@@ -19,6 +22,7 @@ import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * A global filter for JWT token validation and request enrichment in Spring Cloud Gateway.
@@ -141,12 +145,43 @@ public class JwtGlobalFilter implements GlobalFilter, Ordered {
         return this.jwtDecoder.decode(token)
                 .flatMap(jwt -> {
                     ServerHttpRequest enrichedRequest = enrichRequest(request, jwt);
-                    return chain.filter(exchange.mutate().request(enrichedRequest).build());
+                    JwtAuthenticationToken authentication = createAuthentication(jwt);
+
+                    return chain.filter(exchange.mutate().request(enrichedRequest).build())
+                            .contextWrite(ReactiveSecurityContextHolder.withAuthentication(authentication));
                 })
                 .onErrorResume(e -> {
                     log.error("Invalid token for path {}: {}", path, e.getMessage());
                     return unauthorized(exchange);
                 });
+    }
+
+    /**
+     * Creates a JwtAuthenticationToken from the validated JWT.
+     * This sets the Spring Security context so that downstream filters recognize the user as authenticated.
+     *
+     * Note: Authorities are created WITHOUT the "ROLE_" prefix to match the format expected by
+     * downstream microservices that use HeaderAuthenticationFilter.
+     *
+     * @param jwt the validated JWT token
+     * @return a {@link JwtAuthenticationToken} containing user authorities
+     */
+    private JwtAuthenticationToken createAuthentication(Jwt jwt) {
+        List<String> rolesList = jwt.getClaimAsStringList("roles");
+
+        List<SimpleGrantedAuthority> authorities;
+        if (rolesList == null || rolesList.isEmpty()) {
+            String role = jwt.getClaimAsString("roles");
+            authorities = (role != null)
+                    ? List.of(new SimpleGrantedAuthority(role))
+                    : List.of();
+        } else {
+            authorities = rolesList.stream()
+                    .map(SimpleGrantedAuthority::new)
+                    .collect(Collectors.toList());
+        }
+
+        return new JwtAuthenticationToken(jwt, authorities);
     }
 
     /**
@@ -159,13 +194,11 @@ public class JwtGlobalFilter implements GlobalFilter, Ordered {
      * @return the JWT token string, or {@code null} if not found
      */
     private String extractToken(ServerHttpRequest request) {
-        // Try Authorization header first (standard approach)
         String authHeader = request.getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
         if (StringUtils.hasText(authHeader) && authHeader.startsWith("Bearer ")) {
             return authHeader.substring(7);
         }
 
-        // Try query parameter (useful for WebSocket connections)
         String queryToken = request.getQueryParams().getFirst("token");
         if (StringUtils.hasText(queryToken)) {
             log.debug("Token extracted from query parameter");
