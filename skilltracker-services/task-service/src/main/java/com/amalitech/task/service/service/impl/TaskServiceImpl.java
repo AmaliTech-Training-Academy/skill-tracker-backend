@@ -361,25 +361,6 @@ public class TaskServiceImpl implements TaskService {
         return new McqResponseDTO(questions);
     }
 
-//    @Override
-//    public UserProfileRequestDTO generateLearningPath(UserProfileRequestDTO userProfileRequestDTO) {
-//        Client client = new Client();
-//        ClassPathResource prompt = new ClassPathResource("prompts/mcq/learningPath_prompt.json");
-
-//        String updateUserId = updateNumberOfQuestions(
-//                Files.readString(prompt.getFile().toPath(), StandardCharsets.UTF_8),
-//                no_of_questions);
-//
-//        GenerateContentResponse response =
-//                client.models.generateContent(
-//                        model,
-//                        jsonResponse,
-//                        null);
-
-
-//        return new UserProfileRequestDTO();
-//    }
-
     public static String updateFields (String jsonString, Map < String, String > updates){
         Gson gson = new Gson();
         JsonObject jsonObject = gson.fromJson(jsonString, JsonObject.class);
@@ -390,11 +371,9 @@ public class TaskServiceImpl implements TaskService {
     public static List<MCQquestionDTO> parseJsonToMcqList (String jsonArrayString){
         Gson gson = new GsonBuilder().setStrictness(Strictness.LENIENT).create();
 
-        // Define the type for List<MCQquestionDTO>
         Type listType = new TypeToken<List<MCQquestionDTO>>() {
         }.getType();
 
-        // Parse JSON array directly to List<MCQquestionDTO>
         List<MCQquestionDTO> mcqQuestions = gson.fromJson(jsonArrayString, listType);
 
         return mcqQuestions;
