@@ -63,7 +63,7 @@ public class TaskController {
     /**
      * This accepts an McqResponseDTO and returns a McqResponseDTO*/
     @PostMapping("/generate/mcq")
-//    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<McqResponseDTO>> generateMCQ(
             @RequestBody McqRequestDTO taskDTO
     ) throws Exception {
