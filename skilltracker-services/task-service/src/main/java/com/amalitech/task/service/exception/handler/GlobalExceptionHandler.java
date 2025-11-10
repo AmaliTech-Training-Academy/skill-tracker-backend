@@ -2,6 +2,8 @@ package com.amalitech.task.service.exception.handler;
 
 import com.amalitech.common.security.dto.response.ApiError;
 import com.amalitech.task.service.exception.ResourceNotFoundException;
+import com.amalitech.task.service.exception.SkillsNotFoundException;
+import jakarta.persistence.EntityNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
@@ -69,6 +71,38 @@ public class GlobalExceptionHandler {
         );
 
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+    }
+
+    @ExceptionHandler(SkillsNotFoundException.class)
+    public ResponseEntity<ApiError> handleSkillsNotFoundException(
+            SkillsNotFoundException ex, HttpServletRequest request) {
+
+        ApiError error = ApiError.of(
+                HttpStatus.NOT_FOUND.value(),
+                "Skills not found",
+                ex.getMessage(),
+                request.getRequestURI(),
+                null,
+                getTraceId()
+        );
+
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+    }
+
+    @ExceptionHandler(EntityNotFoundException.class)
+    public ResponseEntity<ApiError> handleEntityNotFoundException(
+            EntityNotFoundException ex, HttpServletRequest request) {
+
+        ApiError error = ApiError.of(
+                HttpStatus.NOT_FOUND.value(),
+                "Entity not found",
+                ex.getMessage(),
+                request.getRequestURI(),
+                null,
+                getTraceId()
+        );
+
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
     }
 
     /**
