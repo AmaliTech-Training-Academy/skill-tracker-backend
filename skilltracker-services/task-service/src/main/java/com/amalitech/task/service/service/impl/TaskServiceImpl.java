@@ -340,7 +340,9 @@ public class TaskServiceImpl implements TaskService {
             throw new IOException("No response from Ai API....");
         }
 
-        LearningPathDTO responseJson = gson.fromJson(response.text(), LearningPathDTO.class);
+        String cleanedResponse = cleanModelResponse(response.text());
+
+        LearningPathDTO responseJson = gson.fromJson(cleanedResponse, LearningPathDTO.class);
 
         return new LearningPathResponseDTO(responseJson);
     }
@@ -349,9 +351,19 @@ public class TaskServiceImpl implements TaskService {
         Gson gson = new GsonBuilder().setPrettyPrinting().create();
         JsonObject jsonObject = JsonParser.parseString(jsonString).getAsJsonObject();
 
-        // Convert block to JsonElement and replace
         jsonObject.add(blockKey, gson.toJsonTree(blockValue));
 
         return gson.toJson(jsonObject);
+    }
+
+    public static String cleanModelResponse(String modelResponse) {
+        if (modelResponse == null || modelResponse.isEmpty()) {
+            return modelResponse;
+        }
+        String cleanedJson = modelResponse.replaceFirst("```(json|text|)", "");
+        if (cleanedJson.endsWith("```")) {
+            cleanedJson = cleanedJson.substring(0, cleanedJson.length() - 3);
+        }
+        return cleanedJson.trim();
     }
 }
