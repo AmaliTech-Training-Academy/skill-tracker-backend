@@ -998,7 +998,7 @@ class ContentGeneratorServiceImplTest {
             }
                  ]
                  }
-                 """;
+                \s""";
 
          Prompt mockPrompt = mock(Prompt.class);
          when(codingPromptTemplate.create(anyMap())).thenReturn(mockPrompt);
@@ -1045,7 +1045,7 @@ class ContentGeneratorServiceImplTest {
         }
               ]
     }
-                 """;
+                \s""";
 
     Prompt mockPrompt = mock(Prompt.class);
     when(essayPromptTemplate.create(anyMap())).thenReturn(mockPrompt);
@@ -1068,7 +1068,6 @@ class ContentGeneratorServiceImplTest {
      }
 
     // ==================== HELPER METHODS ====================
-
     private void mockChatResponse(String responseText) {
         ChatResponse response = mock(ChatResponse.class);
         Generation generation = mock(Generation.class);

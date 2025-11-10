@@ -5,16 +5,17 @@ import com.amalitech.task.service.dto.TaskAvailabilityDTO;
 import com.amalitech.task.service.dto.TaskDTO;
 import com.amalitech.task.service.dto.request.BatchGenerationRequest;
 import com.amalitech.task.service.dto.request.GenerateTaskRequest;
+import com.amalitech.task.service.dto.request.McqRequestDTO;
 import com.amalitech.task.service.dto.response.AdminTaskDetailResponse;
 import com.amalitech.task.service.dto.response.AdminTaskSummaryResponse;
-import com.amalitech.task.service.dto.request.McqRequestDTO;
 import com.amalitech.task.service.dto.response.McqResponseDTO;
+import com.amalitech.task.service.dto.response.UserTasksResponse;
 import com.amalitech.task.service.events.RabbitMQEventProducer;
 import com.amalitech.task.service.exception.ResourceNotFoundException;
 import com.amalitech.task.service.mapper.TaskMapper;
 import com.amalitech.task.service.model.Task;
-import com.amalitech.task.service.model.content.impl.McqTaskContent;
 import com.amalitech.task.service.model.UserSkillProfile;
+import com.amalitech.task.service.model.content.impl.McqTaskContent;
 import com.amalitech.task.service.model.enums.TaskDifficulty;
 import com.amalitech.task.service.model.enums.TaskType;
 import com.amalitech.task.service.model.view.SkillView;
@@ -23,11 +24,8 @@ import com.amalitech.task.service.repository.TaskSubmissionRepository;
 import com.amalitech.task.service.repository.UserSkillProfileRepository;
 import com.amalitech.task.service.service.SkillService;
 import com.amalitech.task.service.service.TaskService;
-
 import com.google.genai.Client;
 import com.google.genai.types.GenerateContentResponse;
-
-
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
@@ -36,21 +34,22 @@ import com.google.gson.reflect.TypeToken;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.core.io.ClassPathResource;
 
-import java.time.Duration;
 import java.io.IOException;
 import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -153,6 +152,61 @@ public class TaskServiceImpl implements TaskService {
         return tasks.stream()
                 .map(taskMapper::toDTO)
                 .collect(Collectors.toList());
+    }
+
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    @Cacheable(cacheNames = "user-tasks-cache",
+            key = "#userId + '_' + #pendingPage + '_' + #pendingSize + '_' + #completedPage + '_' + #completedSize")
+    public UserTasksResponse getUserTasksGroupedByStatus(UUID userId, int pendingPage, int pendingSize,
+                                                         int completedPage, int completedSize) {
+        log.info("Fetching grouped tasks for user: {}", userId);
+
+        Set<UUID> userSkillIds = userSkillProfileRepository.findSkillIdsByUserId(userId);
+
+        if (userSkillIds.isEmpty()) {
+            log.warn("User {} has no skills in profile, returning empty pages", userId);
+            return new UserTasksResponse(
+                    Page.empty(PageRequest.of(pendingPage, pendingSize)),
+                    Page.empty(PageRequest.of(completedPage, completedSize))
+            );
+        }
+
+        Set<UUID> completedTaskIds = submissionRepository.findCompletedTaskIdsByUser(userId);
+        log.debug("User {} has {} completed tasks", userId, completedTaskIds.size());
+
+        Pageable pendingPageable = PageRequest.of(pendingPage, pendingSize);
+        Page<Task> pendingTasks;
+
+        if (completedTaskIds.isEmpty()) {
+            pendingTasks = taskRepository.findAllTasksBySkills(userSkillIds, pendingPageable);
+        } else {
+            pendingTasks = taskRepository.findPendingTasksBySkills(
+                    userSkillIds,
+                    completedTaskIds,
+                    pendingPageable
+            );
+        }
+
+        Pageable completedPageable = PageRequest.of(completedPage, completedSize);
+        Page<Task> completedTasks;
+
+        if (completedTaskIds.isEmpty()) {
+            completedTasks = Page.empty(completedPageable);
+        } else {
+            completedTasks = taskRepository.findCompletedTasksByIds(completedTaskIds, completedPageable);
+        }
+
+        Page<TaskDTO> pendingDTOs = pendingTasks.map(taskMapper::toDTO);
+        Page<TaskDTO> completedDTOs = completedTasks.map(taskMapper::toDTO);
+
+        log.info("Returning {} pending and {} completed tasks for user {}",
+                pendingDTOs.getTotalElements(), completedDTOs.getTotalElements(), userId);
+
+        return new UserTasksResponse(pendingDTOs, completedDTOs);
     }
 
     /**

@@ -2,11 +2,10 @@ package com.amalitech.task.service.controller;
 
 import com.amalitech.common.security.dto.response.ApiResponse;
 import com.amalitech.task.service.dto.TaskDTO;
-import com.amalitech.task.service.model.enums.TaskType;
 import com.amalitech.task.service.dto.request.McqRequestDTO;
-import com.amalitech.task.service.dto.request.UserProfileRequestDTO;
-import com.amalitech.task.service.dto.response.LearningPathResponseDTO;
 import com.amalitech.task.service.dto.response.McqResponseDTO;
+import com.amalitech.task.service.dto.response.UserTasksResponse;
+import com.amalitech.task.service.model.enums.TaskType;
 import com.amalitech.task.service.service.TaskService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -69,6 +68,7 @@ public class TaskController {
         return ResponseEntity.ok(ApiResponse.success("MCQ Task Generated Successfully", mcqTask, ""));
     }
 
+
     @GetMapping
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<List<TaskDTO>>> getPersonalizedTasks(
@@ -82,6 +82,38 @@ public class TaskController {
 
         return ResponseEntity.ok(
                 ApiResponse.success("Tasks retrieved successfully", tasks, null)
+        );
+    }
+
+    /**
+     * Retrieves tasks grouped by status (pending/completed) for the authenticated user.
+     * Tasks are filtered based on the user's skill profile and only published tasks are returned.
+     * Both pending and completed task lists support independent pagination.
+     *
+     * @param pendingPage Page number for pending tasks (default: 0)
+     * @param pendingSize Page size for pending tasks (default: 10)
+     * @param completedPage Page number for completed tasks (default: 0)
+     * @param completedSize Page size for completed tasks (default: 10)
+     * @param authentication Spring Security authentication object containing userId
+     * @return ResponseEntity containing UserTasksResponse with paginated pending and completed tasks
+     */
+    @GetMapping("/my-tasks")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ApiResponse<UserTasksResponse>> getUserTasks(
+            @RequestParam(defaultValue = "0") int pendingPage,
+            @RequestParam(defaultValue = "10") int pendingSize,
+            @RequestParam(defaultValue = "0") int completedPage,
+            @RequestParam(defaultValue = "10") int completedSize,
+            Authentication authentication
+    ) {
+
+        UUID userId = UUID.fromString(authentication.getName());
+        UserTasksResponse response = taskService.getUserTasksGroupedByStatus(
+                userId, pendingPage, pendingSize, completedPage, completedSize
+        );
+
+        return ResponseEntity.ok(
+                ApiResponse.success("Tasks retrieved successfully", response, null)
         );
     }
 }
