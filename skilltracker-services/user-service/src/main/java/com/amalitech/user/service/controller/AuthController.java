@@ -3,19 +3,20 @@ package com.amalitech.user.service.controller;
 import com.amalitech.common.security.dto.response.ApiResponse;
 import com.amalitech.user.service.dto.UserRequestDTO;
 import com.amalitech.user.service.dto.UserResponseDTO;
-import com.amalitech.user.service.dto.request.*;
+import com.amalitech.user.service.dto.request.ChangePasswordRequest;
+import com.amalitech.user.service.dto.request.ForgotPasswordRequest;
+import com.amalitech.user.service.dto.request.LoginRequest;
+import com.amalitech.user.service.dto.request.ResetPasswordRequest;
 import com.amalitech.user.service.dto.response.AuthResponse;
 import com.amalitech.user.service.service.AuthService;
 import com.amalitech.user.service.service.impl.AuthServiceImpl;
-
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
-
-import jakarta.servlet.http.HttpServletResponse;
-import jakarta.validation.Valid;
 
 /**
  * Controller for authentication-related endpoints.
@@ -59,7 +60,7 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.success("Verification sent", null, null)) ;
     }
 
-        /** Authenticates the user and returns an access token */
+    /** Authenticates the user and returns an access token */
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<UserResponseDTO>> login(@Valid @RequestBody LoginRequest request, HttpServletResponse response) {
         UserResponseDTO userResponseDTO = authService.login(request, response);
@@ -94,7 +95,6 @@ public class AuthController {
         authService.resetPassword(request.token(), request.password());
         return ResponseEntity.ok(ApiResponse.success("Password reset successfully", null, null));
     }
-
 
     /** Logout - revoke refresh token */
     @PreAuthorize("isAuthenticated()")

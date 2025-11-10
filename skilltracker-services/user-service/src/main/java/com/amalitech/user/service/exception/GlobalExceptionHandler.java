@@ -1,7 +1,6 @@
 package com.amalitech.user.service.exception;
 
 import com.amalitech.common.security.dto.response.ApiError;
-
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.MDC;
 import org.springframework.dao.DataAccessException;
@@ -198,6 +197,22 @@ public class GlobalExceptionHandler {
                 getTraceId()
         );
         return ResponseEntity.status(HttpStatus.CONFLICT).body(apiError);
+    }
+
+    @ExceptionHandler(SkillsNotFoundException.class)
+    public ResponseEntity<ApiError> handleSkillsNotFoundException(
+            SkillsNotFoundException ex, HttpServletRequest request) {
+
+        ApiError error = ApiError.of(
+                HttpStatus.NOT_FOUND.value(),
+                "Skills not found",
+                ex.getMessage(),
+                request.getRequestURI(),
+                null,
+                getTraceId()
+        );
+
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
     }
 
     @ExceptionHandler(DataAccessException.class)
