@@ -4,10 +4,11 @@ import com.amalitech.user.service.dto.UserRequestDTO;
 import com.amalitech.user.service.dto.UserResponseDTO;
 import com.amalitech.user.service.dto.request.LoginRequest;
 import com.amalitech.user.service.dto.response.AuthResponse;
-import com.amalitech.user.service.dto.response.UserDto;
 import com.amalitech.user.service.exception.*;
 import com.amalitech.user.service.mapper.UserMapper;
-import com.amalitech.user.service.model.*;
+import com.amalitech.user.service.model.User;
+import com.amalitech.user.service.model.UserProfile;
+import com.amalitech.user.service.model.VerificationObject;
 import com.amalitech.user.service.model.enums.UserState;
 import com.amalitech.user.service.repository.UserRepository;
 import com.amalitech.user.service.security.CustomUserDetails;
@@ -18,6 +19,8 @@ import com.amalitech.user.service.util.CookieUtil;
 import com.amalitech.user.service.util.RedisUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -25,12 +28,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.security.SecureRandom;
-import java.time.Duration;
-import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -121,6 +120,7 @@ public class AuthServiceImpl implements AuthService {
         savedUser.setProfile(profile);
 
         return UserMapper.toDto(savedUser);
+
     }
 
     /**
