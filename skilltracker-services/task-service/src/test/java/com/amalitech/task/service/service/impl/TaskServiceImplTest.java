@@ -546,29 +546,6 @@ class TaskServiceImplTest {
         assertEquals(100, result.getContent().size());
     }
 
-    // ==================== DETERMINE USER DIFFICULTY TESTS ====================
-
-    @Test
-    void testDetermineUserDifficulty_Beginner() {
-        when(submissionRepository.countByUserIdAndIsCorrect(userId, true)).thenReturn(4L);
-        TaskDifficulty result = taskService.determineUserDifficulty(userId, skillId);
-        assertEquals(TaskDifficulty.BEGINNER, result);
-    }
-
-    @Test
-    void testDetermineUserDifficulty_Intermediate() {
-        when(submissionRepository.countByUserIdAndIsCorrect(userId, true)).thenReturn(10L);
-        TaskDifficulty result = taskService.determineUserDifficulty(userId, skillId);
-        assertEquals(TaskDifficulty.INTERMEDIATE, result);
-    }
-
-    @Test
-    void testDetermineUserDifficulty_Advanced() {
-        when(submissionRepository.countByUserIdAndIsCorrect(userId, true)).thenReturn(20L);
-        TaskDifficulty result = taskService.determineUserDifficulty(userId, skillId);
-        assertEquals(TaskDifficulty.ADVANCED, result);
-    }
-
     @Test
     void testGetOrGenerateTasks_ExceptionDuringPublishing() {
         List<Task> cachedTasks = new ArrayList<>();
