@@ -1,6 +1,7 @@
 package com.amalitech.analytics.service.config;
 
-import com.amalitech.common.event.events.RabbitMQConstants;
+
+import com.amalitech.analytics.service.events.RabbitMQConstants;
 import org.springframework.amqp.core.*;
 import org.springframework.amqp.rabbit.config.SimpleRabbitListenerContainerFactory;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;

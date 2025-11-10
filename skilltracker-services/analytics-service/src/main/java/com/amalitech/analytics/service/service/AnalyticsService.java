@@ -45,9 +45,6 @@ public class AnalyticsService implements AnalyticsServiceInterface {
     private final SkillSnapshotRepository skillSnapshotRepository;
     private final UserGoalRepository goalRepository;
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     @Transactional
     public void processTaskCompletion(TaskCompletedEvent event) {
@@ -62,65 +59,46 @@ public class AnalyticsService implements AnalyticsServiceInterface {
         eventPublisher.publishEvent(new AnalyticsUpdateEvent(this, event.userId()));
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     @Transactional
     public void submitTaskDirectly(TaskSubmissionRequestDTO request) {
         log.warn("DIRECT SUBMISSION API USED: Bypassing message queue for user {}", request.userId());
-        TaskCompletedEvent event = request.toEvent();
-        this.processTaskCompletion(event);
+        processTaskCompletion(request.toEvent());
     }
 
-    /**
-     * Retrieves or creates a {@link UserSkillProgress} record and updates it
-     * based on the completed task event.
-     *
-     * @param event the task completion event
-     * @return the updated {@link UserSkillProgress} entity
-     */
+
     private UserSkillProgress updateSkillProgress(TaskCompletedEvent event) {
         UserSkillProgress progress = getSkillProgress(event.skillId(), event.userId());
-
-        // --- NEW: Proficiency Calculation (from Solution B) ---
-        SkillSnapShot snapshot = skillSnapshotRepository.findById(event.skillId())
-                .orElseThrow(() -> new EntityNotFoundException("Skill snapshot not found: " + event.skillId()));
-
-        // Use defaults as fallbacks
-        long intermediate = snapshot.getLevelXpMap().getOrDefault("INTERMEDIATE", 1000L);
-        long advanced = snapshot.getLevelXpMap().getOrDefault("ADVANCED", 3000L);
-        int currentXp = progress.getTotalXpEarned();
-
-        double prof;
-        if (currentXp < intermediate) {
-            // Scale 0-33% of proficiency based on progress to Intermediate
-            prof = (double) currentXp / intermediate * 33.3;
-        } else if (currentXp < advanced) {
-            // Scale 33-66% of proficiency based on progress to Advanced
-            prof = 33.3 + ((double) (currentXp - intermediate) / (advanced - intermediate)) * 33.3;
-        } else {
-            // Scale 66-100% of proficiency.
-            // Using (advanced - intermediate) as a "capstone" XP chunk size
-            long capstoneChunk = (advanced - intermediate > 0) ? (advanced - intermediate) : 2000L;
-            prof = 66.6 + ((double) (currentXp - advanced) / capstoneChunk) * 33.4;
-        }
-
-        progress.updateProgress(event.totalXpEarned(), Math.min(prof, 100.0));
+        SkillSnapShot snapshot = fetchSkillSnapshot(event.skillId());
+        double proficiency = calculateProficiency(progress.getTotalXpEarned(), snapshot);
+        progress.updateProgress(event.totalXpEarned(), Math.min(proficiency, 100.0));
         return skillProgressRepository.save(progress);
     }
 
+    private SkillSnapShot fetchSkillSnapshot(UUID skillId) {
+        return skillSnapshotRepository.findById(skillId)
+                .orElseThrow(() -> new EntityNotFoundException("Skill snapshot not found: " + skillId));
+    }
 
-    /**
-     * Retrieves or creates a {@link UserSkillProgress} record and updates it
-     * based on userId and SkillId passed to it
-     *
-     * @param skillId the skill which you want to st a goal on
-     * @param userId the user who wants to set the goal
-     * @return the updated {@link UserSkillProgress} entity
-     */
+    private double calculateProficiency(int currentXp, SkillSnapShot snapshot) {
+        long intermediate = snapshot.getLevelXpMap().getOrDefault("INTERMEDIATE", 1000L);
+        long advanced = snapshot.getLevelXpMap().getOrDefault("ADVANCED", 3000L);
+        double proficiency;
+
+        if (currentXp < intermediate) {
+            proficiency = (double) currentXp / intermediate * 33.3;
+        } else if (currentXp < advanced) {
+            proficiency = 33.3 + ((double) (currentXp - intermediate) / (advanced - intermediate)) * 33.3;
+        } else {
+            long capstoneChunk = (advanced - intermediate > 0) ? (advanced - intermediate) : 2000L;
+            proficiency = 66.6 + ((double) (currentXp - advanced) / capstoneChunk) * 33.4;
+        }
+
+        return proficiency;
+    }
+
     private UserSkillProgress getSkillProgress(UUID skillId, UUID userId) {
-        UserSkillProgress skillProgress = skillProgressRepository
+        return skillProgressRepository
                 .findByUserIdAndSkillId(userId, skillId)
                 .orElseGet(() -> {
                     UserSkillProgress newProgress = new UserSkillProgress();
@@ -132,105 +110,91 @@ public class AnalyticsService implements AnalyticsServiceInterface {
                     newProgress.setProficiency(0.0);
                     return newProgress;
                 });
-
-        return skillProgress;
     }
 
-    /**
-     * NEW: Updates all active user goals related to the completed task's skill.
-     *
-     * @param progress The updated UserSkillProgress entity.
-     */
-    private void updateGoalProgress(UserSkillProgress progress) {
-        List<UserGoal> activeGoals = goalRepository.findByUserIdAndSkillIdAndStatus(
-                progress.getUserId(),
-                progress.getSkillId(),
-                GoalStatus.ACTIVE
-        );
 
-        if (activeGoals.isEmpty()) {
-            return;
-        }
+    private void updateGoalProgress(UserSkillProgress progress) {
+        List<UserGoal> activeGoals = fetchActiveGoals(progress.getUserId(), progress.getSkillId());
+        if (activeGoals.isEmpty()) return;
 
         log.debug("Found {} active goals for user {} and skill {}",
                 activeGoals.size(), progress.getUserId(), progress.getSkillId());
 
         for (UserGoal goal : activeGoals) {
-            boolean updated = false;
-            switch (goal.getGoalType()) {
-                case TARGET_XP:
-                case REACH_LEVEL:
-                    if (progress.getTotalXpEarned() > goal.getCurrentValue()) {
-                        goal.setCurrentValue(progress.getTotalXpEarned());
-                        updated = true;
-                    }
-                    break;
-                case TASKS_COMPLETED:
-                    if (progress.getTasksCompleted() > goal.getCurrentValue()) {
-                        goal.setCurrentValue(progress.getTasksCompleted());
-                        updated = true;
-                    }
-                    break;
-            }
-
-            if (updated) {
-                boolean justCompleted = goal.checkAndMarkCompleted();
-                if (justCompleted) {
-                    log.info("User {} completed goal: {}", goal.getUserId(), goal.getId());
-                    String description = String.format("Completed goal for %s", goal.getSkillName());
-                    eventPublisher.publishEvent(new GoalCompletedEvent(
-                            this, goal.getUserId(), goal.getId(), description
-                    ));
-                }
-            }
+            boolean updated = updateSingleGoal(goal, progress);
+            if (updated) handleGoalCompletion(goal);
         }
+
         goalRepository.saveAll(activeGoals);
     }
 
+    private List<UserGoal> fetchActiveGoals(UUID userId, UUID skillId) {
+        return goalRepository.findByUserIdAndSkillIdAndStatus(userId, skillId, GoalStatus.ACTIVE);
+    }
 
-    /**
-     * Updates or creates a trajectory snapshot entry for the user’s skill
-     * on the current date, reflecting the latest progress state.
-     *
-     * @param progress the current user skill progress
-     */
+    private boolean updateSingleGoal(UserGoal goal, UserSkillProgress progress) {
+        boolean updated = false;
+        switch (goal.getGoalType()) {
+            case TARGET_XP:
+            case REACH_LEVEL:
+                if (progress.getTotalXpEarned() > goal.getCurrentValue()) {
+                    goal.setCurrentValue(progress.getTotalXpEarned());
+                    updated = true;
+                }
+                break;
+            case TASKS_COMPLETED:
+                if (progress.getTasksCompleted() > goal.getCurrentValue()) {
+                    goal.setCurrentValue(progress.getTasksCompleted());
+                    updated = true;
+                }
+                break;
+        }
+        return updated;
+    }
+
+    private void handleGoalCompletion(UserGoal goal) {
+        if (goal.checkAndMarkCompleted()) {
+            log.info("User {} completed goal: {}", goal.getUserId(), goal.getId());
+            String description = String.format("Completed goal for %s", goal.getSkillName());
+            eventPublisher.publishEvent(new GoalCompletedEvent(this, goal.getUserId(), goal.getId(), description));
+        }
+    }
+
+
     private void updateTrajectorySnapshot(UserSkillProgress progress) {
-        LocalDate today = LocalDate.now(ZoneOffset.UTC);
-
-        SkillTrajectorySnapshot snapshot = trajectoryRepository
-                .findByUserIdAndSkillIdAndSnapshotDate(progress.getUserId(), progress.getSkillId(), today)
-                .orElseGet(() -> SkillTrajectorySnapshot.fromProgress(progress, today));
-
+        SkillTrajectorySnapshot snapshot = fetchOrCreateTrajectorySnapshot(progress);
         trajectoryRepository.save(snapshot);
     }
 
-    /**
-     * Updates the aggregate user statistics such as total tasks completed
-     * and streak information.
-     *
-     * @param event the completed task event
-     * @return the updated {@link UserAggregateStats} entity
-     */
+    private SkillTrajectorySnapshot fetchOrCreateTrajectorySnapshot(UserSkillProgress progress) {
+        LocalDate today = LocalDate.now(ZoneOffset.UTC);
+        return trajectoryRepository
+                .findByUserIdAndSkillIdAndSnapshotDate(progress.getUserId(), progress.getSkillId(), today)
+                .orElseGet(() -> SkillTrajectorySnapshot.fromProgress(progress, today));
+    }
+
+
     private UserAggregateStats updateUserAggregateStats(TaskCompletedEvent event) {
+        UserAggregateStats stats = fetchOrCreateAggregateStats(event.userId());
         LocalDate practiceDate = event.completedAt().atZone(ZoneOffset.UTC).toLocalDate();
-
-        UserAggregateStats stats = aggregateStatsRepository.findById(event.userId())
-                .orElseGet(() -> new UserAggregateStats(event.userId()));
-
         stats.updateStreak(practiceDate);
         return aggregateStatsRepository.save(stats);
     }
 
-    /**
-     * Logs a task submission by persisting a {@link TaskSubmissionLog} record.
-     *
-     * <p>This log provides an immutable audit trail of user submissions
-     * for analytical and compliance purposes.</p>
-     *
-     * @param event the completed task event
-     */
+    private UserAggregateStats fetchOrCreateAggregateStats(UUID userId) {
+        return aggregateStatsRepository.findById(userId)
+                .orElseGet(() -> new UserAggregateStats(userId));
+    }
+
+
     private void logSubmission(TaskCompletedEvent event) {
-        TaskSubmissionLog submissionLog = TaskSubmissionLog.builder()
+        TaskSubmissionLog logEntry = buildSubmissionLog(event);
+        logRepository.save(logEntry);
+        log.debug("Logged new task submission for user {} and skill {}", event.userId(), event.skillId());
+    }
+
+    private TaskSubmissionLog buildSubmissionLog(TaskCompletedEvent event) {
+        return TaskSubmissionLog.builder()
                 .userId(event.userId())
                 .skillId(event.skillId())
                 .taskId(event.taskId())
@@ -240,8 +204,5 @@ public class AnalyticsService implements AnalyticsServiceInterface {
                 .rubricsScores(event.rubricsScores())
                 .completedAt(event.completedAt())
                 .build();
-
-        logRepository.save(submissionLog);
-        log.debug("Logged new task submission for user {} and skill {}", event.userId(), event.skillId());
     }
 }
