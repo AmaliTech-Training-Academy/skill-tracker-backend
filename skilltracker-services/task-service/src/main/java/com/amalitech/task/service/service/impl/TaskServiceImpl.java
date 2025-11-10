@@ -1,11 +1,14 @@
 package com.amalitech.task.service.service.impl;
 
+import com.amalitech.task.service.dto.LearningPathDTO;
 import com.amalitech.task.service.dto.TaskAvailabilityDTO;
 import com.amalitech.task.service.dto.TaskDTO;
 import com.amalitech.task.service.dto.request.BatchGenerationRequest;
 import com.amalitech.task.service.dto.request.GenerateTaskRequest;
+import com.amalitech.task.service.dto.request.UserProfileRequestDTO;
 import com.amalitech.task.service.dto.response.AdminTaskDetailResponse;
 import com.amalitech.task.service.dto.response.AdminTaskSummaryResponse;
+import com.amalitech.task.service.dto.response.LearningPathResponseDTO;
 import com.amalitech.task.service.events.RabbitMQEventProducer;
 import com.amalitech.task.service.exception.ResourceNotFoundException;
 import com.amalitech.task.service.mapper.TaskMapper;
@@ -19,9 +22,15 @@ import com.amalitech.task.service.repository.TaskSubmissionRepository;
 import com.amalitech.task.service.repository.UserSkillProfileRepository;
 import com.amalitech.task.service.service.SkillService;
 import com.amalitech.task.service.service.TaskService;
+
+import com.google.genai.types.GenerateContentResponse;
+import com.google.gson.*;
+import com.google.genai.Client;
+
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -29,6 +38,9 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
@@ -53,6 +65,7 @@ public class TaskServiceImpl implements TaskService {
     private final RabbitMQEventProducer taskEventProducer;
     private final TaskMapper taskMapper;
     private final StringRedisTemplate redisTemplate;
+    private static final String model = "gemini-2.5-flash";
 
     /**
      * Minimum number of tasks required per difficulty level before triggering generation.
@@ -306,5 +319,39 @@ public class TaskServiceImpl implements TaskService {
         if (correctCount < 5) return TaskDifficulty.BEGINNER;
         if (correctCount < 15) return TaskDifficulty.INTERMEDIATE;
         return TaskDifficulty.ADVANCED;
+    }
+
+
+    @Override
+    public LearningPathResponseDTO generateLearningPath(UserProfileRequestDTO userProfileRequestDTO) throws IOException {
+        Client client = new Client();
+        Gson gson = new GsonBuilder().setPrettyPrinting().create();
+        ClassPathResource prompt = new ClassPathResource("prompts/learningPath/learningPath_prompt.json");
+        String StringPrompt = Files.readString(prompt.getFile().toPath(), StandardCharsets.UTF_8);
+        String updatedFields = updateBlock(StringPrompt, "input", userProfileRequestDTO);
+
+        GenerateContentResponse response =
+                client.models.generateContent(
+                        model,
+                        updatedFields,
+                        null);
+
+        if (response.text() == null) {
+            throw new IOException("No response from Ai API....");
+        }
+
+        LearningPathDTO responseJson = gson.fromJson(response.text(), LearningPathDTO.class);
+
+        return new LearningPathResponseDTO(responseJson);
+    }
+
+    public static String updateBlock(String jsonString, String blockKey, Object blockValue) {
+        Gson gson = new GsonBuilder().setPrettyPrinting().create();
+        JsonObject jsonObject = JsonParser.parseString(jsonString).getAsJsonObject();
+
+        // Convert block to JsonElement and replace
+        jsonObject.add(blockKey, gson.toJsonTree(blockValue));
+
+        return gson.toJson(jsonObject);
     }
 }
