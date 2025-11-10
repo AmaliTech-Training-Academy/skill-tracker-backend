@@ -6,6 +6,7 @@ import com.amalitech.user.service.dto.request.SkillSelection;
 import com.amalitech.user.service.dto.response.OnboardingResponseDTO;
 import com.amalitech.user.service.events.EventProducer;
 import com.amalitech.user.service.exception.OnboardingAlreadyCompletedException;
+import com.amalitech.user.service.exception.SkillsNotFoundException;
 import com.amalitech.user.service.mapper.UserMapper;
 import com.amalitech.user.service.model.Skill;
 import com.amalitech.user.service.model.User;
@@ -138,6 +139,7 @@ public class OnboardingServiceImpl implements OnboardingService {
 
     /**
      * Fetches all requested skills in a single batch and validates that all exist.
+     * Throws SkillsNotFoundException with all missing skill IDs.
      */
     private Map<UUID, Skill> validateAndFetchSkills(OnboardingRequest request) {
         Set<UUID> requestedSkillIds = request.skills().stream()
@@ -151,8 +153,11 @@ public class OnboardingServiceImpl implements OnboardingService {
             Set<UUID> missingIds = requestedSkillIds.stream()
                     .filter(id -> !foundSkillsMap.containsKey(id))
                     .collect(Collectors.toSet());
-            throw new EntityNotFoundException("Could not find skills with IDs: " + missingIds);
+
+            log.error("Skills not found. Missing IDs: {}", missingIds);
+            throw new SkillsNotFoundException(missingIds);
         }
+
         return foundSkillsMap;
     }
 
@@ -221,6 +226,7 @@ public class OnboardingServiceImpl implements OnboardingService {
 
     /**
      * Constructs a new {@link UserSkill} entity.
+     * Normalizes the skill level to uppercase to match database values.
      *
      * @param user     The {@link User} entity.
      * @param skill    The pre-fetched {@link Skill} entity.
@@ -228,7 +234,8 @@ public class OnboardingServiceImpl implements OnboardingService {
      * @return A newly created {@link UserSkill} entity.
      */
     private UserSkill createNewUserSkill(User user, Skill skill, SkillSelection skillDto) {
-        Long initialXp = skill.getLevelXpMap().getOrDefault(skillDto.level().name(), 0L);
+        String normalizedLevel = skillDto.level().name().toUpperCase();
+        Long initialXp = skill.getLevelXpMap().getOrDefault(normalizedLevel, 0L);
 
         UserSkill userSkill = new UserSkill();
         userSkill.setUser(user);
