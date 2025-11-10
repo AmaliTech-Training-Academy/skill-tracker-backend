@@ -3,10 +3,11 @@ package com.amalitech.task.service.service;
 import com.amalitech.task.service.dto.TaskAvailabilityDTO;
 import com.amalitech.task.service.dto.TaskDTO;
 import com.amalitech.task.service.dto.request.GenerateTaskRequest;
+import com.amalitech.task.service.dto.request.McqRequestDTO;
 import com.amalitech.task.service.dto.response.AdminTaskDetailResponse;
 import com.amalitech.task.service.dto.response.AdminTaskSummaryResponse;
-import com.amalitech.task.service.dto.request.McqRequestDTO;
 import com.amalitech.task.service.dto.response.McqResponseDTO;
+import com.amalitech.task.service.dto.response.UserTasksResponse;
 import com.amalitech.task.service.exception.ResourceNotFoundException;
 import com.amalitech.task.service.model.enums.TaskDifficulty;
 import com.amalitech.task.service.model.enums.TaskType;
@@ -88,4 +89,19 @@ public interface TaskService {
      * @param adminUserId The UUID of the admin making the request (for notifications).
      */
     void requestSpecificTaskGeneration(GenerateTaskRequest requestBody, UUID adminUserId);
+
+    /**
+     * Retrieves tasks grouped by status (pending/completed) for a specific user.
+     * Tasks are filtered based on the user's skill profile and only published tasks are returned.
+     * Both pending and completed task lists support independent pagination.
+     *
+     * @param userId The ID of the user
+     * @param pendingPage Page number for pending tasks
+     * @param pendingSize Page size for pending tasks
+     * @param completedPage Page number for completed tasks
+     * @param completedSize Page size for completed tasks
+     * @return UserTasksResponse containing paginated pending and completed tasks
+     */
+    UserTasksResponse getUserTasksGroupedByStatus(UUID userId, int pendingPage, int pendingSize,
+                                                  int completedPage, int completedSize);
 }
