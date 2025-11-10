@@ -1,0 +1,47 @@
+{
+  "type": "learning_path_generation",
+  "input": {
+    "userId": "UUID",
+    "career_goals": ["Become a Backend Engineer, Master Data Analytics"],
+    "current_progress": {
+      "skill": "Git",
+      "difficulty": "Advanced",
+      "performance_percentage": 67
+    }
+  },
+  "expected_output": {
+    "userId": "String(exact copy from input block)",
+    "summary": "String (brief overview explaining how this path fits the user’s goals and skill level)",
+    "current_skill": "String (copied from input.current_progress.skill)",
+    "recommended_next_skill": "String (the most logical next skill that builds on current_skill)",
+    "recommended_activities": [
+      "String (practical Activity 1)",
+      "String (practical Activity 2)",
+      "String (practical Activity 3)",
+      "String (practical Activity 4)"
+    ],
+    "reasoning": "String (why this next skill makes sense based on goals and skill in current_performance block)",
+    "difficulty": "String (should logically be relevant to the details in the input block)",
+    "resources": [
+      "Link (relevant, high-quality learning video resource 1)",
+      "Link (relevant, high-quality learning article resource 2)",
+      "Link (relevant, high-quality learning exercise resource 3)",
+      "Link (relevant, high-quality learning illustration resource 4)"
+    ]
+  },
+  "constraints": [
+    "current_skill is skill in current_performance block.",
+    "recommended_next_skill must be a natural next step after current_skill.",
+    "summary and reasoning must be clear, short, and practical.",
+    "Difficulty should progress logically without skipping levels.",
+    "All output fields must be non-null and match expected_output structure.",
+    "Exclude markdown or any formatting syntax; output must be pure JSON.",
+    "Generated next_skill must be based on skill and correspond with performance in current_performance block",
+    "Always output a single JSON object with the exact expected_output fields.",
+    "recommended_activities should from 1 to 4, list the most impactful and varied activities for developing input skill.",
+    "Ensure all references in 'resources' block are highly relevant and high quality.",
+    "Ensure all references are unique and varied in nature.",
+    "Ensure all links provided are relevant, working correctly, and pointing to the resource intended.",
+    "If a link for a resource type is unavailable, replace with text based resource."
+  ]
+}
