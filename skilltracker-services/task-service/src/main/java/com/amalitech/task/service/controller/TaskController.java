@@ -2,6 +2,8 @@ package com.amalitech.task.service.controller;
 
 import com.amalitech.common.security.dto.response.ApiResponse;
 import com.amalitech.task.service.dto.TaskDTO;
+import com.amalitech.task.service.dto.request.UserProfileRequestDTO;
+import com.amalitech.task.service.dto.response.LearningPathResponseDTO;
 import com.amalitech.task.service.model.enums.TaskType;
 import com.amalitech.task.service.service.TaskService;
 import lombok.RequiredArgsConstructor;
@@ -11,6 +13,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
 
@@ -51,6 +54,15 @@ public class TaskController {
         );
 
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/generate/learning-path")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ApiResponse<LearningPathResponseDTO>> generateLearningPath(
+            @RequestBody() UserProfileRequestDTO userProfileRequestDTO
+    ) throws IOException {
+        LearningPathResponseDTO learningPathResponseDTO = taskService.generateLearningPath(userProfileRequestDTO);
+        return ResponseEntity.ok(ApiResponse.success("Learning path Generated Successfully", learningPathResponseDTO, ""));
     }
 
     @GetMapping
