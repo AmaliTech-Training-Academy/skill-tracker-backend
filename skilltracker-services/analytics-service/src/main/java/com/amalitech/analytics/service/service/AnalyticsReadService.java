@@ -3,6 +3,7 @@ package com.amalitech.analytics.service.service;
 import com.amalitech.analytics.service.dto.*;
 import com.amalitech.analytics.service.exception.EntityNotFoundException;
 import com.amalitech.analytics.service.model.SkillSnapShot;
+import com.amalitech.analytics.service.model.UserAggregateStats;
 import com.amalitech.analytics.service.model.UserGoal;
 import com.amalitech.analytics.service.model.UserSkillProgress;
 import com.amalitech.analytics.service.model.enums.GoalStatus;
@@ -68,159 +69,153 @@ public class AnalyticsReadService implements AnalyticsReadServiceInterface {
         );
     }
 
+
     /**
-     * Retrieves aggregate user statistics including total tasks,
-     * current streak, and longest streak.
-     *
-     * @param userId the user ID
-     * @return {@link UserStatsDTO} representing summarized stats
+     * Retrieves aggregate statistics for a user: total tasks, streaks, last practice.
      */
     private UserStatsDTO getUserStats(UUID userId) {
         return aggregateStatsRepository.findById(userId)
-                .map(stats -> new UserStatsDTO(
-                        stats.getTotalTasksCompleted(),
-                        stats.getCurrentStreakInDays(),
-                        stats.getLongestStreakInDays(),
-                        stats.getLastPracticeDate()))
+                .map(this::mapToUserStatsDTO)
                 .orElse(new UserStatsDTO(0, 0, 0, null));
     }
 
+    /** Maps entity to DTO. */
+    private UserStatsDTO mapToUserStatsDTO(UserAggregateStats stats) {
+        return new UserStatsDTO(
+                stats.getTotalTasksCompleted(),
+                stats.getCurrentStreakInDays(),
+                stats.getLongestStreakInDays(),
+                stats.getLastPracticeDate()
+        );
+    }
+
+
     /**
-     * Loads all skill progress for the specified user and enriches
-     * with corresponding snapshot data to compute XP thresholds and levels.
-     *
-     * @param userId the user ID
-     * @return list of {@link SkillProgressDTO}
+     * Retrieves skill progress for a user enriched with snapshot XP levels.
      */
     private List<SkillProgressDTO> getSkillProgress(UUID userId) {
         List<UserSkillProgress> progresses = skillProgressRepository.findAllByUserId(userId);
-        if (progresses.isEmpty()) {
-            return List.of();
-        }
+        if (progresses.isEmpty()) return List.of();
 
+        Map<UUID, SkillSnapShot> snapshotMap = getSnapshotMap(progresses);
+
+        return progresses.stream()
+                .map(progress -> mapToSkillProgressDTO(progress, snapshotMap.get(progress.getSkillId())))
+                .collect(Collectors.toList());
+    }
+
+    /** Fetches all snapshots for a list of progresses and maps by ID. */
+    private Map<UUID, SkillSnapShot> getSnapshotMap(List<UserSkillProgress> progresses) {
         Set<UUID> skillIds = progresses.stream()
                 .map(UserSkillProgress::getSkillId)
                 .collect(Collectors.toSet());
 
-        Map<UUID, SkillSnapShot> snapshotMap = skillSnapshotRepository.findAllById(skillIds)
+        return skillSnapshotRepository.findAllById(skillIds)
                 .stream()
                 .collect(Collectors.toMap(SkillSnapShot::getId, s -> s));
-
-        return progresses.stream().map(progress -> {
-            SkillSnapShot snapshot = snapshotMap.get(progress.getSkillId());
-            if (snapshot == null) {
-                throw new EntityNotFoundException("Skill not found", progress.getSkillId());
-            }
-
-            Map<String, Long> xpMap = snapshot.getLevelXpMap();
-            SkillDetailsDTO details = new SkillDetailsDTO(
-                    snapshot.getId(),
-                    snapshot.getName(),
-                    xpMap.getOrDefault("INTERMEDIATE", 0L).intValue(),
-                    xpMap.getOrDefault("ADVANCED", 0L).intValue()
-            );
-
-            int currentXp = progress.getTotalXpEarned();
-            String currentLevel = details.getCurrentLevel(currentXp);
-            String nextLevel = details.getNextLevel(currentLevel);
-            int xpForNextLevel = details.getXpForLevel(nextLevel);
-            int xpForCurrentLevel = details.getXpForLevel(currentLevel);
-            int xpToNextLevel = Math.max(0, xpForNextLevel - currentXp);
-            int currentLevelTotalXp = Math.max(0, xpForNextLevel - xpForCurrentLevel);
-
-            return new SkillProgressDTO(
-                    progress.getSkillId(),
-                    details.skillName(),
-                    progress.getAverageXpEarned(),
-                    progress.getProficiency(),
-                    progress.getTasksCompleted(),
-                    currentXp,
-                    currentLevel,
-                    nextLevel,
-                    xpToNextLevel,
-                    currentLevelTotalXp
-            );
-        }).collect(Collectors.toList());
     }
 
-    /**
-     * Fetches all active goals for the user and maps them to DTOs.
-     */
+    /** Maps progress + snapshot into SkillProgressDTO. */
+    private SkillProgressDTO mapToSkillProgressDTO(UserSkillProgress progress, SkillSnapShot snapshot) {
+        if (snapshot == null) {
+            throw new EntityNotFoundException("Skill not found", progress.getSkillId());
+        }
+
+        Map<String, Long> xpMap = snapshot.getLevelXpMap();
+        SkillDetailsDTO details = new SkillDetailsDTO(
+                snapshot.getId(),
+                snapshot.getName(),
+                xpMap.getOrDefault("INTERMEDIATE", 0L).intValue(),
+                xpMap.getOrDefault("ADVANCED", 0L).intValue()
+        );
+
+        int currentXp = progress.getTotalXpEarned();
+        String currentLevel = details.getCurrentLevel(currentXp);
+        String nextLevel = details.getNextLevel(currentLevel);
+        int xpForNextLevel = details.getXpForLevel(nextLevel);
+        int xpForCurrentLevel = details.getXpForLevel(currentLevel);
+        int xpToNextLevel = Math.max(0, xpForNextLevel - currentXp);
+        int currentLevelTotalXp = Math.max(0, xpForNextLevel - xpForCurrentLevel);
+
+        return new SkillProgressDTO(
+                progress.getSkillId(),
+                details.skillName(),
+                progress.getAverageXpEarned(),
+                progress.getProficiency(),
+                progress.getTasksCompleted(),
+                currentXp,
+                currentLevel,
+                nextLevel,
+                xpToNextLevel,
+                currentLevelTotalXp
+        );
+    }
+
+
+    /** Retrieves all active goals for a user. */
     private List<GoalStatusDTO> getActiveGoalStatus(UUID userId) {
         List<UserGoal> activeGoals = goalRepository.findByUserIdAndStatus(userId, GoalStatus.ACTIVE);
-
-        return activeGoals.stream().map(goal -> {
-            String description = switch (goal.getGoalType()) {
-                case TARGET_XP -> String.format("Reach %d XP in %s",
-                        goal.getTargetValue(), goal.getSkillName());
-                case TASKS_COMPLETED -> String.format("Complete %d tasks in %s",
-                        goal.getTargetValue(), goal.getSkillName());
-                case REACH_LEVEL -> String.format("Reach next level in %s",
-                        goal.getSkillName());
-            };
-
-            double progressPercentage = 0.0;
-            int range = goal.getTargetValue() - goal.getInitialValue();
-            int currentProgress = goal.getCurrentValue() - goal.getInitialValue();
-            if (range > 0) {
-                progressPercentage = Math.max(0, Math.min(100.0, ((double) currentProgress / range) * 100.0));
-            }
-
-            // Determine status string
-            String status;
-            if (goal.getDeadline() != null && LocalDate.now().isAfter(goal.getDeadline())) {
-                status = "Overdue";
-            } else {
-                status = "On Track";
-            }
-
-            return new GoalStatusDTO(
-                    goal.getId(),
-                    description,
-                    goal.getGoalType(),
-                    goal.getCurrentValue(),
-                    goal.getTargetValue(),
-                    goal.getInitialValue(),
-                    progressPercentage,
-                    goal.getDeadline(),
-                    status
-            );
-        }).collect(Collectors.toList());
+        return activeGoals.stream()
+                .map(this::mapToGoalStatusDTO)
+                .collect(Collectors.toList());
     }
 
-    /**
-     * Identifies skill gaps by querying rubric scores from submission logs.
-     *
-     * CORRECTED: Now calculates performance using SUM(score) / SUM(maxScore).
-     */
+    /** Maps a goal entity to GoalStatusDTO. */
+    private GoalStatusDTO mapToGoalStatusDTO(UserGoal goal) {
+        String description = switch (goal.getGoalType()) {
+            case TARGET_XP -> String.format("Reach %d XP in %s", goal.getTargetValue(), goal.getSkillName());
+            case TASKS_COMPLETED -> String.format("Complete %d tasks in %s", goal.getTargetValue(), goal.getSkillName());
+            case REACH_LEVEL -> String.format("Reach next level in %s", goal.getSkillName());
+        };
+
+        double progressPercentage = calculateGoalProgressPercentage(goal);
+        String status = calculateGoalStatus(goal);
+
+        return new GoalStatusDTO(
+                goal.getId(),
+                description,
+                goal.getGoalType(),
+                goal.getCurrentValue(),
+                goal.getTargetValue(),
+                goal.getInitialValue(),
+                progressPercentage,
+                goal.getDeadline(),
+                status
+        );
+    }
+
+    private double calculateGoalProgressPercentage(UserGoal goal) {
+        int range = goal.getTargetValue() - goal.getInitialValue();
+        int currentProgress = goal.getCurrentValue() - goal.getInitialValue();
+        return (range > 0) ? Math.max(0, Math.min(100.0, ((double) currentProgress / range) * 100.0)) : 0.0;
+    }
+
+    private String calculateGoalStatus(UserGoal goal) {
+        if (goal.getDeadline() != null && LocalDate.now().isAfter(goal.getDeadline())) {
+            return "Overdue";
+        }
+        return "On Track";
+    }
+
+
+    /** Identifies skill gaps based on rubric scores. */
     private List<SkillGapDTO> getSkillGaps(UUID userId) {
         String sql = """
-                SELECT
-                    key AS rubric,
-                    -- Correct Calculation: SUM(Score) / SUM(MaxScore) * 100.
-                    -- Uses CASE to prevent divide-by-zero errors.
+                SELECT key AS rubric,
                     CASE
-                        -- Safety check: If total maxScore is zero, performance is 0%.
                         WHEN SUM((value ->> 'maxScore')::numeric) = 0 THEN 0
-                        -- Otherwise, calculate (Total Score / Total Max Score) * 100
                         ELSE (SUM((value ->> 'score')::numeric) / SUM((value ->> 'maxScore')::numeric)) * 100
                     END AS avg_score
-                FROM
-                    task_submission_logs,
-                    -- jsonb_each is used to break out the nested {score, maxScore, percentage} object
-                    jsonb_each(rubrics) AS t(key, value)
-                WHERE
-                    user_id = ?
-                GROUP BY
-                    key
+                FROM task_submission_logs,
+                     jsonb_each(rubrics) AS t(key, value)
+                WHERE user_id = ?
+                GROUP BY key
                 HAVING
-                    -- Apply the filter on the calculated average performance
                     CASE
                         WHEN SUM((value ->> 'maxScore')::numeric) = 0 THEN 0
                         ELSE (SUM((value ->> 'score')::numeric) / SUM((value ->> 'maxScore')::numeric)) * 100
                     END < ?
-                ORDER BY
-                    avg_score ASC
+                ORDER BY avg_score ASC
                 """;
 
         return jdbcTemplate.query(
@@ -235,9 +230,8 @@ public class AnalyticsReadService implements AnalyticsReadServiceInterface {
         );
     }
 
-    /**
-     * Generates simple recommendations based on identified rubric gaps.
-     */
+
+    /** Generates recommendations based on skill gaps. */
     private List<RecommendationDTO> getRecommendations(List<SkillGapDTO> gaps) {
         if (gaps.isEmpty()) {
             return List.of(new RecommendationDTO("Keep up the great work! No specific gaps found.", null));
@@ -252,27 +246,17 @@ public class AnalyticsReadService implements AnalyticsReadServiceInterface {
     }
 
 
-
-    /**
-     * Maps {@link Granularity} values to PostgreSQL {@code DATE_TRUNC} units.
-     *
-     * @param granularity desired aggregation level
-     * @return SQL-compatible time unit string
-     * @throws IllegalArgumentException if granularity is unsupported
-     */
-    private String mapGranularityToPostgresUnit(Granularity granularity) {
-        return switch (granularity) {
-            case DAILY -> "day";
-            case WEEKLY -> "week";
-            case MONTHLY -> "month";
-        };
-    }
-
     /** {@inheritDoc} */
     @Override
     public List<TrajectoryPointDTO> getSkillTrajectory(UUID userId, UUID skillId, Granularity granularity) {
         if (granularity == Granularity.DAILY) {
-            String dailySql = """
+            return queryDailyTrajectory(userId, skillId);
+        }
+        return queryTrajectoryWithGranularity(userId, skillId, granularity);
+    }
+
+    private List<TrajectoryPointDTO> queryDailyTrajectory(UUID userId, UUID skillId) {
+        String sql = """
                 SELECT DISTINCT ON (snapshot_date::date)
                        snapshot_date::date AS period_start,
                        average_xp_earned,
@@ -282,17 +266,16 @@ public class AnalyticsReadService implements AnalyticsReadServiceInterface {
                 ORDER BY snapshot_date::date, snapshot_date DESC
                 """;
 
-            return jdbcTemplate.query(
-                    dailySql,
-                    (rs, rowNum) -> new TrajectoryPointDTO(
-                            rs.getDate("period_start").toLocalDate(),
-                            rs.getDouble("average_xp_earned"),
-                            rs.getInt("tasks_completed_up_to_date")
-                    ),
-                    userId, skillId
-            );
-        }
+        return jdbcTemplate.query(sql,
+                (rs, rowNum) -> new TrajectoryPointDTO(
+                        rs.getDate("period_start").toLocalDate(),
+                        rs.getDouble("average_xp_earned"),
+                        rs.getInt("tasks_completed_up_to_date")
+                ),
+                userId, skillId);
+    }
 
+    private List<TrajectoryPointDTO> queryTrajectoryWithGranularity(UUID userId, UUID skillId, Granularity granularity) {
         String periodUnit = mapGranularityToPostgresUnit(granularity);
         String sql = String.format("""
                 SELECT DISTINCT ON (DATE_TRUNC('%s', snapshot_date))
@@ -304,24 +287,30 @@ public class AnalyticsReadService implements AnalyticsReadServiceInterface {
                 ORDER BY period_start, snapshot_date DESC
                 """, periodUnit, periodUnit);
 
-        return jdbcTemplate.query(
-                sql,
+        return jdbcTemplate.query(sql,
                 (rs, rowNum) -> new TrajectoryPointDTO(
                         rs.getDate("period_start").toLocalDate(),
                         rs.getDouble("average_xp_earned"),
                         rs.getInt("tasks_completed_up_to_date")
                 ),
-                userId, skillId
-        );
+                userId, skillId);
     }
+
+    /** Maps granularity enum to PostgreSQL DATE_TRUNC unit. */
+    private String mapGranularityToPostgresUnit(Granularity granularity) {
+        return switch (granularity) {
+            case DAILY -> "day";
+            case WEEKLY -> "week";
+            case MONTHLY -> "month";
+        };
+    }
+
 
     /** {@inheritDoc} */
     @Override
     public List<LocalDate> getCurrentStreakDays(UUID userId) {
         List<LocalDate> allPracticeDays = logRepository.findAllDistinctPracticeDaysByUserId(userId);
-        if (allPracticeDays.isEmpty()) {
-            return List.of();
-        }
+        if (allPracticeDays.isEmpty()) return List.of();
 
         Set<LocalDate> practiced = new HashSet<>(allPracticeDays);
         List<LocalDate> streak = new LinkedList<>();
