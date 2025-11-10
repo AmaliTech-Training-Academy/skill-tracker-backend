@@ -128,6 +128,7 @@ public class AuthServiceImpl implements AuthService {
         savedUser.setProfile(profile);
 
         return UserMapper.toDto(savedUser);
+
     }
 
     /**
