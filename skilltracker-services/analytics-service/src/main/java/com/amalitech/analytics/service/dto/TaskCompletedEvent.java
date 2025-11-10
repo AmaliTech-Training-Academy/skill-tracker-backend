@@ -20,5 +20,5 @@ public record TaskCompletedEvent(
         Instant completedAt,
         TaskType taskType,
         String taskDifficulty,
-        Map<String, Integer> rubricsScores
+        Map<String, RubricScoreDTO> rubricsScores
 ) {}

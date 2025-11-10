@@ -19,7 +19,7 @@ public record TaskSubmissionRequestDTO(
         @NotNull Boolean passed,
         @NotNull TaskType taskType,
         @NotNull String taskDifficulty,
-        Map<String, Integer> rubricsScores,
+        Map<String, RubricScoreDTO> rubricsScores,
         @NotNull Instant completedAt
 ) {
 

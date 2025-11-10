@@ -8,8 +8,10 @@ import com.amalitech.analytics.service.security.util.JwtUtil;
 import com.amalitech.analytics.service.service.AnalyticsReadService;
 import com.amalitech.analytics.service.service.AnalyticsService;
 import com.amalitech.analytics.service.util.CookieUtil;
+import com.amalitech.common.security.dto.response.ApiResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -36,13 +38,12 @@ import java.util.UUID;
  * @since 1.0
  */
 @RestController
-@RequestMapping("/analytics")
+@RequestMapping("/api/v1/analytics")
 public class AnalyticsController {
 
     private final AnalyticsReadService analyticsReadService;
     private final AnalyticsService analyticsService;
-    private final CookieUtil cookieUtil;
-    private final JwtUtil jwtUtil;
+    private static final String API_TRACE_ID = "....";
 
     public AnalyticsController(AnalyticsReadService analyticsReadService,
                                AnalyticsService analyticsService,
@@ -50,8 +51,6 @@ public class AnalyticsController {
                                JwtUtil jwtUtil) {
         this.analyticsReadService = analyticsReadService;
         this.analyticsService = analyticsService;
-        this.cookieUtil = cookieUtil;
-        this.jwtUtil = jwtUtil;
     }
 
     /**
@@ -68,17 +67,14 @@ public class AnalyticsController {
      *         or {@code 400 Bad Request} if the UUID is invalid
      */
     @GetMapping("/dashboard")
-    public ResponseEntity<DashboardDTO> getDashboard(
+    public ResponseEntity<ApiResponse<DashboardDTO>> getDashboard(
             @RequestHeader("X-User-Id") String userID,
             @AuthenticationPrincipal String userIdPrincipal) {
-        try {
-            UUID userId = UUID.fromString(userID);
-            DashboardDTO dashboard = analyticsReadService.buildDashboard(userId);
-            return ResponseEntity.ok(dashboard);
-        } catch (IllegalArgumentException e) {
-            System.err.println("Invalid UUID in X-User-Id header: " + userID);
-            return ResponseEntity.badRequest().build();
-        }
+        UUID userId = UUID.fromString(userID);
+        DashboardDTO dashboard = analyticsReadService.buildDashboard(userId);
+
+        ApiResponse<DashboardDTO> response = ApiResponse.success("Dashboard successfully retrieved.", dashboard, API_TRACE_ID);
+        return ResponseEntity.ok(response);
     }
 
     /**
@@ -96,21 +92,18 @@ public class AnalyticsController {
      *         or {@code 400 Bad Request} if the UUID is invalid
      */
     @GetMapping("/dashboard/trajectory/{skillId}")
-    public ResponseEntity<List<TrajectoryPointDTO>> getSkillTrajectory(
+    public ResponseEntity<ApiResponse<List<TrajectoryPointDTO>>> getSkillTrajectory(
             @PathVariable UUID skillId,
             @RequestHeader("X-User-Id") String userID,
             HttpServletRequest request,
             @RequestParam(defaultValue = "DAILY") Granularity granularity) {
 
-        try {
-            UUID userId = UUID.fromString(userID);
-            List<TrajectoryPointDTO> trajectory =
-                    analyticsReadService.getSkillTrajectory(userId, skillId, granularity);
-            return ResponseEntity.ok(trajectory);
-        } catch (IllegalArgumentException e) {
-            System.err.println("Invalid UUID in X-User-Id header: " + userID);
-            return ResponseEntity.badRequest().build();
-        }
+        UUID userId = UUID.fromString(userID);
+        List<TrajectoryPointDTO> trajectory =
+                analyticsReadService.getSkillTrajectory(userId, skillId, granularity);
+
+        ApiResponse<List<TrajectoryPointDTO>> response = ApiResponse.success("Skill trajectory retrieved.", trajectory, API_TRACE_ID);
+        return ResponseEntity.ok(response);
     }
 
     /**
@@ -125,16 +118,13 @@ public class AnalyticsController {
      *         for streak days, or {@code 400 Bad Request} if the UUID is invalid
      */
     @GetMapping("/dashboard/current-streak-history")
-    public ResponseEntity<List<LocalDate>> getCurrentStreakDays(
+    public ResponseEntity<ApiResponse<List<LocalDate>>> getCurrentStreakDays(
             @RequestHeader("X-User-Id") String userID) {
-        try {
-            UUID userId = UUID.fromString(userID);
-            List<LocalDate> streakDates = analyticsReadService.getCurrentStreakDays(userId);
-            return ResponseEntity.ok(streakDates);
-        } catch (IllegalArgumentException e) {
-            System.err.println("Invalid UUID in X-User-Id header: " + userID);
-            return ResponseEntity.badRequest().build();
-        }
+        UUID userId = UUID.fromString(userID);
+        List<LocalDate> streakDates = analyticsReadService.getCurrentStreakDays(userId);
+
+        ApiResponse<List<LocalDate>> response = ApiResponse.success("Current streak dates retrieved.", streakDates, API_TRACE_ID);
+        return ResponseEntity.ok(response);
     }
 
     /**
@@ -149,10 +139,10 @@ public class AnalyticsController {
      * @return {@link ResponseEntity} with {@code 202 Accepted} status
      */
     @PostMapping("/submit-task")
-    public ResponseEntity<Void> submitTaskDirectly(
+    public  ResponseEntity<ApiResponse<Void>> submitTaskDirectly(
             @Valid @RequestBody TaskSubmissionRequestDTO request) {
-        analyticsService.submitTaskDirectly(request);
-        return ResponseEntity.accepted().build();
+        ApiResponse<Void> response = ApiResponse.success("Task submission accepted for processing.", null, API_TRACE_ID);
+        return new ResponseEntity<>(response, HttpStatus.ACCEPTED);
     }
 
     /**
@@ -162,15 +152,16 @@ public class AnalyticsController {
      * activity or streak tracking.
      * </p>
      *
-     * @param userIdPrincipal the authenticated user ID from Spring Security
+     * @param userID the authenticated user ID from Spring Security
      * @return {@link ResponseEntity} containing a list of {@link LocalDate} values
      *         representing practice history
      */
     @GetMapping("/dashboard/practice-history")
-    public ResponseEntity<List<LocalDate>> getPracticeHistory(
-            @AuthenticationPrincipal String userIdPrincipal) {
-        UUID userId = UUID.fromString(userIdPrincipal);
+    public ResponseEntity<ApiResponse<List<LocalDate>>> getPracticeHistory(
+            @RequestHeader("X-User-Id") String userID) {
+        UUID userId = UUID.fromString(userID);
         List<LocalDate> practiceDates = analyticsReadService.getAllPracticeDays(userId);
-        return ResponseEntity.ok(practiceDates);
+        ApiResponse<List<LocalDate>> response = ApiResponse.success("Practice history dates retrieved.", practiceDates, API_TRACE_ID);
+        return ResponseEntity.ok(response);
     }
 }

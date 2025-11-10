@@ -1,5 +1,6 @@
 package com.amalitech.analytics.service.model;
 
+import com.amalitech.analytics.service.dto.RubricScoreDTO;
 import com.amalitech.analytics.service.model.enums.TaskType;
 import com.vladmihalcea.hibernate.type.json.JsonType;
 import jakarta.persistence.*;
@@ -51,7 +52,7 @@ public class TaskSubmissionLog {
 
     @Type(JsonType.class)
     @Column(name = "rubrics", columnDefinition = "jsonb")
-    private Map<String, Integer> rubricsScores = new HashMap<>();
+    private Map<String, RubricScoreDTO> rubricsScores = new HashMap<>();
 
     @Column(nullable = false, updatable = false)
     private Instant completedAt;

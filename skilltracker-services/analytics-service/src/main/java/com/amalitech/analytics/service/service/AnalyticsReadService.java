@@ -1,8 +1,11 @@
 package com.amalitech.analytics.service.service;
 
 import com.amalitech.analytics.service.dto.*;
+import com.amalitech.analytics.service.exception.EntityNotFoundException;
 import com.amalitech.analytics.service.model.SkillSnapShot;
+import com.amalitech.analytics.service.model.UserGoal;
 import com.amalitech.analytics.service.model.UserSkillProgress;
+import com.amalitech.analytics.service.model.enums.GoalStatus;
 import com.amalitech.analytics.service.model.enums.Granularity;
 import com.amalitech.analytics.service.repository.*;
 import com.amalitech.analytics.service.service.interfaces.AnalyticsReadServiceInterface;
@@ -36,22 +39,33 @@ import java.util.stream.Collectors;
 @Transactional(readOnly = true)
 public class AnalyticsReadService implements AnalyticsReadServiceInterface {
 
+    private static final double LOW_RUBRIC_SCORE_THRESHOLD = 70.0;
+
     private final UserAggregateStatsRepository aggregateStatsRepository;
     private final UserSkillProgressRepository skillProgressRepository;
     private final SkillSnapshotRepository skillSnapshotRepository;
     private final JdbcTemplate jdbcTemplate;
     private final TaskSubmissionLogRepository logRepository;
+    private final UserGoalRepository goalRepository;
 
     /** {@inheritDoc} */
     @Override
     public DashboardDTO buildDashboard(UUID userId) {
         UserStatsDTO userStats = getUserStats(userId);
         List<SkillProgressDTO> skillProgress = getSkillProgress(userId);
-        List<GoalStatusDTO> goalStatus = List.of();
-        List<SkillGapDTO> skillGaps = List.of();
+        List<GoalStatusDTO> goalStatus = getActiveGoalStatus(userId);
+        List<SkillGapDTO> skillGaps = getSkillGaps(userId);
+        List<RecommendationDTO> recommendations = getRecommendations(skillGaps);
         GlobalRankDTO globalRank = null;
 
-        return new DashboardDTO(userStats, skillProgress, goalStatus, skillGaps, globalRank);
+        return new DashboardDTO(
+                userStats,
+                skillProgress,
+                goalStatus,
+                skillGaps,
+                recommendations,
+                globalRank
+        );
     }
 
     /**
@@ -95,7 +109,7 @@ public class AnalyticsReadService implements AnalyticsReadServiceInterface {
         return progresses.stream().map(progress -> {
             SkillSnapShot snapshot = snapshotMap.get(progress.getSkillId());
             if (snapshot == null) {
-                throw new IllegalStateException("Skill snapshot not found: " + progress.getSkillId());
+                throw new EntityNotFoundException("Skill not found", progress.getSkillId());
             }
 
             Map<String, Long> xpMap = snapshot.getLevelXpMap();
@@ -128,6 +142,116 @@ public class AnalyticsReadService implements AnalyticsReadServiceInterface {
             );
         }).collect(Collectors.toList());
     }
+
+    /**
+     * Fetches all active goals for the user and maps them to DTOs.
+     */
+    private List<GoalStatusDTO> getActiveGoalStatus(UUID userId) {
+        List<UserGoal> activeGoals = goalRepository.findByUserIdAndStatus(userId, GoalStatus.ACTIVE);
+
+        return activeGoals.stream().map(goal -> {
+            String description = switch (goal.getGoalType()) {
+                case TARGET_XP -> String.format("Reach %d XP in %s",
+                        goal.getTargetValue(), goal.getSkillName());
+                case TASKS_COMPLETED -> String.format("Complete %d tasks in %s",
+                        goal.getTargetValue(), goal.getSkillName());
+                case REACH_LEVEL -> String.format("Reach next level in %s",
+                        goal.getSkillName());
+            };
+
+            double progressPercentage = 0.0;
+            int range = goal.getTargetValue() - goal.getInitialValue();
+            int currentProgress = goal.getCurrentValue() - goal.getInitialValue();
+            if (range > 0) {
+                progressPercentage = Math.max(0, Math.min(100.0, ((double) currentProgress / range) * 100.0));
+            }
+
+            // Determine status string
+            String status;
+            if (goal.getDeadline() != null && LocalDate.now().isAfter(goal.getDeadline())) {
+                status = "Overdue";
+            } else {
+                status = "On Track";
+            }
+
+            return new GoalStatusDTO(
+                    goal.getId(),
+                    description,
+                    goal.getGoalType(),
+                    goal.getCurrentValue(),
+                    goal.getTargetValue(),
+                    goal.getInitialValue(),
+                    progressPercentage,
+                    goal.getDeadline(),
+                    status
+            );
+        }).collect(Collectors.toList());
+    }
+
+    /**
+     * Identifies skill gaps by querying rubric scores from submission logs.
+     *
+     * CORRECTED: Now calculates performance using SUM(score) / SUM(maxScore).
+     */
+    private List<SkillGapDTO> getSkillGaps(UUID userId) {
+        String sql = """
+                SELECT
+                    key AS rubric,
+                    -- Correct Calculation: SUM(Score) / SUM(MaxScore) * 100.
+                    -- Uses CASE to prevent divide-by-zero errors.
+                    CASE
+                        -- Safety check: If total maxScore is zero, performance is 0%.
+                        WHEN SUM((value ->> 'maxScore')::numeric) = 0 THEN 0
+                        -- Otherwise, calculate (Total Score / Total Max Score) * 100
+                        ELSE (SUM((value ->> 'score')::numeric) / SUM((value ->> 'maxScore')::numeric)) * 100
+                    END AS avg_score
+                FROM
+                    task_submission_logs,
+                    -- jsonb_each is used to break out the nested {score, maxScore, percentage} object
+                    jsonb_each(rubrics) AS t(key, value)
+                WHERE
+                    user_id = ?
+                GROUP BY
+                    key
+                HAVING
+                    -- Apply the filter on the calculated average performance
+                    CASE
+                        WHEN SUM((value ->> 'maxScore')::numeric) = 0 THEN 0
+                        ELSE (SUM((value ->> 'score')::numeric) / SUM((value ->> 'maxScore')::numeric)) * 100
+                    END < ?
+                ORDER BY
+                    avg_score ASC
+                """;
+
+        return jdbcTemplate.query(
+                sql,
+                (rs, rowNum) -> new SkillGapDTO(
+                        rs.getString("rubric"),
+                        rs.getDouble("avg_score"),
+                        String.format("Weak performance in %s (Avg: %.1f/100)",
+                                rs.getString("rubric"), rs.getDouble("avg_score"))
+                ),
+                userId, LOW_RUBRIC_SCORE_THRESHOLD
+        );
+    }
+
+    /**
+     * Generates simple recommendations based on identified rubric gaps.
+     */
+    private List<RecommendationDTO> getRecommendations(List<SkillGapDTO> gaps) {
+        if (gaps.isEmpty()) {
+            return List.of(new RecommendationDTO("Keep up the great work! No specific gaps found.", null));
+        }
+
+        return gaps.stream()
+                .map(gap -> new RecommendationDTO(
+                        String.format("To improve, focus on '%s' in your next tasks.", gap.rubric()),
+                        gap.rubric()
+                ))
+                .collect(Collectors.toList());
+    }
+
+
 
     /**
      * Maps {@link Granularity} values to PostgreSQL {@code DATE_TRUNC} units.
