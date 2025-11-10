@@ -187,6 +187,18 @@
             <artifactId>common-event</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+            <groupId>com.amalitech</groupId>
+            <artifactId>user-service</artifactId>
+            <version>0.0.1-SNAPSHOT</version>
+            <scope>compile</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>com.google.genai</groupId>
+            <artifactId>google-genai</artifactId>
+            <version>1.23.0</version>
+        </dependency>
     </dependencies>
 
 

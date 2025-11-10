@@ -1,15 +1,19 @@
 package com.amalitech.task.service.service.impl;
 
+import com.amalitech.task.service.dto.MCQquestionDTO;
 import com.amalitech.task.service.dto.TaskAvailabilityDTO;
 import com.amalitech.task.service.dto.TaskDTO;
 import com.amalitech.task.service.dto.request.BatchGenerationRequest;
 import com.amalitech.task.service.dto.request.GenerateTaskRequest;
 import com.amalitech.task.service.dto.response.AdminTaskDetailResponse;
 import com.amalitech.task.service.dto.response.AdminTaskSummaryResponse;
+import com.amalitech.task.service.dto.request.McqRequestDTO;
+import com.amalitech.task.service.dto.response.McqResponseDTO;
 import com.amalitech.task.service.events.RabbitMQEventProducer;
 import com.amalitech.task.service.exception.ResourceNotFoundException;
 import com.amalitech.task.service.mapper.TaskMapper;
 import com.amalitech.task.service.model.Task;
+import com.amalitech.task.service.model.content.impl.McqTaskContent;
 import com.amalitech.task.service.model.UserSkillProfile;
 import com.amalitech.task.service.model.enums.TaskDifficulty;
 import com.amalitech.task.service.model.enums.TaskType;
@@ -19,6 +23,16 @@ import com.amalitech.task.service.repository.TaskSubmissionRepository;
 import com.amalitech.task.service.repository.UserSkillProfileRepository;
 import com.amalitech.task.service.service.SkillService;
 import com.amalitech.task.service.service.TaskService;
+
+import com.google.genai.Client;
+import com.google.genai.types.GenerateContentResponse;
+
+
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonObject;
+import com.google.gson.Strictness;
+import com.google.gson.reflect.TypeToken;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.Cacheable;
@@ -28,9 +42,15 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.core.io.ClassPathResource;
 
 import java.time.Duration;
+import java.io.IOException;
+import java.lang.reflect.Type;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -45,6 +65,7 @@ import java.util.stream.Collectors;
 @Slf4j
 @Transactional(readOnly = true)
 public class TaskServiceImpl implements TaskService {
+
 
     private final TaskRepository taskRepository;
     private final UserSkillProfileRepository userSkillProfileRepository;
@@ -295,8 +316,8 @@ public class TaskServiceImpl implements TaskService {
      *   <li>5-14 correct: MEDIUM</li>
      *   <li>15 or more correct: HARD</li>
      * </ul>
-     *
-     * @param userId the unique identifier of the user
+     *param
+     * @param userId  the unique identifier of the user
      * @param skillId the unique identifier of the skill
      * @return the determined difficulty level
      */
@@ -306,5 +327,84 @@ public class TaskServiceImpl implements TaskService {
         if (correctCount < 5) return TaskDifficulty.BEGINNER;
         if (correctCount < 15) return TaskDifficulty.INTERMEDIATE;
         return TaskDifficulty.ADVANCED;
+    }
+
+    @Override
+    public McqResponseDTO generateMCQ(McqRequestDTO mcqRequestDTO) throws IOException {
+        Client client = new Client();
+        ClassPathResource prompt = new ClassPathResource("prompts/mcq/mcq_prompt.json");
+
+        String updatedFields = updateFields(
+                Files.readString(prompt.getFile().toPath(), StandardCharsets.UTF_8),
+                Map.of(
+                        "userId", mcqRequestDTO.getUserId().toString(),
+                        "interest", mcqRequestDTO.getInterest(),
+                        "difficulty", mcqRequestDTO.getDifficulty(),
+                        "no_of_questions", String.valueOf(mcqRequestDTO.getNo_of_questions()))
+                );
+
+
+        String model = "gemini-2.5-flash";
+        GenerateContentResponse response =
+                client.models.generateContent(
+                        model,
+                        updatedFields,
+                        null);
+
+        if (response.text() == null) {
+            throw new IOException("No response from Ai API....");
+        }
+        List<MCQquestionDTO> questions = parseJsonToMcqList(response.text());
+
+        saveQuestions(questions);
+
+        return new McqResponseDTO(questions);
+    }
+
+    public static String updateFields (String jsonString, Map < String, String > updates){
+        Gson gson = new Gson();
+        JsonObject jsonObject = gson.fromJson(jsonString, JsonObject.class);
+        updates.forEach(jsonObject::addProperty);
+        return gson.toJson(jsonObject);
+    }
+
+    public static List<MCQquestionDTO> parseJsonToMcqList (String jsonArrayString){
+        Gson gson = new GsonBuilder().setStrictness(Strictness.LENIENT).create();
+
+        Type listType = new TypeToken<List<MCQquestionDTO>>() {
+        }.getType();
+
+        List<MCQquestionDTO> mcqQuestions = gson.fromJson(jsonArrayString, listType);
+
+        return mcqQuestions;
+    }
+
+    public void saveQuestions(List<MCQquestionDTO> questions) {
+
+        for(MCQquestionDTO question : questions) {
+            Task task = new Task().builder()
+                    .title(question.getQuestion_title())
+                    .description(question.getQuestion_description())
+                    .type(TaskType.valueOf(question.getQuestion_type()))
+                    .difficulty(TaskDifficulty.valueOf(question.getQuestion_difficulty()))
+                    .content(createMCQContent(question))
+                    .xpReward(question.getXpReward())
+                    .build();
+
+            taskRepository.save(task);
+        }
+    }
+
+    public McqTaskContent createMCQContent(MCQquestionDTO content) {
+
+        return McqTaskContent.builder()
+                .question_number(content.getQuestion_number())
+                .question_text(content.getQuestion_text())
+                .question_duration(content.getQuestion_duration())
+                .options(content.getOptions())
+                .hint(content.getHint())
+                .correct_answer(content.getCorrect_answer())
+                .explanation(content.getExplanation())
+                .build();
     }
 }

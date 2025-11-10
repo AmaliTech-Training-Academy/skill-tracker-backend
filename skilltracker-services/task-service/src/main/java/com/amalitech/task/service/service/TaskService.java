@@ -5,6 +5,8 @@ import com.amalitech.task.service.dto.TaskDTO;
 import com.amalitech.task.service.dto.request.GenerateTaskRequest;
 import com.amalitech.task.service.dto.response.AdminTaskDetailResponse;
 import com.amalitech.task.service.dto.response.AdminTaskSummaryResponse;
+import com.amalitech.task.service.dto.request.McqRequestDTO;
+import com.amalitech.task.service.dto.response.McqResponseDTO;
 import com.amalitech.task.service.exception.ResourceNotFoundException;
 import com.amalitech.task.service.model.enums.TaskDifficulty;
 import com.amalitech.task.service.model.enums.TaskType;
@@ -19,6 +21,8 @@ import java.util.UUID;
  * This defines the contract for all task-related business logic.
  */
 public interface TaskService {
+
+    McqResponseDTO generateMCQ(McqRequestDTO taskDTO) throws Exception;
 
     /**
      * Get personalized tasks for a user based on their skill and difficulty.
