@@ -3,14 +3,17 @@ package com.amalitech.task.service.service;
 import com.amalitech.task.service.dto.TaskAvailabilityDTO;
 import com.amalitech.task.service.dto.TaskDTO;
 import com.amalitech.task.service.dto.request.GenerateTaskRequest;
+import com.amalitech.task.service.dto.request.UserProfileRequestDTO;
 import com.amalitech.task.service.dto.response.AdminTaskDetailResponse;
 import com.amalitech.task.service.dto.response.AdminTaskSummaryResponse;
+import com.amalitech.task.service.dto.response.LearningPathResponseDTO;
 import com.amalitech.task.service.exception.ResourceNotFoundException;
 import com.amalitech.task.service.model.enums.TaskDifficulty;
 import com.amalitech.task.service.model.enums.TaskType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
 
@@ -84,4 +87,6 @@ public interface TaskService {
      * @param adminUserId The UUID of the admin making the request (for notifications).
      */
     void requestSpecificTaskGeneration(GenerateTaskRequest requestBody, UUID adminUserId);
+
+    LearningPathResponseDTO generateLearningPath(UserProfileRequestDTO userProfileRequestDTO) throws IOException;
 }
