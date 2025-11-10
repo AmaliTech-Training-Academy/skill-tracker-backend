@@ -2,7 +2,6 @@ package com.amalitech.analytics.service.events;
 
 import com.amalitech.analytics.service.model.SkillSnapShot;
 import com.amalitech.analytics.service.repository.SkillSnapshotRepository;
-import com.amalitech.common.event.events.RabbitMQConstants;
 import com.amalitech.common.event.events.SkillEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
