@@ -21,13 +21,7 @@
       "String (practical Activity 4)"
     ],
     "reasoning": "String (why this next skill makes sense based on goals and skill in current_performance block)",
-    "difficulty": "String (should logically be relevant to the details in the input block)",
-    "resources": [
-      "Link (only use verified URLs from official documentation, established learning platforms like MDN, freeCodeCamp, or reputable tech publishers)",
-      "Link (only use verified URLs from official documentation, established learning platforms like MDN, freeCodeCamp, or reputable tech publishers)",
-      "Link (only use verified URLs from official documentation, established learning platforms like MDN, freeCodeCamp, or reputable tech publishers)",
-      "Link (only use verified URLs from official documentation, established learning platforms like MDN, freeCodeCamp, or reputable tech publishers)"
-    ]
+    "difficulty": "String (should logically be relevant to the details in the input block)"
   },
   "validation": [
     "All links must be verified working URLs from official documentation or established learning platforms",
