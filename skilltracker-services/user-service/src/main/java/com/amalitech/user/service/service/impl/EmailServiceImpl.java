@@ -109,13 +109,14 @@ public class EmailServiceImpl implements EmailService {
      * {@inheritDoc}
      */
     @Override
-    public void sendAdminCreatedUserEmail(String toEmail, String temporaryPassword, String adminEmail) {
+    public void sendAdminCreatedUserEmail(String toEmail, String temporaryPassword, String adminEmail, String loginUrl) {
         String subject = "Your SkillBoost Account Created";
 
         String body = this.adminCreatedUserTemplate
                 .replace("{{email}}", toEmail)
                 .replace("{{temporaryPassword}}", temporaryPassword)
-                .replace("{{adminEmail}}", adminEmail);
+                .replace("{{adminEmail}}", adminEmail)
+                .replace("{{loginUrl}}", loginUrl);
 
         this.send(toEmail, subject, body, "text/html");
     }

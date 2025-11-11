@@ -282,8 +282,6 @@ public class TaskServiceImpl implements TaskService {
     }
 
     /**
-     * --- THIS IS THE ADJUSTED METHOD ---
-     *
      * Retrieves tasks or triggers generation if needed.
      * It now uses simple parameters and has a "guard clause" to prevent
      * generation for anonymous (null) users.
