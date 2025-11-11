@@ -1,5 +1,8 @@
 package com.amalitech.task.service.service.impl;
 
+import com.amalitech.task.service.exception.AiResponseParsingException;
+import com.amalitech.task.service.exception.AiServiceException;
+import com.amalitech.task.service.exception.InvalidAiResponseException;
 import com.amalitech.task.service.model.Task;
 import com.amalitech.task.service.model.TaskDefinition;
 import com.amalitech.task.service.model.content.impl.CodingTaskContent;
@@ -212,15 +215,17 @@ public class ContentGeneratorServiceImpl implements ContentGeneratorService {
             JsonNode challengesNode = root.path("challenges");
 
             if (challengesNode.isMissingNode() || !challengesNode.isArray()) {
-                throw new RuntimeException("Missing or invalid 'challenges' array in OpenAI response");
+                throw new InvalidAiResponseException("Missing or invalid 'challenges' array in OpenAI response");
             }
 
             return StreamSupport.stream(challengesNode.spliterator(), false)
                     .collect(Collectors.toList());
 
+        } catch (InvalidAiResponseException e) {
+            throw e;
         } catch (JsonProcessingException e) {
             log.error("Failed to parse coding challenge JSON: {}", response, e);
-            throw new RuntimeException("Failed to parse OpenAI coding response", e);
+            throw new AiResponseParsingException("Failed to parse OpenAI coding response", e);
         }
     }
 
@@ -244,7 +249,7 @@ public class ContentGeneratorServiceImpl implements ContentGeneratorService {
 
         } catch (Exception e) {
             log.error("Failed to call OpenAI after all retries.", e);
-            throw new RuntimeException("Failed to generate task content via OpenAI after all retries", e);
+            throw new AiServiceException("Failed to generate task content via OpenAI after all retries", e);
         }
     }
 
@@ -321,15 +326,17 @@ public class ContentGeneratorServiceImpl implements ContentGeneratorService {
             JsonNode tasksNode = root.path("tasks");
 
             if (tasksNode.isMissingNode() || !tasksNode.isArray()) {
-                throw new RuntimeException("Missing or invalid 'tasks' array in OpenAI response");
+                throw new InvalidAiResponseException("Missing or invalid 'tasks' array in OpenAI response");
             }
 
             return StreamSupport.stream(tasksNode.spliterator(), false)
                     .collect(Collectors.toList());
 
+        } catch (InvalidAiResponseException e) {
+            throw e;
         } catch (JsonProcessingException e) {
             log.error("Failed to parse essay tasks JSON: {}", response, e);
-            throw new RuntimeException("Failed to parse OpenAI essay response", e);
+            throw new AiResponseParsingException("Failed to parse OpenAI essay response", e);
         }
     }
 

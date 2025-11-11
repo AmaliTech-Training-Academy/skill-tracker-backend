@@ -7,6 +7,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @Repository
@@ -40,4 +41,9 @@ public interface TaskSubmissionRepository extends JpaRepository<TaskSubmission, 
     @Query("SELECT COALESCE(SUM(ts.scoreEarned), 0) FROM TaskSubmission ts " +
             "WHERE ts.userId = :userId")
     Integer getTotalScoreByUser(@Param("userId") UUID userId);
+
+
+    @Query("SELECT ts.task.id FROM TaskSubmission ts " +
+            "WHERE ts.userId = :userId AND ts.status = 'COMPLETED'")
+    Set<UUID> findCompletedTaskIdsByUser(@Param("userId") UUID userId);
 }

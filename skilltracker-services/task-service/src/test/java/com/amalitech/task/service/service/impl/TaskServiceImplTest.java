@@ -33,8 +33,10 @@ import com.amalitech.task.service.dto.response.AdminTaskSummaryResponse;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.data.jpa.domain.Specification;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -560,5 +562,798 @@ class TaskServiceImplTest {
         taskService.getPersonalizedTasks(userId, "PYTHON", TaskType.CODING, 5);
 
         verify(redisTemplate, times(1)).delete(anyString());
+    }
+
+    // ==================== USER TASKS GROUPED BY STATUS TESTS ====================
+
+    @Test
+    void testGetUserTasksGroupedByStatus_Success_WithUserSkills() {
+        UUID skillId2 = UUID.randomUUID();
+        UserSkillProfile userSkillProfile2 = UserSkillProfile.builder()
+                .id(new UserSkillProfile.UserSkillId(userId, skillId2))
+                .skillName("JAVA")
+                .difficulty(TaskDifficulty.INTERMEDIATE)
+                .build();
+
+        List<UserSkillProfile> userProfiles = List.of(userSkillProfile, userSkillProfile2);
+        Set<UUID> completedTaskIds = Set.of(UUID.randomUUID());
+
+        Task task1 = Task.builder()
+                .id(UUID.randomUUID())
+                .title("Python Beginner Task")
+                .type(TaskType.CODING)
+                .difficulty(TaskDifficulty.BEGINNER)
+                .build();
+
+        Task task2 = Task.builder()
+                .id(UUID.randomUUID())
+                .title("Java Intermediate Task")
+                .type(TaskType.CODING)
+                .difficulty(TaskDifficulty.INTERMEDIATE)
+                .build();
+
+        Page<Task> pendingPage = new PageImpl<>(List.of(task1, task2), PageRequest.of(0, 10), 2);
+        Page<Task> completedPage = new PageImpl<>(List.of(), PageRequest.of(0, 10), 0);
+
+        when(userSkillProfileRepository.findById_UserId(userId)).thenReturn(userProfiles);
+        when(submissionRepository.findCompletedTaskIdsByUser(userId)).thenReturn(completedTaskIds);
+        when(taskRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(pendingPage);
+        when(taskRepository.findCompletedTasksByIds(completedTaskIds, PageRequest.of(0, 10))).thenReturn(completedPage);
+        when(taskMapper.toDTO(any(Task.class))).thenReturn(testTaskDTO);
+
+        com.amalitech.task.service.dto.response.UserTasksResponse result = 
+            taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 10);
+
+        assertNotNull(result);
+        assertNotNull(result.pending());
+        assertNotNull(result.completed());
+        assertEquals(2, result.pending().getTotalElements());
+        assertEquals(0, result.completed().getTotalElements());
+        verify(userSkillProfileRepository, times(1)).findById_UserId(userId);
+        verify(submissionRepository, times(1)).findCompletedTaskIdsByUser(userId);
+    }
+
+    @Test
+    void testGetUserTasksGroupedByStatus_NoUserSkillProfiles_EmptyResponse() {
+        when(userSkillProfileRepository.findById_UserId(userId)).thenReturn(List.of());
+
+        com.amalitech.task.service.dto.response.UserTasksResponse result = 
+            taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 10);
+
+        assertNotNull(result);
+        assertEquals(0, result.pending().getTotalElements());
+        assertEquals(0, result.completed().getTotalElements());
+        verify(userSkillProfileRepository, times(1)).findById_UserId(userId);
+        verify(taskRepository, never()).findAll(any(Specification.class), any(Pageable.class));
+    }
+
+    @Test
+    void testGetUserTasksGroupedByStatus_SingleSkillProfile() {
+        List<UserSkillProfile> userProfiles = List.of(userSkillProfile);
+        Set<UUID> completedTaskIds = Set.of();
+
+        List<Task> pendingTasks = List.of(testTask, testTask, testTask, testTask, testTask);
+        Page<Task> pendingPage = new PageImpl<>(pendingTasks, PageRequest.of(0, 10), 5);
+        Page<Task> completedPage = new PageImpl<>(List.of(), PageRequest.of(0, 10), 0);
+
+        when(userSkillProfileRepository.findById_UserId(userId)).thenReturn(userProfiles);
+        when(submissionRepository.findCompletedTaskIdsByUser(userId)).thenReturn(completedTaskIds);
+        when(taskRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(pendingPage);
+        when(taskRepository.findCompletedTasksByIds(completedTaskIds, PageRequest.of(0, 10))).thenReturn(completedPage);
+        when(taskMapper.toDTO(testTask)).thenReturn(testTaskDTO);
+
+        com.amalitech.task.service.dto.response.UserTasksResponse result = 
+            taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 10);
+
+        assertNotNull(result);
+        assertEquals(5, result.pending().getTotalElements());
+        assertEquals(0, result.completed().getTotalElements());
+        verify(taskRepository, times(1)).findAll(any(Specification.class), any(Pageable.class));
+    }
+
+    @Test
+    void testGetUserTasksGroupedByStatus_MultipleSkillProfiles() {
+        UUID skillId2 = UUID.randomUUID();
+        UUID skillId3 = UUID.randomUUID();
+
+        UserSkillProfile profile2 = UserSkillProfile.builder()
+                .id(new UserSkillProfile.UserSkillId(userId, skillId2))
+                .skillName("JAVA")
+                .difficulty(TaskDifficulty.INTERMEDIATE)
+                .build();
+
+        UserSkillProfile profile3 = UserSkillProfile.builder()
+                .id(new UserSkillProfile.UserSkillId(userId, skillId3))
+                .skillName("CPP")
+                .difficulty(TaskDifficulty.ADVANCED)
+                .build();
+
+        List<UserSkillProfile> userProfiles = List.of(userSkillProfile, profile2, profile3);
+        Set<UUID> completedTaskIds = Set.of();
+
+        Page<Task> pendingPage = new PageImpl<>(List.of(testTask), PageRequest.of(0, 10), 20);
+        Page<Task> completedPage = new PageImpl<>(List.of(), PageRequest.of(0, 10), 0);
+
+        when(userSkillProfileRepository.findById_UserId(userId)).thenReturn(userProfiles);
+        when(submissionRepository.findCompletedTaskIdsByUser(userId)).thenReturn(completedTaskIds);
+        when(taskRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(pendingPage);
+        when(taskRepository.findCompletedTasksByIds(completedTaskIds, PageRequest.of(0, 10))).thenReturn(completedPage);
+        when(taskMapper.toDTO(testTask)).thenReturn(testTaskDTO);
+
+        com.amalitech.task.service.dto.response.UserTasksResponse result = 
+            taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 10);
+
+        assertNotNull(result);
+        assertEquals(20, result.pending().getTotalElements());
+        verify(userSkillProfileRepository, times(1)).findById_UserId(userId);
+    }
+
+    @Test
+    void testGetUserTasksGroupedByStatus_NoCompletedTasks() {
+        List<UserSkillProfile> userProfiles = List.of(userSkillProfile);
+        Set<UUID> completedTaskIds = Set.of();
+
+        Page<Task> pendingPage = new PageImpl<>(List.of(testTask), PageRequest.of(0, 10), 10);
+        Page<Task> completedPage = Page.empty(PageRequest.of(0, 10));
+
+        when(userSkillProfileRepository.findById_UserId(userId)).thenReturn(userProfiles);
+        when(submissionRepository.findCompletedTaskIdsByUser(userId)).thenReturn(completedTaskIds);
+        when(taskRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(pendingPage);
+        when(taskRepository.findCompletedTasksByIds(completedTaskIds, PageRequest.of(0, 10))).thenReturn(completedPage);
+        when(taskMapper.toDTO(testTask)).thenReturn(testTaskDTO);
+
+        com.amalitech.task.service.dto.response.UserTasksResponse result = 
+            taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 10);
+
+        assertNotNull(result);
+        assertTrue(result.pending().getTotalElements() > 0);
+        assertEquals(0, result.completed().getTotalElements());
+        verify(taskRepository, times(1)).findAll(any(Specification.class), any(Pageable.class));
+        verify(taskRepository, never()).findCompletedTasksByIds(any(), any());
+    }
+
+    @Test
+    void testGetUserTasksGroupedByStatus_SomeCompletedTasks() {
+        List<UserSkillProfile> userProfiles = List.of(userSkillProfile);
+        UUID completedTaskId1 = UUID.randomUUID();
+        UUID completedTaskId2 = UUID.randomUUID();
+        Set<UUID> completedTaskIds = Set.of(completedTaskId1, completedTaskId2);
+
+        Task completedTask1 = Task.builder()
+                .id(completedTaskId1)
+                .title("Completed Task 1")
+                .type(TaskType.CODING)
+                .difficulty(TaskDifficulty.BEGINNER)
+                .build();
+
+        Task completedTask2 = Task.builder()
+                .id(completedTaskId2)
+                .title("Completed Task 2")
+                .type(TaskType.ESSAY)
+                .difficulty(TaskDifficulty.BEGINNER)
+                .build();
+
+        Page<Task> pendingPage = new PageImpl<>(List.of(testTask), PageRequest.of(0, 10), 15);
+        Page<Task> completedPage = new PageImpl<>(List.of(completedTask1, completedTask2), PageRequest.of(0, 10), 2);
+
+        when(userSkillProfileRepository.findById_UserId(userId)).thenReturn(userProfiles);
+        when(submissionRepository.findCompletedTaskIdsByUser(userId)).thenReturn(completedTaskIds);
+        when(taskRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(pendingPage);
+        when(taskRepository.findCompletedTasksByIds(completedTaskIds, PageRequest.of(0, 10))).thenReturn(completedPage);
+        when(taskMapper.toDTO(any(Task.class))).thenReturn(testTaskDTO);
+
+        com.amalitech.task.service.dto.response.UserTasksResponse result = 
+            taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 10);
+
+        assertNotNull(result);
+        assertEquals(15, result.pending().getTotalElements());
+        assertEquals(2, result.completed().getTotalElements());
+        verify(taskRepository, times(1)).findCompletedTasksByIds(completedTaskIds, PageRequest.of(0, 10));
+    }
+
+    @Test
+    void testGetUserTasksGroupedByStatus_AllTasksCompleted() {
+        List<UserSkillProfile> userProfiles = List.of(userSkillProfile);
+        UUID completedTaskId = UUID.randomUUID();
+        Set<UUID> completedTaskIds = Set.of(completedTaskId);
+
+        Task completedTask = Task.builder()
+                .id(completedTaskId)
+                .title("Completed Task")
+                .type(TaskType.CODING)
+                .difficulty(TaskDifficulty.BEGINNER)
+                .build();
+
+        Page<Task> pendingPage = new PageImpl<>(List.of(), PageRequest.of(0, 10), 0);
+        List<Task> completedTasks = List.of(completedTask, completedTask, completedTask, completedTask, 
+                                            completedTask, completedTask, completedTask, completedTask);
+        Page<Task> completedPage = new PageImpl<>(completedTasks, PageRequest.of(0, 10), 8);
+
+        when(userSkillProfileRepository.findById_UserId(userId)).thenReturn(userProfiles);
+        when(submissionRepository.findCompletedTaskIdsByUser(userId)).thenReturn(completedTaskIds);
+        when(taskRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(pendingPage);
+        when(taskRepository.findCompletedTasksByIds(completedTaskIds, PageRequest.of(0, 10))).thenReturn(completedPage);
+        when(taskMapper.toDTO(completedTask)).thenReturn(testTaskDTO);
+
+        com.amalitech.task.service.dto.response.UserTasksResponse result = 
+            taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 10);
+
+        assertNotNull(result);
+        assertEquals(0, result.pending().getTotalElements());
+        assertEquals(8, result.completed().getTotalElements());
+    }
+
+    @Test
+    void testGetUserTasksGroupedByStatus_PendingPage0Size10() {
+        List<UserSkillProfile> userProfiles = List.of(userSkillProfile);
+        Set<UUID> completedTaskIds = Set.of();
+
+        List<Task> tasks = new ArrayList<>();
+        for (int i = 0; i < 10; i++) {
+            tasks.add(Task.builder()
+                    .id(UUID.randomUUID())
+                    .title("Task " + i)
+                    .type(TaskType.CODING)
+                    .difficulty(TaskDifficulty.BEGINNER)
+                    .build());
+        }
+
+        Page<Task> pendingPage = new PageImpl<>(tasks, PageRequest.of(0, 10), 50);
+        Page<Task> completedPage = new PageImpl<>(List.of(), PageRequest.of(0, 10), 0);
+
+        when(userSkillProfileRepository.findById_UserId(userId)).thenReturn(userProfiles);
+        when(submissionRepository.findCompletedTaskIdsByUser(userId)).thenReturn(completedTaskIds);
+        when(taskRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(pendingPage);
+        when(taskRepository.findCompletedTasksByIds(completedTaskIds, PageRequest.of(0, 10))).thenReturn(completedPage);
+        when(taskMapper.toDTO(any(Task.class))).thenReturn(testTaskDTO);
+
+        com.amalitech.task.service.dto.response.UserTasksResponse result = 
+            taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 10);
+
+        assertNotNull(result);
+        assertEquals(10, result.pending().getContent().size());
+        assertEquals(50, result.pending().getTotalElements());
+        assertEquals(0, result.pending().getNumber());
+    }
+
+    @Test
+    void testGetUserTasksGroupedByStatus_PendingPage1Size10() {
+        List<UserSkillProfile> userProfiles = List.of(userSkillProfile);
+        Set<UUID> completedTaskIds = Set.of();
+
+        List<Task> tasks = new ArrayList<>();
+        for (int i = 0; i < 10; i++) {
+            tasks.add(Task.builder()
+                    .id(UUID.randomUUID())
+                    .title("Task " + i)
+                    .type(TaskType.CODING)
+                    .difficulty(TaskDifficulty.BEGINNER)
+                    .build());
+        }
+
+        Page<Task> pendingPage = new PageImpl<>(tasks, PageRequest.of(1, 10), 50);
+        Page<Task> completedPage = new PageImpl<>(List.of(), PageRequest.of(0, 10), 0);
+
+        when(userSkillProfileRepository.findById_UserId(userId)).thenReturn(userProfiles);
+        when(submissionRepository.findCompletedTaskIdsByUser(userId)).thenReturn(completedTaskIds);
+        when(taskRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(pendingPage);
+        when(taskRepository.findCompletedTasksByIds(completedTaskIds, PageRequest.of(0, 10))).thenReturn(completedPage);
+        when(taskMapper.toDTO(any(Task.class))).thenReturn(testTaskDTO);
+
+        com.amalitech.task.service.dto.response.UserTasksResponse result = 
+            taskService.getUserTasksGroupedByStatus(userId, 1, 10, 0, 10);
+
+        assertNotNull(result);
+        assertEquals(1, result.pending().getNumber());
+        assertEquals(10, result.pending().getSize());
+        assertEquals(50, result.pending().getTotalElements());
+    }
+
+    @Test
+    void testGetUserTasksGroupedByStatus_PendingCustomPageSize() {
+        List<UserSkillProfile> userProfiles = List.of(userSkillProfile);
+        Set<UUID> completedTaskIds = Set.of();
+
+        List<Task> tasks = new ArrayList<>();
+        for (int i = 0; i < 20; i++) {
+            tasks.add(Task.builder()
+                    .id(UUID.randomUUID())
+                    .title("Task " + i)
+                    .type(TaskType.CODING)
+                    .difficulty(TaskDifficulty.BEGINNER)
+                    .build());
+        }
+
+        Page<Task> pendingPage = new PageImpl<>(tasks, PageRequest.of(0, 20), 60);
+        Page<Task> completedPage = new PageImpl<>(List.of(), PageRequest.of(0, 10), 0);
+
+        when(userSkillProfileRepository.findById_UserId(userId)).thenReturn(userProfiles);
+        when(submissionRepository.findCompletedTaskIdsByUser(userId)).thenReturn(completedTaskIds);
+        when(taskRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(pendingPage);
+        when(taskRepository.findCompletedTasksByIds(completedTaskIds, PageRequest.of(0, 10))).thenReturn(completedPage);
+        when(taskMapper.toDTO(any(Task.class))).thenReturn(testTaskDTO);
+
+        com.amalitech.task.service.dto.response.UserTasksResponse result = 
+            taskService.getUserTasksGroupedByStatus(userId, 0, 20, 0, 10);
+
+        assertNotNull(result);
+        assertEquals(20, result.pending().getSize());
+        assertEquals(20, result.pending().getContent().size());
+    }
+
+    @Test
+    void testGetUserTasksGroupedByStatus_CompletedPage0Size10() {
+        List<UserSkillProfile> userProfiles = List.of(userSkillProfile);
+        UUID completedTaskId = UUID.randomUUID();
+        Set<UUID> completedTaskIds = Set.of(completedTaskId);
+
+        Page<Task> pendingPage = new PageImpl<>(List.of(), PageRequest.of(0, 10), 0);
+
+        List<Task> completedTasks = new ArrayList<>();
+        for (int i = 0; i < 10; i++) {
+            completedTasks.add(Task.builder()
+                    .id(UUID.randomUUID())
+                    .title("Completed " + i)
+                    .type(TaskType.CODING)
+                    .difficulty(TaskDifficulty.BEGINNER)
+                    .build());
+        }
+
+        Page<Task> completedPage = new PageImpl<>(completedTasks, PageRequest.of(0, 10), 30);
+
+        when(userSkillProfileRepository.findById_UserId(userId)).thenReturn(userProfiles);
+        when(submissionRepository.findCompletedTaskIdsByUser(userId)).thenReturn(completedTaskIds);
+        when(taskRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(pendingPage);
+        when(taskRepository.findCompletedTasksByIds(completedTaskIds, PageRequest.of(0, 10))).thenReturn(completedPage);
+        when(taskMapper.toDTO(any(Task.class))).thenReturn(testTaskDTO);
+
+        com.amalitech.task.service.dto.response.UserTasksResponse result = 
+            taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 10);
+
+        assertNotNull(result);
+        assertEquals(10, result.completed().getSize());
+        assertEquals(0, result.completed().getNumber());
+        assertEquals(30, result.completed().getTotalElements());
+    }
+
+    @Test
+    void testGetUserTasksGroupedByStatus_CompletedPage1Size10() {
+        List<UserSkillProfile> userProfiles = List.of(userSkillProfile);
+        UUID completedTaskId = UUID.randomUUID();
+        Set<UUID> completedTaskIds = Set.of(completedTaskId);
+
+        Page<Task> pendingPage = new PageImpl<>(List.of(), PageRequest.of(0, 10), 0);
+
+        List<Task> completedTasks = new ArrayList<>();
+        for (int i = 0; i < 10; i++) {
+            completedTasks.add(Task.builder()
+                    .id(UUID.randomUUID())
+                    .title("Completed " + i)
+                    .type(TaskType.CODING)
+                    .difficulty(TaskDifficulty.BEGINNER)
+                    .build());
+        }
+
+        Page<Task> completedPage = new PageImpl<>(completedTasks, PageRequest.of(1, 10), 30);
+
+        when(userSkillProfileRepository.findById_UserId(userId)).thenReturn(userProfiles);
+        when(submissionRepository.findCompletedTaskIdsByUser(userId)).thenReturn(completedTaskIds);
+        when(taskRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(pendingPage);
+        when(taskRepository.findCompletedTasksByIds(completedTaskIds, PageRequest.of(1, 10))).thenReturn(completedPage);
+        when(taskMapper.toDTO(any(Task.class))).thenReturn(testTaskDTO);
+
+        com.amalitech.task.service.dto.response.UserTasksResponse result = 
+            taskService.getUserTasksGroupedByStatus(userId, 0, 10, 1, 10);
+
+        assertNotNull(result);
+        assertEquals(1, result.completed().getNumber());
+        assertEquals(30, result.completed().getTotalElements());
+    }
+
+    @Test
+    void testGetUserTasksGroupedByStatus_IndependentPagination_DifferentSizes() {
+        List<UserSkillProfile> userProfiles = List.of(userSkillProfile);
+        UUID completedTaskId = UUID.randomUUID();
+        Set<UUID> completedTaskIds = Set.of(completedTaskId);
+
+        List<Task> pendingTasks = new ArrayList<>();
+        for (int i = 0; i < 5; i++) {
+            pendingTasks.add(Task.builder()
+                    .id(UUID.randomUUID())
+                    .title("Pending " + i)
+                    .type(TaskType.CODING)
+                    .difficulty(TaskDifficulty.BEGINNER)
+                    .build());
+        }
+
+        List<Task> completedTasks = new ArrayList<>();
+        for (int i = 0; i < 20; i++) {
+            completedTasks.add(Task.builder()
+                    .id(UUID.randomUUID())
+                    .title("Completed " + i)
+                    .type(TaskType.CODING)
+                    .difficulty(TaskDifficulty.BEGINNER)
+                    .build());
+        }
+
+        Page<Task> pendingPage = new PageImpl<>(pendingTasks, PageRequest.of(0, 5), 25);
+        Page<Task> completedPage = new PageImpl<>(completedTasks, PageRequest.of(0, 20), 60);
+
+        when(userSkillProfileRepository.findById_UserId(userId)).thenReturn(userProfiles);
+        when(submissionRepository.findCompletedTaskIdsByUser(userId)).thenReturn(completedTaskIds);
+        when(taskRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(pendingPage);
+        when(taskRepository.findCompletedTasksByIds(completedTaskIds, PageRequest.of(0, 20))).thenReturn(completedPage);
+        when(taskMapper.toDTO(any(Task.class))).thenReturn(testTaskDTO);
+
+        com.amalitech.task.service.dto.response.UserTasksResponse result = 
+            taskService.getUserTasksGroupedByStatus(userId, 0, 5, 0, 20);
+
+        assertNotNull(result);
+        assertEquals(5, result.pending().getSize());
+        assertEquals(5, result.pending().getContent().size());
+        assertEquals(20, result.completed().getSize());
+        assertEquals(20, result.completed().getContent().size());
+    }
+
+    @Test
+    void testGetUserTasksGroupedByStatus_SkillAndDifficultyMatching() {
+        List<UserSkillProfile> userProfiles = List.of(userSkillProfile);
+        Set<UUID> completedTaskIds = Set.of();
+
+        Page<Task> pendingPage = new PageImpl<>(List.of(testTask), PageRequest.of(0, 10), 1);
+        Page<Task> completedPage = new PageImpl<>(List.of(), PageRequest.of(0, 10), 0);
+
+        when(userSkillProfileRepository.findById_UserId(userId)).thenReturn(userProfiles);
+        when(submissionRepository.findCompletedTaskIdsByUser(userId)).thenReturn(completedTaskIds);
+        when(taskRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(pendingPage);
+        when(taskRepository.findCompletedTasksByIds(completedTaskIds, PageRequest.of(0, 10))).thenReturn(completedPage);
+        when(taskMapper.toDTO(testTask)).thenReturn(testTaskDTO);
+
+        com.amalitech.task.service.dto.response.UserTasksResponse result = 
+            taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 10);
+
+        assertNotNull(result);
+        assertEquals(1, result.pending().getTotalElements());
+        verify(taskRepository, times(1)).findAll(any(Specification.class), any(Pageable.class));
+    }
+
+    @Test
+    void testGetUserTasksGroupedByStatus_TaskDTOMapping() {
+        List<UserSkillProfile> userProfiles = List.of(userSkillProfile);
+        Set<UUID> completedTaskIds = Set.of();
+
+        Task task1 = Task.builder()
+                .id(UUID.randomUUID())
+                .title("Task 1")
+                .type(TaskType.CODING)
+                .difficulty(TaskDifficulty.BEGINNER)
+                .build();
+
+        Task task2 = Task.builder()
+                .id(UUID.randomUUID())
+                .title("Task 2")
+                .type(TaskType.ESSAY)
+                .difficulty(TaskDifficulty.INTERMEDIATE)
+                .build();
+
+        Page<Task> pendingPage = new PageImpl<>(List.of(task1, task2), PageRequest.of(0, 10), 2);
+        Page<Task> completedPage = new PageImpl<>(List.of(), PageRequest.of(0, 10), 0);
+
+        when(userSkillProfileRepository.findById_UserId(userId)).thenReturn(userProfiles);
+        when(submissionRepository.findCompletedTaskIdsByUser(userId)).thenReturn(completedTaskIds);
+        when(taskRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(pendingPage);
+        when(taskRepository.findCompletedTasksByIds(completedTaskIds, PageRequest.of(0, 10))).thenReturn(completedPage);
+        when(taskMapper.toDTO(any(Task.class))).thenReturn(testTaskDTO);
+
+        com.amalitech.task.service.dto.response.UserTasksResponse result = 
+            taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 10);
+
+        assertNotNull(result);
+        verify(taskMapper, times(2)).toDTO(any(Task.class));
+        assertEquals(2, result.pending().getContent().size());
+    }
+
+    @Test
+    void testGetUserTasksGroupedByStatus_UserWithZeroTasks() {
+        List<UserSkillProfile> userProfiles = List.of(userSkillProfile);
+        Set<UUID> completedTaskIds = Set.of();
+
+        Page<Task> pendingPage = new PageImpl<>(List.of(), PageRequest.of(0, 10), 0);
+        Page<Task> completedPage = new PageImpl<>(List.of(), PageRequest.of(0, 10), 0);
+
+        when(userSkillProfileRepository.findById_UserId(userId)).thenReturn(userProfiles);
+        when(submissionRepository.findCompletedTaskIdsByUser(userId)).thenReturn(completedTaskIds);
+        when(taskRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(pendingPage);
+        when(taskRepository.findCompletedTasksByIds(completedTaskIds, PageRequest.of(0, 10))).thenReturn(completedPage);
+
+        com.amalitech.task.service.dto.response.UserTasksResponse result = 
+            taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 10);
+
+        assertNotNull(result);
+        assertEquals(0, result.pending().getTotalElements());
+        assertEquals(0, result.completed().getTotalElements());
+    }
+
+    @Test
+    void testGetUserTasksGroupedByStatus_LargeDataset() {
+        List<UserSkillProfile> userProfiles = List.of(userSkillProfile);
+        Set<UUID> completedTaskIds = Set.of();
+
+        List<Task> largePendingList = new ArrayList<>();
+        for (int i = 0; i < 100; i++) {
+            largePendingList.add(Task.builder()
+                    .id(UUID.randomUUID())
+                    .title("Task " + i)
+                    .type(TaskType.CODING)
+                    .difficulty(TaskDifficulty.BEGINNER)
+                    .build());
+        }
+
+        Page<Task> pendingPage = new PageImpl<>(largePendingList, PageRequest.of(0, 100), 1000);
+        Page<Task> completedPage = new PageImpl<>(List.of(), PageRequest.of(0, 10), 0);
+
+        when(userSkillProfileRepository.findById_UserId(userId)).thenReturn(userProfiles);
+        when(submissionRepository.findCompletedTaskIdsByUser(userId)).thenReturn(completedTaskIds);
+        when(taskRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(pendingPage);
+        when(taskRepository.findCompletedTasksByIds(completedTaskIds, PageRequest.of(0, 10))).thenReturn(completedPage);
+        when(taskMapper.toDTO(any(Task.class))).thenReturn(testTaskDTO);
+
+        com.amalitech.task.service.dto.response.UserTasksResponse result = 
+            taskService.getUserTasksGroupedByStatus(userId, 0, 100, 0, 10);
+
+        assertNotNull(result);
+        assertEquals(100, result.pending().getContent().size());
+        assertEquals(1000, result.pending().getTotalElements());
+    }
+
+    @Test
+    void testGetUserTasksGroupedByStatus_AllTasksForDifferentUsers_NoMixup() {
+        UUID differentUserId = UUID.randomUUID();
+        
+        List<UserSkillProfile> userProfiles = List.of(userSkillProfile);
+        Set<UUID> completedTaskIds = Set.of();
+
+        Page<Task> pendingPage = new PageImpl<>(List.of(testTask), PageRequest.of(0, 10), 5);
+        Page<Task> completedPage = new PageImpl<>(List.of(), PageRequest.of(0, 10), 0);
+
+        when(userSkillProfileRepository.findById_UserId(userId)).thenReturn(userProfiles);
+        when(submissionRepository.findCompletedTaskIdsByUser(userId)).thenReturn(completedTaskIds);
+        when(taskRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(pendingPage);
+        when(taskRepository.findCompletedTasksByIds(completedTaskIds, PageRequest.of(0, 10))).thenReturn(completedPage);
+        when(taskMapper.toDTO(testTask)).thenReturn(testTaskDTO);
+
+        com.amalitech.task.service.dto.response.UserTasksResponse result = 
+            taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 10);
+
+        assertNotNull(result);
+        verify(userSkillProfileRepository, times(1)).findById_UserId(userId);
+        verify(submissionRepository, times(1)).findCompletedTaskIdsByUser(userId);
+    }
+
+    @Test
+    void testGetUserTasksGroupedByStatus_EmptyCompletedTaskIds() {
+        List<UserSkillProfile> userProfiles = List.of(userSkillProfile);
+        Set<UUID> completedTaskIds = Set.of();
+
+        Page<Task> pendingPage = new PageImpl<>(List.of(testTask), PageRequest.of(0, 10), 10);
+        Page<Task> completedPage = Page.empty(PageRequest.of(0, 10));
+
+        when(userSkillProfileRepository.findById_UserId(userId)).thenReturn(userProfiles);
+        when(submissionRepository.findCompletedTaskIdsByUser(userId)).thenReturn(completedTaskIds);
+        when(taskRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(pendingPage);
+        when(taskRepository.findCompletedTasksByIds(completedTaskIds, PageRequest.of(0, 10))).thenReturn(completedPage);
+        when(taskMapper.toDTO(testTask)).thenReturn(testTaskDTO);
+
+        com.amalitech.task.service.dto.response.UserTasksResponse result = 
+            taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 10);
+
+        assertNotNull(result);
+        assertEquals(10, result.pending().getTotalElements());
+        assertEquals(0, result.completed().getTotalElements());
+        verify(taskRepository, never()).findCompletedTasksByIds(any(), any());
+    }
+
+    @Test
+    void testGetUserTasksGroupedByStatus_NoUserSkillProfiles() {
+        List<UserSkillProfile> emptyProfiles = List.of();
+        Set<UUID> completedTaskIds = Set.of();
+
+        Page<Task> emptyPendingPage = Page.empty(PageRequest.of(0, 10));
+        Page<Task> emptyCompletedPage = Page.empty(PageRequest.of(0, 10));
+
+        when(userSkillProfileRepository.findById_UserId(userId)).thenReturn(emptyProfiles);
+        when(submissionRepository.findCompletedTaskIdsByUser(userId)).thenReturn(completedTaskIds);
+        when(taskRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(emptyPendingPage);
+        when(taskRepository.findCompletedTasksByIds(completedTaskIds, PageRequest.of(0, 10))).thenReturn(emptyCompletedPage);
+
+        com.amalitech.task.service.dto.response.UserTasksResponse result = 
+            taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 10);
+
+        assertNotNull(result);
+        assertEquals(0, result.pending().getTotalElements());
+        assertEquals(0, result.completed().getTotalElements());
+    }
+
+    @Test
+    void testGetUserTasksGroupedByStatus_OrLogicForMultipleSkills() {
+        UUID skillId2 = UUID.randomUUID();
+        UUID skillId3 = UUID.randomUUID();
+
+        UserSkillProfile profile2 = UserSkillProfile.builder()
+                .id(new UserSkillProfile.UserSkillId(userId, skillId2))
+                .skillName("JAVA")
+                .difficulty(TaskDifficulty.INTERMEDIATE)
+                .build();
+
+        UserSkillProfile profile3 = UserSkillProfile.builder()
+                .id(new UserSkillProfile.UserSkillId(userId, skillId3))
+                .skillName("CPP")
+                .difficulty(TaskDifficulty.ADVANCED)
+                .build();
+
+        List<UserSkillProfile> userProfiles = List.of(userSkillProfile, profile2, profile3);
+        Set<UUID> completedTaskIds = Set.of();
+
+        List<Task> mixedTasks = List.of(
+            Task.builder().id(UUID.randomUUID()).title("Python BEGINNER").difficulty(TaskDifficulty.BEGINNER).build(),
+            Task.builder().id(UUID.randomUUID()).title("Java INTERMEDIATE").difficulty(TaskDifficulty.INTERMEDIATE).build(),
+            Task.builder().id(UUID.randomUUID()).title("CPP ADVANCED").difficulty(TaskDifficulty.ADVANCED).build()
+        );
+
+        Page<Task> pendingPage = new PageImpl<>(mixedTasks, PageRequest.of(0, 10), 3);
+        Page<Task> completedPage = Page.empty(PageRequest.of(0, 10));
+
+        when(userSkillProfileRepository.findById_UserId(userId)).thenReturn(userProfiles);
+        when(submissionRepository.findCompletedTaskIdsByUser(userId)).thenReturn(completedTaskIds);
+        when(taskRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(pendingPage);
+        when(taskRepository.findCompletedTasksByIds(completedTaskIds, PageRequest.of(0, 10))).thenReturn(completedPage);
+        when(taskMapper.toDTO(any(Task.class))).thenReturn(testTaskDTO);
+
+        com.amalitech.task.service.dto.response.UserTasksResponse result = 
+            taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 10);
+
+        assertNotNull(result);
+        assertEquals(3, result.pending().getTotalElements());
+        verify(taskRepository, times(1)).findAll(any(Specification.class), any(Pageable.class));
+    }
+
+    @Test
+    void testGetUserTasksGroupedByStatus_CompletedCustomPageSize() {
+        List<UserSkillProfile> userProfiles = List.of(userSkillProfile);
+        UUID completedTaskId = UUID.randomUUID();
+        Set<UUID> completedTaskIds = Set.of(completedTaskId);
+
+        Page<Task> pendingPage = new PageImpl<>(List.of(), PageRequest.of(0, 10), 0);
+
+        List<Task> completedTasks = new ArrayList<>();
+        for (int i = 0; i < 15; i++) {
+            completedTasks.add(Task.builder()
+                    .id(UUID.randomUUID())
+                    .title("Completed " + i)
+                    .type(TaskType.CODING)
+                    .difficulty(TaskDifficulty.BEGINNER)
+                    .build());
+        }
+
+        Page<Task> completedPage = new PageImpl<>(completedTasks, PageRequest.of(0, 15), 45);
+
+        when(userSkillProfileRepository.findById_UserId(userId)).thenReturn(userProfiles);
+        when(submissionRepository.findCompletedTaskIdsByUser(userId)).thenReturn(completedTaskIds);
+        when(taskRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(pendingPage);
+        when(taskRepository.findCompletedTasksByIds(completedTaskIds, PageRequest.of(0, 15))).thenReturn(completedPage);
+        when(taskMapper.toDTO(any(Task.class))).thenReturn(testTaskDTO);
+
+        com.amalitech.task.service.dto.response.UserTasksResponse result = 
+            taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 15);
+
+        assertNotNull(result);
+        assertEquals(15, result.completed().getSize());
+        assertEquals(15, result.completed().getContent().size());
+    }
+
+    @Test
+    void testGetUserTasksGroupedByStatus_PendingPageBeyondTotal() {
+        List<UserSkillProfile> userProfiles = List.of(userSkillProfile);
+        Set<UUID> completedTaskIds = Set.of();
+
+        Page<Task> emptyPage = new PageImpl<>(List.of(), PageRequest.of(10, 10), 5);
+        Page<Task> completedPage = new PageImpl<>(List.of(), PageRequest.of(0, 10), 0);
+
+        when(userSkillProfileRepository.findById_UserId(userId)).thenReturn(userProfiles);
+        when(submissionRepository.findCompletedTaskIdsByUser(userId)).thenReturn(completedTaskIds);
+        when(taskRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(emptyPage);
+        when(taskRepository.findCompletedTasksByIds(completedTaskIds, PageRequest.of(0, 10))).thenReturn(completedPage);
+
+        com.amalitech.task.service.dto.response.UserTasksResponse result = 
+            taskService.getUserTasksGroupedByStatus(userId, 10, 10, 0, 10);
+
+        assertNotNull(result);
+        assertEquals(0, result.pending().getContent().size());
+        assertEquals(5, result.pending().getTotalElements());
+    }
+
+    @Test
+    void testGetUserTasksGroupedByStatus_IndependentPagination_DifferentPages() {
+        List<UserSkillProfile> userProfiles = List.of(userSkillProfile);
+        Set<UUID> completedTaskIds = Set.of();
+
+        List<Task> pendingTasks = new ArrayList<>();
+        for (int i = 0; i < 10; i++) {
+            pendingTasks.add(Task.builder()
+                    .id(UUID.randomUUID())
+                    .title("Pending " + i)
+                    .type(TaskType.CODING)
+                    .difficulty(TaskDifficulty.BEGINNER)
+                    .build());
+        }
+
+        List<Task> completedTasks = new ArrayList<>();
+        for (int i = 0; i < 10; i++) {
+            completedTasks.add(Task.builder()
+                    .id(UUID.randomUUID())
+                    .title("Completed " + i)
+                    .type(TaskType.CODING)
+                    .difficulty(TaskDifficulty.BEGINNER)
+                    .build());
+        }
+
+        Page<Task> pendingPage = new PageImpl<>(pendingTasks, PageRequest.of(0, 10), 50);
+        Page<Task> completedPage = new PageImpl<>(completedTasks, PageRequest.of(2, 10), 50);
+
+        when(userSkillProfileRepository.findById_UserId(userId)).thenReturn(userProfiles);
+        when(submissionRepository.findCompletedTaskIdsByUser(userId)).thenReturn(completedTaskIds);
+        when(taskRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(pendingPage);
+        when(taskRepository.findCompletedTasksByIds(any(), any(Pageable.class))).thenReturn(completedPage);
+        when(taskMapper.toDTO(any(Task.class))).thenReturn(testTaskDTO);
+
+        com.amalitech.task.service.dto.response.UserTasksResponse result = 
+            taskService.getUserTasksGroupedByStatus(userId, 0, 10, 2, 10);
+
+        assertNotNull(result);
+        assertEquals(0, result.pending().getNumber());
+        assertEquals(2, result.completed().getNumber());
+    }
+
+    @Test
+    void testGetUserTasksGroupedByStatus_Success_MultipleDifficulties() {
+        UUID skillId2 = UUID.randomUUID();
+
+        UserSkillProfile profile2 = UserSkillProfile.builder()
+                .id(new UserSkillProfile.UserSkillId(userId, skillId2))
+                .skillName("PYTHON")
+                .difficulty(TaskDifficulty.INTERMEDIATE)
+                .build();
+
+        List<UserSkillProfile> userProfiles = List.of(userSkillProfile, profile2);
+        Set<UUID> completedTaskIds = Set.of();
+
+        Task task1 = Task.builder()
+                .id(UUID.randomUUID())
+                .title("Python BEGINNER")
+                .type(TaskType.CODING)
+                .difficulty(TaskDifficulty.BEGINNER)
+                .build();
+
+        Task task2 = Task.builder()
+                .id(UUID.randomUUID())
+                .title("Python INTERMEDIATE")
+                .type(TaskType.CODING)
+                .difficulty(TaskDifficulty.INTERMEDIATE)
+                .build();
+
+        Page<Task> pendingPage = new PageImpl<>(List.of(task1, task2), PageRequest.of(0, 10), 2);
+        Page<Task> completedPage = Page.empty(PageRequest.of(0, 10));
+
+        when(userSkillProfileRepository.findById_UserId(userId)).thenReturn(userProfiles);
+        when(submissionRepository.findCompletedTaskIdsByUser(userId)).thenReturn(completedTaskIds);
+        when(taskRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(pendingPage);
+        when(taskRepository.findCompletedTasksByIds(completedTaskIds, PageRequest.of(0, 10))).thenReturn(completedPage);
+        when(taskMapper.toDTO(any(Task.class))).thenReturn(testTaskDTO);
+
+        com.amalitech.task.service.dto.response.UserTasksResponse result = 
+            taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 10);
+
+        assertNotNull(result);
+        assertEquals(2, result.pending().getTotalElements());
     }
 }
