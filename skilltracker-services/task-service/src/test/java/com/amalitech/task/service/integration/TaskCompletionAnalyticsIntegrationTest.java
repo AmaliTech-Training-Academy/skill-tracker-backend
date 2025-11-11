@@ -9,17 +9,14 @@ import com.amalitech.task.service.mapper.TaskCompletionMapper;
 import com.amalitech.task.service.model.Task;
 import com.amalitech.task.service.model.TaskDefinition;
 import com.amalitech.task.service.model.TaskSubmission;
-import com.amalitech.task.service.model.view.SkillView;
 import com.amalitech.task.service.model.enums.SubmissionStatus;
 import com.amalitech.task.service.model.enums.TaskDifficulty;
 import com.amalitech.task.service.model.enums.TaskType;
+import com.amalitech.task.service.model.view.SkillView;
 import com.amalitech.task.service.repository.TaskRepository;
 import com.amalitech.task.service.repository.TaskSubmissionRepository;
-import com.amalitech.task.service.service.SubmissionService;
 import com.amalitech.task.service.validation.TaskCompletedEventValidator;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -28,7 +25,6 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.Optional;
@@ -36,7 +32,6 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 /**
@@ -72,7 +67,6 @@ class TaskCompletionAnalyticsIntegrationTest {
     private ObjectMapper objectMapper;
     private TaskCompletionMapper taskCompletionMapper;
     private TaskCompletedEventValidator validator;
-    private MeterRegistry meterRegistry;
 
     @InjectMocks
     private com.amalitech.task.service.service.impl.SubmissionServiceImpl submissionService;
@@ -90,7 +84,6 @@ class TaskCompletionAnalyticsIntegrationTest {
         objectMapper = new ObjectMapper();
         taskCompletionMapper = new TaskCompletionMapper(objectMapper);
         validator = new TaskCompletedEventValidator();
-        meterRegistry = new SimpleMeterRegistry();
 
         // Reinitialize the submission service with all dependencies
         submissionService = new com.amalitech.task.service.service.impl.SubmissionServiceImpl(
@@ -101,8 +94,7 @@ class TaskCompletionAnalyticsIntegrationTest {
                 objectMapper,
                 fallbackMapper,
                 taskCompletionMapper,
-                validator,
-                meterRegistry
+                validator
         );
 
         // Create test data
@@ -144,9 +136,9 @@ class TaskCompletionAnalyticsIntegrationTest {
         String detailedFeedback = """
                 {
                   "evaluation": {
-                    "correctness": {"score": 50.0, "feedback": "All test cases passed"},
-                    "efficiency": {"score": 25.5, "feedback": "Good algorithm complexity"},
-                    "style": {"score": 18.0, "feedback": "Well-formatted code"},
+                    "correctness": {"score": 50.0, "percentage": 100, "feedback": "All test cases passed"},
+                    "efficiency": {"score": 25.5, "percentage": 85, "feedback": "Good algorithm complexity"},
+                    "style": {"score": 18.0, "percentage": 90, "feedback": "Well-formatted code"},
                     "overall": {"percentage": 93, "summary": "Excellent submission"}
                   }
                 }
@@ -201,9 +193,9 @@ class TaskCompletionAnalyticsIntegrationTest {
         String detailedFeedback = """
                 {
                   "evaluation": {
-                    "correctness": {"score": 48.5, "feedback": "Minor issues in edge cases"},
-                    "efficiency": {"score": 28.0, "feedback": "Optimized"},
-                    "style": {"score": 20.0, "feedback": "Perfect formatting"},
+                    "correctness": {"score": 48.5, "percentage": 97, "feedback": "Minor issues in edge cases"},
+                    "efficiency": {"score": 28.0, "percentage": 93, "feedback": "Optimized"},
+                    "style": {"score": 20.0, "percentage": 100, "feedback": "Perfect formatting"},
                     "overall": {"percentage": 96, "summary": "Great work"}
                   }
                 }
@@ -256,9 +248,9 @@ class TaskCompletionAnalyticsIntegrationTest {
         String detailedFeedback = """
                 {
                   "evaluation": {
-                    "correctness": {"score": 50.0, "feedback": "Good"},
-                    "efficiency": {"score": 30.0, "feedback": "Good"},
-                    "style": {"score": 20.0, "feedback": "Good"},
+                    "correctness": {"score": 50.0, "percentage": 100, "feedback": "Good"},
+                    "efficiency": {"score": 30.0, "percentage": 100, "feedback": "Good"},
+                    "style": {"score": 20.0, "percentage": 100, "feedback": "Good"},
                     "overall": {"percentage": 100, "summary": "Perfect"}
                   }
                 }
@@ -289,46 +281,6 @@ class TaskCompletionAnalyticsIntegrationTest {
 
         // Event should be valid
         assertTrue(validator.isValid(publishedEvent), "Event should pass validation");
-    }
-
-    @Test
-    void testMetricsRecording() {
-        // Arrange
-        String detailedFeedback = """
-                {
-                  "evaluation": {
-                    "correctness": {"score": 50.0, "feedback": "Good"},
-                    "efficiency": {"score": 30.0, "feedback": "Good"},
-                    "style": {"score": 20.0, "feedback": "Good"},
-                    "overall": {"percentage": 100, "summary": "Perfect"}
-                  }
-                }
-                """;
-
-        SubmissionEvaluatedEvent evaluatedEvent = SubmissionEvaluatedEvent.builder()
-                .submissionId(submissionId)
-                .userId(userId)
-                .status("COMPLETED")
-                .score(100)
-                .isCorrect(true)
-                .feedbackType("CODING")
-                .overallFeedback("Perfect")
-                .detailedFeedback(detailedFeedback)
-                .build();
-
-        when(submissionRepository.findById(submissionId)).thenReturn(Optional.of(testSubmission));
-        when(submissionRepository.save(any(TaskSubmission.class))).thenAnswer(invocation -> invocation.getArgument(0));
-
-        // Act
-        submissionService.updateSubmissionFromEvent(evaluatedEvent);
-
-        // Assert - Verify metrics were recorded
-        double publishedCount = meterRegistry.counter(
-                "task.completed.published",
-                "taskType", "CODING",
-                "passed", "true"
-        ).count();
-        assertEquals(1.0, publishedCount, "Should record one successful publication");
     }
 
     @Test
@@ -373,9 +325,9 @@ class TaskCompletionAnalyticsIntegrationTest {
         String detailedFeedback = """
                 {
                   "evaluation": {
-                    "correctness": {"score": 40.0, "feedback": "Good"},
-                    "efficiency": {"score": 24.0, "feedback": "Good"},
-                    "style": {"score": 16.0, "feedback": "Good"},
+                    "correctness": {"score": 40.0, "percentage": 80, "feedback": "Good"},
+                    "efficiency": {"score": 24.0, "percentage": 80, "feedback": "Good"},
+                    "style": {"score": 16.0, "percentage": 80, "feedback": "Good"},
                     "overall": {"percentage": 80, "summary": "Good"}
                   }
                 }

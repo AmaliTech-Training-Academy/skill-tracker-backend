@@ -60,6 +60,8 @@ public class AuthServiceImpl implements AuthService {
     private CookieUtil cookieUtil;
     @Value("${app.frontend-url}")
     private String frontendUrl;
+    @Value("${app.frontend.login-url:http://localhost:3000/login}")
+    private String loginUrl;
     private final Map<Integer, VerificationObject> activeVerifications = new ConcurrentHashMap<>();
 
 
@@ -381,7 +383,7 @@ public class AuthServiceImpl implements AuthService {
         savedUser.setProfile(userProfile);
         userRepository.save(savedUser);
 
-        emailService.sendAdminCreatedUserEmail(request.email(), tempPassword, adminEmail);
+        emailService.sendAdminCreatedUserEmail(request.email(), tempPassword, adminEmail, loginUrl);
 
         log.info("Admin {} created new {} user: {}", adminEmail, request.role(), request.email());
         return UserMapper.toDto(savedUser);

@@ -84,7 +84,7 @@ public class TaskCompletedEvent {
      * 
      * <p>Keys are rubric category names (e.g., "correctness", "efficiency", "style" for coding tasks;
      * "completeness", "accuracy", "clarity", "depth" for essay tasks).
-     * Values contain detailed score breakdown including weighted points and achievement percentage.</p>
+     * Values contain a detailed score breakdown including weighted points and achievement percentage.</p>
      */
     private Map<String, RubricScoreData> rubricsScores;
 
@@ -95,7 +95,7 @@ public class TaskCompletedEvent {
     @Builder
     public static class RubricScoreData {
         /**
-         * Score achieved for this rubric (as floating-point to preserve precision).
+         * Score achieved for this rubric (as a floating-point to preserve precision).
          * Example: 45.5 for a score of 45.5 points
          */
         private Double score;

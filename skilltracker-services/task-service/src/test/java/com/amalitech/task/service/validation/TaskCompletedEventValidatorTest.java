@@ -5,6 +5,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -298,6 +299,9 @@ class TaskCompletedEventValidatorTest {
     @Test
     void testNullRubricDataFails() {
         // Arrange
+        Map<String, TaskCompletedEvent.RubricScoreData> rubrics = new HashMap<>();
+        rubrics.put("correctness", null);  // Null rubric data
+        
         TaskCompletedEvent event = TaskCompletedEvent.builder()
                 .userId(UUID.randomUUID())
                 .taskId(UUID.randomUUID().toString())
@@ -305,9 +309,7 @@ class TaskCompletedEventValidatorTest {
                 .taskType("CODING")
                 .totalXpEarned(100)
                 .completedAt(Instant.now())
-                .rubricsScores(Map.of(
-                        "correctness", null  // Null rubric data
-                ))
+                .rubricsScores(rubrics)
                 .build();
 
         // Act
