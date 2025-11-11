@@ -2,12 +2,14 @@ package com.amalitech.task.service.service.impl;
 
 import com.amalitech.common.event.events.SubmissionCreatedEvent;
 import com.amalitech.common.event.events.SubmissionEvaluatedEvent;
+import com.amalitech.common.event.events.TaskCompletedEvent;
 import com.amalitech.task.service.dto.TaskSubmissionDTO;
 import com.amalitech.task.service.dto.request.SubmitAnswerRequest;
 import com.amalitech.task.service.events.EventProducer;
 import com.amalitech.task.service.exception.ResourceNotFoundException;
 import com.amalitech.task.service.mapper.FallbackFeedbackMapper;
 import com.amalitech.task.service.mapper.SubmissionMapper;
+import com.amalitech.task.service.mapper.TaskCompletionMapper;
 import com.amalitech.task.service.model.Task;
 import com.amalitech.task.service.model.TaskSubmission;
 import com.amalitech.task.service.model.enums.SubmissionStatus;
@@ -17,7 +19,6 @@ import com.amalitech.task.service.model.feedback.impl.EssaySubmissionFeedback;
 import com.amalitech.task.service.repository.TaskRepository;
 import com.amalitech.task.service.repository.TaskSubmissionRepository;
 import com.amalitech.task.service.service.SubmissionService;
-import com.amalitech.task.service.service.TaskService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -45,7 +46,7 @@ public class SubmissionServiceImpl implements SubmissionService {
     private final SubmissionMapper submissionMapper;
     private final ObjectMapper objectMapper;
     private final FallbackFeedbackMapper fallbackMapper;
-    private final TaskService taskService;
+    private final TaskCompletionMapper taskCompletionMapper;
 
     public SubmissionServiceImpl(TaskSubmissionRepository submissionRepository,
                                  TaskRepository taskRepository,
@@ -53,14 +54,14 @@ public class SubmissionServiceImpl implements SubmissionService {
                                  SubmissionMapper submissionMapper,
                                  ObjectMapper objectMapper,
                                  FallbackFeedbackMapper fallbackMapper,
-                                 TaskService taskService) {
+                                 TaskCompletionMapper taskCompletionMapper) {
         this.submissionRepository = submissionRepository;
         this.taskRepository = taskRepository;
         this.eventProducer = eventProducer;
         this.submissionMapper = submissionMapper;
         this.objectMapper = objectMapper;
         this.fallbackMapper = fallbackMapper;
-        this.taskService = taskService;
+        this.taskCompletionMapper = taskCompletionMapper;
     }
 
     /**
@@ -103,67 +104,103 @@ public class SubmissionServiceImpl implements SubmissionService {
     }
 
     /**
-     * Updates an existing submission record using the results received from the
-     * asynchronous Evaluation Service via the {@link SubmissionEvaluatedEvent}.
-     * <p>
-     * This method finds the submission, updates the score, correctness, evaluation time,
-     * status, and dynamically constructs the appropriate polymorphic feedback (e.g.,
-     * {@link CodingSubmissionFeedback}) based on the event's payload. It is typically
-     * called by a message listener.
-     *
-     * @param event The {@link SubmissionEvaluatedEvent} containing the evaluation results.
-     * @throws ResourceNotFoundException if the submission ID in the event does not match an existing record.
+    * Updates an existing submission record using the results received from the
+    * asynchronous Evaluation Service via the {@link SubmissionEvaluatedEvent}.
+    * <p>
+    * This method finds the submission, updates the score, correctness, evaluation time,
+    * status, and dynamically constructs the appropriate polymorphic feedback (e.g.,
+    * {@link CodingSubmissionFeedback}) based on the event's payload. It then publishes
+    * a {@link TaskCompletedEvent} to analytics services. It is typically called by a
+    * message listener.
+    *
+    * @param event The {@link SubmissionEvaluatedEvent} containing the evaluation results.
+    * @throws ResourceNotFoundException if the submission ID in the event does not match an existing record.
      */
     @Override
     @Transactional
     public void updateSubmissionFromEvent(SubmissionEvaluatedEvent event) {
-        log.info("Updating submission {} from evaluated event.", event.getSubmissionId());
+         log.info("Updating submission {} from evaluated event.", event.getSubmissionId());
 
-        TaskSubmission existingSubmission = submissionRepository.findById(event.getSubmissionId())
-                .orElseThrow(() -> new ResourceNotFoundException("Submission not found: " + event.getSubmissionId()));
+    TaskSubmission existingSubmission = submissionRepository.findById(event.getSubmissionId())
+                 .orElseThrow(() -> new ResourceNotFoundException("Submission not found: " + event.getSubmissionId()));
 
-        existingSubmission.setScoreEarned(event.getScore());
-        existingSubmission.setIsCorrect(event.isCorrect());
-        existingSubmission.setEvaluatedAt(LocalDateTime.now());
+    existingSubmission.setScoreEarned(event.getScore());
+    existingSubmission.setIsCorrect(event.isCorrect());
+         existingSubmission.setEvaluatedAt(LocalDateTime.now());
 
-        try {
-            SubmissionStatus status = SubmissionStatus.valueOf(event.getStatus());
-            existingSubmission.setStatus(status);
-        } catch (Exception e) {
-            log.warn("Invalid status '{}' from event. Defaulting to COMPLETED.", event.getStatus());
-            existingSubmission.setStatus(SubmissionStatus.COMPLETED);
+    try {
+    SubmissionStatus status = SubmissionStatus.valueOf(event.getStatus());
+        existingSubmission.setStatus(status);
+    } catch (Exception e) {
+    log.warn("Invalid status '{}' from event. Defaulting to COMPLETED.", event.getStatus());
+        existingSubmission.setStatus(SubmissionStatus.COMPLETED);
+         }
+
+    if (event.getDetailedFeedback() != null && !event.getDetailedFeedback().trim().isEmpty()) {
+    try {
+    SubmissionFeedback detailedFeedback = objectMapper.readValue(
+    event.getDetailedFeedback(),
+            SubmissionFeedback.class
+    );
+                 existingSubmission.setFeedback(detailedFeedback);
+
+    } catch (Exception e) {
+    log.warn("Failed to parse detailed feedback JSON, falling back to basic: {}", e.getMessage());
+    if ("CODING".equals(event.getFeedbackType())) {
+        existingSubmission.setFeedback(fallbackMapper.createBasicCodingFeedback(event));
+    } else if ("ESSAY".equals(event.getFeedbackType())) {
+        existingSubmission.setFeedback(fallbackMapper.createBasicEssayFeedback(event));
         }
-
-        if (event.getDetailedFeedback() != null && !event.getDetailedFeedback().trim().isEmpty()) {
-            try {
-                SubmissionFeedback detailedFeedback = objectMapper.readValue(
-                        event.getDetailedFeedback(),
-                        SubmissionFeedback.class
-                );
-                existingSubmission.setFeedback(detailedFeedback);
-
-            } catch (Exception e) {
-                log.warn("Failed to parse detailed feedback JSON, falling back to basic: {}", e.getMessage());
-                if ("CODING".equals(event.getFeedbackType())) {
-                    existingSubmission.setFeedback(fallbackMapper.createBasicCodingFeedback(event));
-                } else if ("ESSAY".equals(event.getFeedbackType())) {
-                    existingSubmission.setFeedback(fallbackMapper.createBasicEssayFeedback(event));
-                }
-            }
         }
-        else {
-            log.warn("No detailed feedback found for event, delegating to fallback mapper.");
-            if ("CODING".equals(event.getFeedbackType())) {
-                existingSubmission.setFeedback(fallbackMapper.createBasicCodingFeedback(event));
-            } else if ("ESSAY".equals(event.getFeedbackType())) {
-                existingSubmission.setFeedback(fallbackMapper.createBasicEssayFeedback(event));
-            }
+    }
+    else {
+    log.warn("No detailed feedback found for event, delegating to fallback mapper.");
+    if ("CODING".equals(event.getFeedbackType())) {
+        existingSubmission.setFeedback(fallbackMapper.createBasicCodingFeedback(event));
+    } else if ("ESSAY".equals(event.getFeedbackType())) {
+        existingSubmission.setFeedback(fallbackMapper.createBasicEssayFeedback(event));
         }
+         }
 
-        TaskSubmission updatedSubmission = submissionRepository.save(existingSubmission);
+    TaskSubmission updatedSubmission = submissionRepository.save(existingSubmission);
         log.info("Submission {} updated with feedback and results.", updatedSubmission.getId());
 
-    }
+         publishTaskCompletionEvent(updatedSubmission, event);
+     }
+
+     /**
+      * Publishes a task completion event to analytics services after submission evaluation.
+      * <p>
+      * This method constructs a {@link TaskCompletedEvent} containing comprehensive
+      * information about task completion and publishes it for consumption by analytics services.
+      *
+      * @param submission The updated {@link TaskSubmission}.
+      * @param event The {@link SubmissionEvaluatedEvent} with evaluation results.
+      */
+     private void publishTaskCompletionEvent(TaskSubmission submission, SubmissionEvaluatedEvent event) {
+         try {
+             Task task = submission.getTask();
+             UUID skillId = task.getTaskDefinition().getSkill().getId();
+             Integer totalXpEarned = task.getXpReward();
+
+             TaskCompletedEvent taskCompletedEvent = taskCompletionMapper.toTaskCompletedEvent(
+                     submission,
+                     task,
+                     event,
+                     skillId,
+                     totalXpEarned
+             );
+
+             eventProducer.publishTaskCompleted(taskCompletedEvent);
+             log.info("Task completion event published for user: {} and task: {}", 
+                     submission.getUserId(), task.getId());
+
+         } catch (Exception e) {
+             log.error("Failed to publish task completion event for submission: {}. Error: {}", 
+                     submission.getId(), e.getMessage());
+             // Log error but don't fail the submission update
+         }
+     }
 
     /**
      * Retrieves a submission record by its unique identifier and converts it to a DTO.
