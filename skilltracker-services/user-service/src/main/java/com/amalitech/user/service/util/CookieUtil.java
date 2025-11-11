@@ -13,7 +13,7 @@ public class CookieUtil {
     @Value("${cookie.secure:true}")
     private boolean cookieSecure;
 
-    @Value("${cookie.same-site:Strict}")
+    @Value("${cookie.same-site:None}")
     private String sameSite;
 
     @Value("${cookie.path:/}")
@@ -23,7 +23,6 @@ public class CookieUtil {
      * Retrieves the value of a cookie by name from the request.
      * @param request The HTTP request containing the cookies.
      * @param name The name of the cookie to retrieve.
-     * @return The cookie value if found, or null if not present.
      */
     public String getCookieValue(HttpServletRequest request, String name) {
         if (request.getCookies() != null) {
