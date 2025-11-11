@@ -1,6 +1,7 @@
 package com.amalitech.user.service.dto.request;
 
 import com.amalitech.user.service.model.enums.Role;
+import com.amalitech.util.validation.ValidEnum;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -13,5 +14,6 @@ public record CreateUserByAdminRequest(
         String email,
 
         @NotNull(message = "Role is required")
+        @ValidEnum(enumClass = Role.class, message = "Role must be either USER or ADMIN")
         Role role
 ) {}
