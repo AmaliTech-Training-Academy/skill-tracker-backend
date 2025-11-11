@@ -33,10 +33,9 @@ import org.slf4j.LoggerFactory;
 import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 /**
  * Service class for handling authentication operations including registration, login, token management,
@@ -407,6 +406,14 @@ public class AuthServiceImpl implements AuthService {
             password.append(allChars.charAt(random.nextInt(allChars.length())));
         }
 
-        return password.toString();
+        // Shuffle the password characters to randomize their positions
+        List<Character> passwordChars = password.chars()
+                .mapToObj(c -> (char) c)
+                .collect(Collectors.toList());
+        Collections.shuffle(passwordChars, random);
+        
+        return passwordChars.stream()
+                .map(String::valueOf)
+                .collect(Collectors.joining());
     }
 }
