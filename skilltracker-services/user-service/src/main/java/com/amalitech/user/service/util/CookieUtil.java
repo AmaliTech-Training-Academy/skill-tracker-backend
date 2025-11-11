@@ -9,8 +9,6 @@ import jakarta.servlet.http.HttpServletResponse;
 
 @Component
 public class CookieUtil {
-    @Value("${cookie.domain}")
-    private String cookieDomain;
 
     @Value("${cookie.secure:true}")
     private boolean cookieSecure;
@@ -55,7 +53,6 @@ public class CookieUtil {
                 .secure(cookieSecure)
                 .sameSite(sameSite)
                 .path(cookiePath)
-                .domain(cookieDomain)
                 .maxAge(maxAgeSeconds)
                 .build();
 
@@ -71,7 +68,6 @@ public class CookieUtil {
                 .secure(cookieSecure)
                 .sameSite(sameSite)
                 .path(cookiePath)
-                .domain(cookieDomain)
                 .maxAge(0)
                 .build();
         response.addHeader("Set-Cookie", cookie.toString());
