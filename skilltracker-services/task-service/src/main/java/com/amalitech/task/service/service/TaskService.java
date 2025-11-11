@@ -104,4 +104,5 @@ public interface TaskService {
      */
     UserTasksResponse getUserTasksGroupedByStatus(UUID userId, int pendingPage, int pendingSize,
                                                   int completedPage, int completedSize);
+
 }

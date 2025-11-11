@@ -1,12 +1,14 @@
 package com.amalitech.task.service.model;
 
 import com.amalitech.task.service.model.enums.SubmissionStatus;
-import com.amalitech.task.service.model.submission.SubmissionAnswer;
 import com.amalitech.task.service.model.feedback.SubmissionFeedback;
-
+import com.amalitech.task.service.model.submission.SubmissionAnswer;
 import io.hypersistence.utils.hibernate.type.json.JsonType;
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.Type;
 
@@ -28,7 +30,8 @@ import java.util.UUID;
 @Table(name = "task_submissions",
         indexes = {
                 @Index(name = "idx_submission_user_task", columnList = "user_id, task_id"),
-                @Index(name = "idx_submission_status", columnList = "is_correct")
+                @Index(name = "idx_submission_user_status", columnList = "user_id, status"),
+                @Index(name = "idx_submission_user_correct", columnList = "user_id, is_correct")
         })
 @Getter
 @Setter

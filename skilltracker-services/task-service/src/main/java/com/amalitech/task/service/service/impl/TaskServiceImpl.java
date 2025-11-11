@@ -31,6 +31,7 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 import com.google.gson.Strictness;
 import com.google.gson.reflect.TypeToken;
+import jakarta.persistence.criteria.Predicate;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.Cacheable;
@@ -38,6 +39,7 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -159,15 +161,13 @@ public class TaskServiceImpl implements TaskService {
      * {@inheritDoc}
      */
     @Override
-    @Cacheable(cacheNames = "user-tasks-cache",
-            key = "#userId + '_' + #pendingPage + '_' + #pendingSize + '_' + #completedPage + '_' + #completedSize")
     public UserTasksResponse getUserTasksGroupedByStatus(UUID userId, int pendingPage, int pendingSize,
                                                          int completedPage, int completedSize) {
-        log.info("Fetching grouped tasks for user: {}", userId);
+        log.info("Fetching personalized grouped tasks for user: {}", userId);
 
-        Set<UUID> userSkillIds = userSkillProfileRepository.findSkillIdsByUserId(userId);
+        List<UserSkillProfile> userProfiles = userSkillProfileRepository.findById_UserId(userId);
 
-        if (userSkillIds.isEmpty()) {
+        if (userProfiles.isEmpty()) {
             log.warn("User {} has no skills in profile, returning empty pages", userId);
             return new UserTasksResponse(
                     Page.empty(PageRequest.of(pendingPage, pendingSize)),
@@ -178,22 +178,30 @@ public class TaskServiceImpl implements TaskService {
         Set<UUID> completedTaskIds = submissionRepository.findCompletedTaskIdsByUser(userId);
         log.debug("User {} has {} completed tasks", userId, completedTaskIds.size());
 
-        Pageable pendingPageable = PageRequest.of(pendingPage, pendingSize);
-        Page<Task> pendingTasks;
+        Specification<Task> pendingTasksSpec = (root, query, criteriaBuilder) -> {
+            List<Predicate> skillPredicates = userProfiles.stream()
+                    .map(profile -> criteriaBuilder.and(
+                            criteriaBuilder.equal(root.get("taskDefinition").get("skill").get("id"), profile.getId().getSkillId()),
+                            criteriaBuilder.equal(root.get("difficulty"), profile.getDifficulty())
+                    ))
+                    .toList();
+            Predicate personalizedPredicates = criteriaBuilder.or(skillPredicates.toArray(new Predicate[0]));
 
-        if (completedTaskIds.isEmpty()) {
-            pendingTasks = taskRepository.findAllTasksBySkills(userSkillIds, pendingPageable);
-        } else {
-            pendingTasks = taskRepository.findPendingTasksBySkills(
-                    userSkillIds,
-                    completedTaskIds,
-                    pendingPageable
-            );
-        }
+            Predicate notCompletedPredicate;
+            if (completedTaskIds.isEmpty()) {
+                notCompletedPredicate = criteriaBuilder.conjunction();
+            } else {
+                notCompletedPredicate = root.get("id").in(completedTaskIds).not();
+            }
+
+            return criteriaBuilder.and(personalizedPredicates, notCompletedPredicate);
+        };
+
+        Pageable pendingPageable = PageRequest.of(pendingPage, pendingSize);
+        Page<Task> pendingTasks = taskRepository.findAll(pendingTasksSpec, pendingPageable);
 
         Pageable completedPageable = PageRequest.of(completedPage, completedSize);
         Page<Task> completedTasks;
-
         if (completedTaskIds.isEmpty()) {
             completedTasks = Page.empty(completedPageable);
         } else {
@@ -203,11 +211,12 @@ public class TaskServiceImpl implements TaskService {
         Page<TaskDTO> pendingDTOs = pendingTasks.map(taskMapper::toDTO);
         Page<TaskDTO> completedDTOs = completedTasks.map(taskMapper::toDTO);
 
-        log.info("Returning {} pending and {} completed tasks for user {}",
+        log.info("Returning {} personalized pending and {} completed tasks for user {}",
                 pendingDTOs.getTotalElements(), completedDTOs.getTotalElements(), userId);
 
         return new UserTasksResponse(pendingDTOs, completedDTOs);
     }
+
 
     /**
      * {@inheritDoc}
