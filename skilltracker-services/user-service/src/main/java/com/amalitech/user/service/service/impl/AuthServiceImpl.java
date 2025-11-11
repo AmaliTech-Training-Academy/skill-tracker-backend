@@ -374,7 +374,6 @@ public class AuthServiceImpl implements AuthService {
         user.setPremiumTier(com.amalitech.user.service.model.enums.PremiumTier.FREE);
         user.setLanguage("en");
         user.setTimezone("UTC");
-        user.setTaskGenerationStatus(null);
         user.setTourStatus(GuidedTourStatus.NOT_STARTED);
 
         User savedUser = userRepository.save(user);
