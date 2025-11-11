@@ -1,11 +1,13 @@
 package com.amalitech.user.service.exception;
 
 import com.amalitech.common.security.dto.response.ApiError;
+import com.fasterxml.jackson.databind.exc.InvalidFormatException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.MDC;
 import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -13,8 +15,8 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * Global exception handler for the application. Catches all exceptions and returns consistent
@@ -120,25 +122,6 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
     }
 
-    @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ApiError> handleValidationExceptions(MethodArgumentNotValidException ex, HttpServletRequest request) {
-        List<ApiError.FieldError> fieldErrors = ex.getBindingResult()
-                .getFieldErrors()
-                .stream()
-                .map(error -> new ApiError.FieldError(error.getField(), error.getDefaultMessage()))
-                .collect(Collectors.toList());
-
-        ApiError error = ApiError.of(
-                HttpStatus.BAD_REQUEST.value(),
-                "One or more fields are invalid",
-                null,
-                request.getRequestURI(),
-                fieldErrors,
-                getTraceId()
-        );
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
-    }
-
     @ExceptionHandler(ResponseStatusException.class)
     public ResponseEntity<ApiError> handleResponseStatusException(ResponseStatusException ex, HttpServletRequest request) {
         ApiError error = ApiError.of(
@@ -231,5 +214,55 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(HttpStatus.SERVICE_UNAVAILABLE)
                 .body(error);
+    }
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ApiError> handleMethodArgumentNotValidException(MethodArgumentNotValidException ex, HttpServletRequest request) {
+        List<ApiError.FieldError> fieldErrors = ex.getBindingResult().getFieldErrors().stream()
+                .map(error -> new ApiError.FieldError(error.getField(), error.getDefaultMessage()))
+                .toList();
+
+        String message = fieldErrors.isEmpty() ? "Validation failed" : fieldErrors.get(0).message();
+
+        ApiError error = ApiError.of(
+                HttpStatus.BAD_REQUEST.value(),
+                message,
+                "Request validation failed",
+                request.getRequestURI(),
+                fieldErrors,
+                getTraceId()
+        );
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiError> handleHttpMessageNotReadableException(HttpMessageNotReadableException ex, HttpServletRequest request) {
+        String message = "Invalid request format";
+        List<ApiError.FieldError> fieldErrors = null;
+
+        if (ex.getCause() instanceof InvalidFormatException invalidFormatEx) {
+            if (invalidFormatEx.getTargetType().isEnum()) {
+                String fieldName = invalidFormatEx.getPath().get(0).getFieldName();
+                String enumValues = String.join(", ",
+                        Arrays.stream(invalidFormatEx.getTargetType().getEnumConstants())
+                                .map(Object::toString)
+                                .toArray(String[]::new));
+
+                message = String.format("Invalid value for field '%s'", fieldName);
+                fieldErrors = List.of(
+                        new ApiError.FieldError(fieldName, "Allowed values: " + enumValues)
+                );
+            }
+        }
+
+        ApiError error = ApiError.of(
+                HttpStatus.BAD_REQUEST.value(),
+                message,
+                "Failed to parse request body",
+                request.getRequestURI(),
+                fieldErrors,
+                getTraceId()
+        );
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
     }
 }
