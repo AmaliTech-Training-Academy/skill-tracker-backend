@@ -6,6 +6,7 @@ import com.amalitech.common.event.events.UserOnboardingCompletedEvent;
 import com.amalitech.task.service.dto.request.BatchGenerationRequest;
 import com.amalitech.task.service.dto.request.GenerateTaskRequest;
 import com.amalitech.task.service.events.TaskReplyEventProducer;
+import com.amalitech.task.service.exception.TaskGenerationException;
 import com.amalitech.task.service.model.UserSkillProfile;
 import com.amalitech.task.service.model.enums.TaskDifficulty;
 import com.amalitech.task.service.model.enums.TaskType;
@@ -98,7 +99,7 @@ public class TaskGenerationServiceImpl implements TaskGenerationService {
         try {
             log.info("Acquired lock {}. Generating {} {} tasks in a single batch...", lockKey, request.requiredCount(), request.taskType());
             SkillView skill = skillViewRepository.findByName(request.skillName())
-                    .orElseThrow(() -> new RuntimeException("Skill not found: " + request.skillName()));
+                    .orElseThrow(() -> new TaskGenerationException("Skill not found: " + request.skillName()));
 
             switch (request.taskType()) {
                 case CODING:
@@ -142,7 +143,7 @@ public class TaskGenerationServiceImpl implements TaskGenerationService {
 
         try {
             SkillView skill = skillViewRepository.findByName(request.skillName())
-                    .orElseThrow(() -> new RuntimeException("Skill not found: " + request.skillName()));
+                    .orElseThrow(() -> new TaskGenerationException("Skill not found: " + request.skillName()));
 
             log.info("Generating ADMIN {} task (1) for topic '{}'...", request.taskType(), request.topic());
 
@@ -205,7 +206,7 @@ public class TaskGenerationServiceImpl implements TaskGenerationService {
                 } catch (Exception e) {
                     log.error("Failed to generate tasks for skill {}: {}",
                             skillData.getSkillId(), e.getMessage());
-                    throw new RuntimeException("Failed to generate tasks for skill: " + skillData.getSkillName(), e);
+                    throw new TaskGenerationException("Failed to generate tasks for skill: " + skillData.getSkillName(), e);
                 }
             }
 
@@ -234,7 +235,7 @@ public class TaskGenerationServiceImpl implements TaskGenerationService {
     private void generateTasksOfType(UserOnboardingCompletedEvent.SkillSelectionData skillData,
                                      TaskType taskType, int quantity) {
         SkillView skill = skillViewRepository.findById(skillData.getSkillId())
-                .orElseThrow(() -> new RuntimeException("Skill not found: " + skillData.getSkillId()));
+                .orElseThrow(() -> new TaskGenerationException("Skill not found: " + skillData.getSkillId()));
 
         TaskDifficulty difficulty = TaskDifficulty.valueOf(skillData.getDifficultyLevel().toUpperCase());
 

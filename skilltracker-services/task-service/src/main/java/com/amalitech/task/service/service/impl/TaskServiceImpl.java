@@ -11,6 +11,7 @@ import com.amalitech.task.service.dto.response.AdminTaskSummaryResponse;
 import com.amalitech.task.service.dto.response.McqResponseDTO;
 import com.amalitech.task.service.dto.response.UserTasksResponse;
 import com.amalitech.task.service.events.RabbitMQEventProducer;
+import com.amalitech.task.service.exception.AiServiceException;
 import com.amalitech.task.service.exception.ResourceNotFoundException;
 import com.amalitech.task.service.mapper.TaskMapper;
 import com.amalitech.task.service.model.Task;
@@ -415,7 +416,7 @@ public class TaskServiceImpl implements TaskService {
                         null);
 
         if (response.text() == null) {
-            throw new IOException("No response from Ai API....");
+            throw new AiServiceException("No response from AI API");
         }
         List<MCQquestionDTO> questions = parseJsonToMcqList(response.text());
 
