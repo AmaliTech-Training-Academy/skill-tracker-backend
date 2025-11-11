@@ -76,9 +76,10 @@ public class TaskCompletedEvent {
     @Builder
     public static class RubricScoreData {
         /**
-         * Score achieved for this rubric.
+         * Score achieved for this rubric (as floating-point to preserve precision).
+         * Example: 45.5 for a score of 45.5 points
          */
-        private Integer score;
+        private Double score;
 
         /**
          * Maximum possible score for this rubric.

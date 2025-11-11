@@ -98,10 +98,8 @@ public class TaskCompletionMapper {
                 return rubricScores;
             }
 
-            // Extract coding rubrics (correctness, efficiency, style)
             extractCodingRubrics(evaluation, rubricScores);
 
-            // Extract written rubrics (completeness, accuracy, clarity, depth)
             extractWrittenRubrics(evaluation, rubricScores);
 
         } catch (Exception e) {
@@ -176,11 +174,10 @@ public class TaskCompletionMapper {
             double score = rubricNode.get("score").asDouble(0.0);
             int percentage = rubricNode.get("percentage").asInt(0);
 
-            // Calculate maxScore based on the rubric name and weight
             int maxScore = getMaxScoreForRubric(rubricName);
 
             return TaskCompletedEvent.RubricScoreData.builder()
-                    .score((int) score)
+                    .score(score)
                     .maxScore(maxScore)
                     .percentage(percentage)
                     .build();
@@ -199,11 +196,8 @@ public class TaskCompletionMapper {
      */
     private int getMaxScoreForRubric(String rubricName) {
         return switch (rubricName) {
-            // Coding task rubrics
             case "correctness" -> 50;
             case "efficiency" -> 30;
-            case "style" -> 20;
-            // Written task rubrics
             case "completeness" -> 25;
             case "accuracy" -> 30;
             case "clarity" -> 25;
