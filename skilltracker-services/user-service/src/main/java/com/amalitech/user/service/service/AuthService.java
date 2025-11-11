@@ -2,6 +2,7 @@ package com.amalitech.user.service.service;
 
 import com.amalitech.user.service.dto.UserRequestDTO;
 import com.amalitech.user.service.dto.UserResponseDTO;
+import com.amalitech.user.service.dto.request.CreateUserByAdminRequest;
 import com.amalitech.user.service.dto.request.LoginRequest;
 import com.amalitech.user.service.dto.response.AuthResponse;
 import com.amalitech.user.service.exception.*;
@@ -95,4 +96,15 @@ public interface AuthService {
     UserResponseDTO createUser(@Valid UserRequestDTO userdto);
     Optional<UserResponseDTO> verifyCode(String code, String email, HttpServletResponse response);
     void sendVerificationCode(String toEmail);
+
+    /**
+     * Creates a new user with a specified role (admin-only operation).
+     * Generates a temporary password and sends it to the user's email.
+     *
+     * @param request contains email and role
+     * @param adminEmail the email of the admin creating the user
+     * @return UserResponseDTO of the newly created user
+     * @throws EmailAlreadyExistsException if email already exists
+     */
+    UserResponseDTO createUserByAdmin(CreateUserByAdminRequest request, String adminEmail);
 }

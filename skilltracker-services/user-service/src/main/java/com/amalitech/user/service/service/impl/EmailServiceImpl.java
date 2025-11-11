@@ -51,6 +51,7 @@ public class EmailServiceImpl implements EmailService {
     private final ResourceLoader resourceLoader;
 
     private String resetTemplate;
+    private String adminCreatedUserTemplate;
 
     public EmailServiceImpl(SendGrid sendGrid,
                             @Value("${sendgrid.from.email}") String fromEmail,
@@ -72,8 +73,14 @@ public class EmailServiceImpl implements EmailService {
                 this.resetTemplate = StreamUtils.copyToString(inputStream, StandardCharsets.UTF_8);
                 log.info("Successfully loaded 'reset-password.html' template.");
             }
+
+            Resource adminResource = resourceLoader.getResource("classpath:templates/email-templates/admin-created-user.html");
+            try (InputStream inputStream = adminResource.getInputStream()) {
+                this.adminCreatedUserTemplate = StreamUtils.copyToString(inputStream, StandardCharsets.UTF_8);
+                log.info("Successfully loaded 'admin-created-user.html' template.");
+            }
         } catch (IOException e) {
-            log.error("Failed to load 'reset-password.html' template", e);
+            log.error("Failed to load email templates", e);
             throw new RuntimeException("Failed to load email template", e);
         }
     }
@@ -98,6 +105,20 @@ public class EmailServiceImpl implements EmailService {
         this.send(to, subject, body, "text/html");
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void sendAdminCreatedUserEmail(String toEmail, String temporaryPassword, String adminEmail) {
+        String subject = "Your SkillBoost Account Created";
+
+        String body = this.adminCreatedUserTemplate
+                .replace("{{email}}", toEmail)
+                .replace("{{temporaryPassword}}", temporaryPassword)
+                .replace("{{adminEmail}}", adminEmail);
+
+        this.send(toEmail, subject, body, "text/html");
+    }
 
     /**
      * Worker method to handle the actual SendGrid API call.

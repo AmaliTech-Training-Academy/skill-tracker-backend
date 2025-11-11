@@ -2,12 +2,14 @@ package com.amalitech.user.service.service.impl;
 
 import com.amalitech.user.service.dto.UserRequestDTO;
 import com.amalitech.user.service.dto.UserResponseDTO;
+import com.amalitech.user.service.dto.request.CreateUserByAdminRequest;
 import com.amalitech.user.service.dto.request.LoginRequest;
 import com.amalitech.user.service.dto.response.AuthResponse;
 import com.amalitech.user.service.dto.response.UserDto;
 import com.amalitech.user.service.exception.*;
 import com.amalitech.user.service.mapper.UserMapper;
 import com.amalitech.user.service.model.*;
+import com.amalitech.user.service.model.enums.GuidedTourStatus;
 import com.amalitech.user.service.model.enums.UserState;
 import com.amalitech.user.service.repository.UserRepository;
 import com.amalitech.user.service.security.CustomUserDetails;
@@ -31,10 +33,9 @@ import org.slf4j.LoggerFactory;
 import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 /**
  * Service class for handling authentication operations including registration, login, token management,
@@ -352,5 +353,67 @@ public class AuthServiceImpl implements AuthService {
         SecureRandom random = new SecureRandom();
         tempCode = 100000 + random.nextInt(900000);
         return tempCode;
+    }
+
+    @Override
+    @Transactional
+    public UserResponseDTO createUserByAdmin(CreateUserByAdminRequest request, String adminEmail) {
+        if (userRepository.existsByEmail(request.email())) {
+            throw new EmailAlreadyExistsException("A user already exists with this email.");
+        }
+
+        String tempPassword = generateTemporaryPassword();
+
+        User user = new User();
+        user.setEmail(request.email());
+        user.setPasswordHash(passwordEncoder.encode(tempPassword));
+        user.setRole(request.role());
+        user.setIsVerified(true);
+        user.setState(UserState.REGISTERED);
+        user.setPremiumTier(com.amalitech.user.service.model.enums.PremiumTier.FREE);
+        user.setLanguage("en");
+        user.setTimezone("UTC");
+        user.setTourStatus(GuidedTourStatus.NOT_STARTED);
+
+        User savedUser = userRepository.save(user);
+
+        UserProfile userProfile = new UserProfile();
+        savedUser.setProfile(userProfile);
+        userRepository.save(savedUser);
+
+        emailService.sendAdminCreatedUserEmail(request.email(), tempPassword, adminEmail);
+
+        log.info("Admin {} created new {} user: {}", adminEmail, request.role(), request.email());
+        return UserMapper.toDto(savedUser);
+    }
+
+    private String generateTemporaryPassword() {
+        String upperCaseLetters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        String lowerCaseLetters = "abcdefghijklmnopqrstuvwxyz";
+        String numbers = "0123456789";
+        String specialCharacters = "@$!%*?&";
+        String allChars = upperCaseLetters + lowerCaseLetters + numbers + specialCharacters;
+
+        SecureRandom random = new SecureRandom();
+        StringBuilder password = new StringBuilder();
+
+        password.append(upperCaseLetters.charAt(random.nextInt(upperCaseLetters.length())));
+        password.append(lowerCaseLetters.charAt(random.nextInt(lowerCaseLetters.length())));
+        password.append(numbers.charAt(random.nextInt(numbers.length())));
+        password.append(specialCharacters.charAt(random.nextInt(specialCharacters.length())));
+
+        for (int i = 4; i < 12; i++) {
+            password.append(allChars.charAt(random.nextInt(allChars.length())));
+        }
+
+        // Shuffle the password characters to randomize their positions
+        List<Character> passwordChars = password.chars()
+                .mapToObj(c -> (char) c)
+                .collect(Collectors.toList());
+        Collections.shuffle(passwordChars, random);
+        
+        return passwordChars.stream()
+                .map(String::valueOf)
+                .collect(Collectors.joining());
     }
 }

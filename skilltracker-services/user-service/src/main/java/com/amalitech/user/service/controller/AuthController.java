@@ -4,6 +4,7 @@ import com.amalitech.common.security.dto.response.ApiResponse;
 import com.amalitech.user.service.dto.UserRequestDTO;
 import com.amalitech.user.service.dto.UserResponseDTO;
 import com.amalitech.user.service.dto.request.ChangePasswordRequest;
+import com.amalitech.user.service.dto.request.CreateUserByAdminRequest;
 import com.amalitech.user.service.dto.request.ForgotPasswordRequest;
 import com.amalitech.user.service.dto.request.LoginRequest;
 import com.amalitech.user.service.dto.request.ResetPasswordRequest;
@@ -104,6 +105,17 @@ public class AuthController {
             HttpServletResponse response) {
         authService.logout(request, response);
         return ResponseEntity.ok(ApiResponse.success("Logged out successfully", null, null));
+    }
+
+    /** Admin endpoint: Create a new user with specified role */
+    @PreAuthorize("hasAuthority('ADMIN')")
+    @PostMapping("/admin/create-user")
+    public ResponseEntity<ApiResponse<UserResponseDTO>> createUserByAdmin(
+            @Valid @RequestBody CreateUserByAdminRequest request
+    ) {
+        String adminEmail = SecurityContextHolder.getContext().getAuthentication().getName();
+        UserResponseDTO user = authService.createUserByAdmin(request, adminEmail);
+        return ResponseEntity.ok(ApiResponse.success("User created successfully by admin", user, null));
     }
 }
 
