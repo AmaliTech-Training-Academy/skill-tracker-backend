@@ -114,7 +114,7 @@ public class TaskCompletedEventValidator {
                 errors.add(String.format("Rubric '%s' maxScore must be positive, got %d", 
                     rubricName, scoreData.getMaxScore()));
             }
-            
+
             if (scoreData.getScore() != null && scoreData.getMaxScore() != null &&
                 scoreData.getScore() > scoreData.getMaxScore()) {
                 errors.add(String.format(
