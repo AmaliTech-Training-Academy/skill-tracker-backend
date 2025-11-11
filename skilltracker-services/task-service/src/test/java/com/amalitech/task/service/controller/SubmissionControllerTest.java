@@ -5,6 +5,7 @@ import com.amalitech.task.service.dto.TaskSubmissionDTO;
 import com.amalitech.task.service.dto.request.SubmitAnswerRequest;
 import com.amalitech.task.service.dto.response.SubmissionResponse;
 import com.amalitech.task.service.exception.ResourceNotFoundException;
+import com.amalitech.task.service.exception.InvalidUserIdException;
 import com.amalitech.task.service.model.enums.SubmissionStatus;
 import com.amalitech.task.service.model.submission.impl.CodingSubmissionAnswer;
 import com.amalitech.task.service.service.SubmissionService;
@@ -71,7 +72,7 @@ class SubmissionControllerTest {
 
     @Test
     void testSubmitTask_InvalidUserIdFormat() {
-        assertThrows(IllegalArgumentException.class, () -> {
+        assertThrows(InvalidUserIdException.class, () -> {
             submissionController.submitTask("invalid-uuid", submitRequest);
         });
 
