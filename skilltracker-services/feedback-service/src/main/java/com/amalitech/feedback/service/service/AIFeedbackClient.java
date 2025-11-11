@@ -6,6 +6,8 @@ import com.amalitech.feedback.service.dto.client.response.Judge0SubmissionRespon
 import com.amalitech.feedback.service.dto.client.submission.DetailedEvaluationResponse;
 import com.amalitech.feedback.service.dto.client.submission.impl.CodingSubmissionFeedback;
 import com.amalitech.feedback.service.dto.client.submission.impl.EssaySubmissionFeedback;
+import com.amalitech.feedback.service.exception.AiResponseParsingException;
+import com.amalitech.feedback.service.exception.InvalidAiResponseException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -170,41 +172,43 @@ public class AIFeedbackClient {
      * Parses the detailed JSON response from AI.
      */
     private DetailedEvaluationResponse parseDetailedResponse(String jsonContent) {
-        try {
-            if (jsonContent == null || jsonContent.isBlank()) {
-                throw new RuntimeException("AI response was empty.");
-            }
-
-            // Clean up markdown and whitespace
-            jsonContent = jsonContent.replace("```json", "")
-                    .replace("```", "")
-                    .trim();
-
-            DetailedEvaluationResponse response = objectMapper.readValue(
-                    jsonContent, DetailedEvaluationResponse.class
-            );
-
-            validateEvaluationResponse(response);
-
-            return response;
-
-        } catch (Exception e) {
-            log.error("Failed to parse detailed AI JSON response: {}", e.getMessage());
-            throw new RuntimeException("Failed to parse AI response.", e);
-        }
+    try {
+    if (jsonContent == null || jsonContent.isBlank()) {
+    throw new InvalidAiResponseException("AI response was empty.");
     }
 
+    // Clean up markdown and whitespace
+    jsonContent = jsonContent.replace("```json", "")
+    .replace("```", "")
+    .trim();
+
+    DetailedEvaluationResponse response = objectMapper.readValue(
+    jsonContent, DetailedEvaluationResponse.class
+    );
+
+    validateEvaluationResponse(response);
+
+    return response;
+
+    } catch (InvalidAiResponseException e) {
+    throw e;
+    } catch (Exception e) {
+        log.error("Failed to parse detailed AI JSON response: {}", e.getMessage());
+            throw new AiResponseParsingException("Failed to parse AI response.", e);
+         }
+     }
+
     private void validateEvaluationResponse(DetailedEvaluationResponse response) {
-        if (response.getEvaluation() == null) {
-            throw new RuntimeException("Missing evaluation object");
-        }
+    if (response.getEvaluation() == null) {
+    throw new InvalidAiResponseException("Missing evaluation object");
+    }
 
-        var eval = response.getEvaluation();
+    var eval = response.getEvaluation();
 
-        if (eval.getCorrectness() == null || eval.getEfficiency() == null ||
-                eval.getStyle() == null || eval.getOverall() == null) {
-            throw new RuntimeException("Missing evaluation categories");
-        }
+    if (eval.getCorrectness() == null || eval.getEfficiency() == null ||
+    eval.getStyle() == null || eval.getOverall() == null) {
+    throw new InvalidAiResponseException("Missing evaluation categories");
+    }
 
         double calculatedTotal = eval.getCorrectness().getScore() +
                 eval.getEfficiency().getScore() +
@@ -220,22 +224,24 @@ public class AIFeedbackClient {
      * Parses the simple JSON response from AI (fallback).
      */
     private CodingSubmissionFeedback parseSimpleAiResponse(String jsonContent) {
-        try {
-            if (jsonContent == null || jsonContent.isBlank()) {
-                throw new RuntimeException("AI response was empty.");
-            }
-
-            jsonContent = jsonContent.replace("```json", "").replace("```", "").trim();
-
-            CodingSubmissionFeedback feedback = objectMapper.readValue(jsonContent, CodingSubmissionFeedback.class);
-
-            return feedback;
-
-        } catch (Exception e) {
-            log.error("Failed to parse AI JSON response: {}", e.getMessage());
-            throw new RuntimeException("Failed to parse AI response.", e);
-        }
+    try {
+    if (jsonContent == null || jsonContent.isBlank()) {
+    throw new InvalidAiResponseException("AI response was empty.");
     }
+
+    jsonContent = jsonContent.replace("```json", "").replace("```", "").trim();
+
+    CodingSubmissionFeedback feedback = objectMapper.readValue(jsonContent, CodingSubmissionFeedback.class);
+
+    return feedback;
+
+    } catch (InvalidAiResponseException e) {
+    throw e;
+    } catch (Exception e) {
+        log.error("Failed to parse AI JSON response: {}", e.getMessage());
+            throw new AiResponseParsingException("Failed to parse AI response.", e);
+         }
+     }
 
     /**
      * Converts detailed evaluation response to simple feedback format.
@@ -329,22 +335,24 @@ public class AIFeedbackClient {
      * Parses the essay evaluation JSON response from AI.
      */
     private EssaySubmissionFeedback parseEssayEvaluationResponse(String jsonContent) {
-        try {
-            if (jsonContent == null || jsonContent.isBlank()) {
-                throw new RuntimeException("AI response was empty.");
-            }
-
-            jsonContent = jsonContent.replace("```json", "")
-                    .replace("```", "")
-                    .trim();
-
-            return objectMapper.readValue(
-                    jsonContent, EssaySubmissionFeedback.class
-            );
-
-        } catch (Exception e) {
-            log.error("Failed to parse essay AI JSON response: {}", e.getMessage());
-            throw new RuntimeException("Failed to parse AI essay response.", e);
-        }
+    try {
+    if (jsonContent == null || jsonContent.isBlank()) {
+    throw new InvalidAiResponseException("AI response was empty.");
     }
+
+    jsonContent = jsonContent.replace("```json", "")
+    .replace("```", "")
+    .trim();
+
+    return objectMapper.readValue(
+    jsonContent, EssaySubmissionFeedback.class
+    );
+
+    } catch (InvalidAiResponseException e) {
+    throw e;
+    } catch (Exception e) {
+        log.error("Failed to parse essay AI JSON response: {}", e.getMessage());
+            throw new AiResponseParsingException("Failed to parse AI essay response.", e);
+         }
+     }
 }
