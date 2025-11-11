@@ -19,7 +19,9 @@ import com.amalitech.task.service.model.feedback.impl.EssaySubmissionFeedback;
 import com.amalitech.task.service.repository.TaskRepository;
 import com.amalitech.task.service.repository.TaskSubmissionRepository;
 import com.amalitech.task.service.service.SubmissionService;
+import com.amalitech.task.service.validation.TaskCompletedEventValidator;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.micrometer.core.instrument.MeterRegistry;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -47,6 +49,8 @@ public class SubmissionServiceImpl implements SubmissionService {
     private final ObjectMapper objectMapper;
     private final FallbackFeedbackMapper fallbackMapper;
     private final TaskCompletionMapper taskCompletionMapper;
+    private final TaskCompletedEventValidator validator;
+    private final MeterRegistry meterRegistry;
 
     public SubmissionServiceImpl(TaskSubmissionRepository submissionRepository,
                                  TaskRepository taskRepository,
@@ -54,7 +58,9 @@ public class SubmissionServiceImpl implements SubmissionService {
                                  SubmissionMapper submissionMapper,
                                  ObjectMapper objectMapper,
                                  FallbackFeedbackMapper fallbackMapper,
-                                 TaskCompletionMapper taskCompletionMapper) {
+                                 TaskCompletionMapper taskCompletionMapper,
+                                 TaskCompletedEventValidator validator,
+                                 MeterRegistry meterRegistry) {
         this.submissionRepository = submissionRepository;
         this.taskRepository = taskRepository;
         this.eventProducer = eventProducer;
@@ -62,6 +68,8 @@ public class SubmissionServiceImpl implements SubmissionService {
         this.objectMapper = objectMapper;
         this.fallbackMapper = fallbackMapper;
         this.taskCompletionMapper = taskCompletionMapper;
+        this.validator = validator;
+        this.meterRegistry = meterRegistry;
     }
 
     /**
@@ -173,6 +181,7 @@ public class SubmissionServiceImpl implements SubmissionService {
       * <p>
       * This method constructs a {@link TaskCompletedEvent} containing comprehensive
       * information about task completion and publishes it for consumption by analytics services.
+      * The event is validated before publication to ensure data integrity.
       *
       * @param submission The updated {@link TaskSubmission}.
       * @param event The {@link SubmissionEvaluatedEvent} with evaluation results.
@@ -191,13 +200,30 @@ public class SubmissionServiceImpl implements SubmissionService {
                      totalXpEarned
              );
 
+             // Validate event before publication
+             if (!validator.isValid(taskCompletedEvent)) {
+                 log.warn("TaskCompletedEvent validation failed for submission: {}. Errors: {}",
+                     submission.getId(), validator.validate(taskCompletedEvent));
+                 meterRegistry.counter("task.completed.validation.failed",
+                     "taskType", task.getType().toString()).increment();
+             }
+
              eventProducer.publishTaskCompleted(taskCompletedEvent);
+             
+             // Record metrics
+             meterRegistry.counter("task.completed.published",
+                 "taskType", task.getType().toString(),
+                 "passed", String.valueOf(taskCompletedEvent.getPassed())).increment();
+             meterRegistry.gauge("task.completed.xp_earned",
+                 taskCompletedEvent.getTotalXpEarned() != null ? taskCompletedEvent.getTotalXpEarned() : 0);
+             
              log.info("Task completion event published for user: {} and task: {}", 
                      submission.getUserId(), task.getId());
 
          } catch (Exception e) {
              log.error("Failed to publish task completion event for submission: {}. Error: {}", 
                      submission.getId(), e.getMessage());
+             meterRegistry.counter("task.completed.publish.error").increment();
              // Log error but don't fail the submission update
          }
      }
