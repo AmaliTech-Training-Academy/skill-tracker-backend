@@ -47,6 +47,10 @@ public class RabbitMQConfig {
     public static final String SUBMISSION_CREATED_ROUTING_KEY = "submission.created";
     public static final String SUBMISSION_EVALUATED_ROUTING_KEY = "submission.evaluated";
 
+    // --- Task Completion (Outgoing to Analytics) ---
+    public static final String TASK_EXCHANGE = "task.completion.exchange";
+    public static final String TASK_COMPLETED_ROUTING_KEY = "task.completed";
+
 
     // ===================================================================
     // --- Task Generation Exchange, Queues, & Bindings ---
@@ -219,6 +223,20 @@ public class RabbitMQConfig {
         return BindingBuilder.bind(onboardingCompletedQueue)
                 .to(userServiceExchange)
                 .with(ONBOARDING_COMPLETED_ROUTING_KEY);
+    }
+
+    // ===================================================================
+    // --- Task Completion Exchange (Outgoing to Analytics) ---
+    // ===================================================================
+
+    /**
+     * Creates a topic exchange for task completion events.
+     *
+     * @return The task completion topic exchange.
+     */
+    @Bean
+    public TopicExchange taskCompletionExchange() {
+        return new TopicExchange(TASK_EXCHANGE);
     }
 
     /**

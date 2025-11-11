@@ -2,6 +2,7 @@ package com.amalitech.task.service.events;
 
 import com.amalitech.common.event.events.SubmissionCreatedEvent;
 import com.amalitech.common.event.events.SubmissionEvaluatedEvent;
+import com.amalitech.common.event.events.TaskCompletedEvent;
 import com.amalitech.task.service.config.RabbitMQConfig;
 import com.amalitech.task.service.dto.request.BatchGenerationRequest;
 import com.amalitech.task.service.dto.request.GenerateTaskRequest;
@@ -95,6 +96,24 @@ public class RabbitMQEventProducer implements EventProducer {
         rabbitTemplate.convertAndSend(
                 RabbitMQConfig.SUBMISSION_EXCHANGE,
                 RabbitMQConfig.SUBMISSION_EVALUATED_ROUTING_KEY,
+                event
+        );
+    }
+
+    /**
+     * Publishes an event when a task has been completed by a user.
+     * <p>
+     * This event notifies analytics services with comprehensive task completion information
+     * including XP earned, pass/fail status, and detailed rubric scores for analysis
+     * and progress tracking.
+     *
+     * @param event The {@link TaskCompletedEvent} containing completion details.
+     */
+    public void publishTaskCompleted(TaskCompletedEvent event) {
+        log.info("Publishing task completed event for user: {} and task: {}", event.getUserId(), event.getTaskId());
+        rabbitTemplate.convertAndSend(
+                RabbitMQConfig.TASK_EXCHANGE,
+                RabbitMQConfig.TASK_COMPLETED_ROUTING_KEY,
                 event
         );
     }
