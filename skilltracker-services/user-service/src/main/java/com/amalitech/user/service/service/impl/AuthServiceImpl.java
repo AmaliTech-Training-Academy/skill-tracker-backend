@@ -9,6 +9,7 @@ import com.amalitech.user.service.dto.response.UserDto;
 import com.amalitech.user.service.exception.*;
 import com.amalitech.user.service.mapper.UserMapper;
 import com.amalitech.user.service.model.*;
+import com.amalitech.user.service.model.enums.GuidedTourStatus;
 import com.amalitech.user.service.model.enums.UserState;
 import com.amalitech.user.service.repository.UserRepository;
 import com.amalitech.user.service.security.CustomUserDetails;
@@ -370,6 +371,11 @@ public class AuthServiceImpl implements AuthService {
         user.setRole(request.role());
         user.setIsVerified(true);
         user.setState(UserState.REGISTERED);
+        user.setPremiumTier(com.amalitech.user.service.model.enums.PremiumTier.FREE);
+        user.setLanguage("en");
+        user.setTimezone("UTC");
+        user.setTaskGenerationStatus(null);
+        user.setTourStatus(GuidedTourStatus.NOT_STARTED);
 
         User savedUser = userRepository.save(user);
 
