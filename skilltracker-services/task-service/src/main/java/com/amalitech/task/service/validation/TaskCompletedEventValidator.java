@@ -7,7 +7,6 @@ import org.springframework.stereotype.Component;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 /**
  * Validates TaskCompletedEvent data integrity and consistency.
@@ -68,13 +67,11 @@ public class TaskCompletedEventValidator {
 
         // Validate passed status consistency
         if (event.getPassed() != null) {
-            // If passed, XP should be earned (unless it's a zero-XP task)
             if (event.getPassed() && event.getTotalXpEarned() != null && event.getTotalXpEarned() < 0) {
                 errors.add("Cannot have passed=true with negative totalXpEarned");
             }
         }
 
-        // Validate rubric scores
         if (event.getRubricsScores() != null && !event.getRubricsScores().isEmpty()) {
             errors.addAll(validateRubricScores(event.getRubricsScores(), event.getTaskType()));
         }
@@ -108,18 +105,16 @@ public class TaskCompletedEventValidator {
                 continue;
             }
 
-            // Validate score is not negative
             if (scoreData.getScore() != null && scoreData.getScore() < 0) {
                 errors.add(String.format("Rubric '%s' score is negative: %f", rubricName, scoreData.getScore()));
             }
 
-            // Validate maxScore is positive
+
             if (scoreData.getMaxScore() == null || scoreData.getMaxScore() <= 0) {
                 errors.add(String.format("Rubric '%s' maxScore must be positive, got %d", 
                     rubricName, scoreData.getMaxScore()));
             }
-
-            // Validate score doesn't exceed maxScore
+            
             if (scoreData.getScore() != null && scoreData.getMaxScore() != null &&
                 scoreData.getScore() > scoreData.getMaxScore()) {
                 errors.add(String.format(
@@ -128,7 +123,6 @@ public class TaskCompletedEventValidator {
                 ));
             }
 
-            // Validate percentage is within valid range
             if (scoreData.getPercentage() != null &&
                 (scoreData.getPercentage() < 0 || scoreData.getPercentage() > 100)) {
                 errors.add(String.format(
@@ -138,7 +132,6 @@ public class TaskCompletedEventValidator {
             }
         }
 
-        // Validate expected rubrics for task type
         errors.addAll(validateExpectedRubrics(rubricsScores.keySet(), taskType));
 
         return errors;
@@ -155,21 +148,18 @@ public class TaskCompletedEventValidator {
         List<String> errors = new ArrayList<>();
 
         if (taskType == null) {
-            return errors; // Can't validate without taskType
+            return errors;
         }
 
         switch (taskType.toUpperCase()) {
             case "CODING":
-                // Coding tasks should have correctness, efficiency, style
                 validateRubricsPresent(presentRubrics, errors, "correctness", "efficiency", "style");
                 break;
             case "ESSAY":
             case "WRITTEN":
-                // Essay tasks should have completeness, accuracy, clarity, depth
                 validateRubricsPresent(presentRubrics, errors, "completeness", "accuracy", "clarity", "depth");
                 break;
             case "MCQ":
-                // MCQ tasks may not have detailed rubrics, which is acceptable
                 break;
             default:
                 log.debug("No rubric validation defined for task type: {}", taskType);
