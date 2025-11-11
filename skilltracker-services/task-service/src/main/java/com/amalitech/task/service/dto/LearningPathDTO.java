@@ -17,6 +17,5 @@ public class LearningPathDTO {
     private String recommended_next_skill;
     private List<String> recommended_activities;
     private String reasoning;
-    private List<String> resources;
     private String difficulty;
 }
