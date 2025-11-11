@@ -30,6 +30,9 @@ help:
 	@echo "🛠️   make build                      - Build all Maven modules"
 	@echo "🧹  make clean                      - Clean Maven build targets"
 	@echo "🧪  make test                       - Run all Maven tests"
+	@echo "🧪  make test-service SERVICE=user  - Run tests for a specific service"
+	@echo "🧪  make test-infra COMPONENT=...   - Run tests for an infrastructure component"
+	@echo "🧪  make test-common                - Run tests for common module"
 	@echo "📦  make package                    - Package all modules (skip tests)"
 	@echo ""
 	@echo "🚀  make run SERVICE=user           - Run a specific service (e.g. user)"
@@ -81,6 +84,8 @@ help:
 	@echo "-------------------------------------------------------------------------------------------"
 	@echo "  make run SERVICE=user"
 	@echo "  make rebuild SERVICE=task"
+	@echo "  make test-service SERVICE=analytics"
+	@echo "  make test-infra COMPONENT=config-server"
 	@echo "  make run-infra"
 	@echo "  make run-services"
 	@echo "  make run-all"
@@ -447,3 +452,34 @@ dkr-logs:
 # -------------------------------------------------------
 rebuild-all: dkr-clean build-all start-all
 	@echo "♻️  Complete Docker rebuild and startup finished successfully!"
+
+
+# -------------------------------------------------------
+# TEST COMMANDS
+# -------------------------------------------------------
+test:
+	@echo "🧪 Running all tests..."
+	$(MVN) test
+
+# Test a specific service
+test-service:
+	@if [ -z "$(SERVICE)" ]; then \
+		echo "❌ Please provide a SERVICE variable, e.g. make test-service SERVICE=user"; \
+		exit 1; \
+	fi
+	@echo "🧪 Running tests for $(SERVICE)-service..."
+	$(MVN) -f $(SERVICES_DIR)/$(SERVICE)-service test
+
+# Test infrastructure component
+test-infra:
+	@if [ -z "$(COMPONENT)" ]; then \
+		echo "❌ Please provide a COMPONENT variable, e.g. make test-infra COMPONENT=config-server"; \
+		exit 1; \
+	fi
+	@echo "🧪 Running tests for $(COMPONENT)..."
+	$(MVN) -f $(INFRA_DIR)/$(COMPONENT) test
+
+# Test common module
+test-common:
+	@echo "🧪 Running tests for common module..."
+	$(MVN) -f $(COMMON_DIR) test

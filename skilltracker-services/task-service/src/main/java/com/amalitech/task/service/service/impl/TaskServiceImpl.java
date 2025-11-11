@@ -1,6 +1,7 @@
 package com.amalitech.task.service.service.impl;
 
 import com.amalitech.task.service.dto.LearningPathDTO;
+import com.amalitech.task.service.dto.MCQquestionDTO;
 import com.amalitech.task.service.dto.TaskAvailabilityDTO;
 import com.amalitech.task.service.dto.TaskDTO;
 import com.amalitech.task.service.dto.request.BatchGenerationRequest;
@@ -9,11 +10,16 @@ import com.amalitech.task.service.dto.request.UserProfileRequestDTO;
 import com.amalitech.task.service.dto.response.AdminTaskDetailResponse;
 import com.amalitech.task.service.dto.response.AdminTaskSummaryResponse;
 import com.amalitech.task.service.dto.response.LearningPathResponseDTO;
+import com.amalitech.task.service.dto.request.McqRequestDTO;
+import com.amalitech.task.service.dto.response.McqResponseDTO;
+import com.amalitech.task.service.dto.response.UserTasksResponse;
 import com.amalitech.task.service.events.RabbitMQEventProducer;
+import com.amalitech.task.service.exception.AiServiceException;
 import com.amalitech.task.service.exception.ResourceNotFoundException;
 import com.amalitech.task.service.mapper.TaskMapper;
 import com.amalitech.task.service.model.Task;
 import com.amalitech.task.service.model.UserSkillProfile;
+import com.amalitech.task.service.model.content.impl.McqTaskContent;
 import com.amalitech.task.service.model.enums.TaskDifficulty;
 import com.amalitech.task.service.model.enums.TaskType;
 import com.amalitech.task.service.model.view.SkillView;
@@ -26,6 +32,7 @@ import com.amalitech.task.service.service.TaskService;
 import com.google.genai.types.GenerateContentResponse;
 import com.google.gson.*;
 import com.google.genai.Client;
+import jakarta.persistence.criteria.Predicate;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -34,15 +41,19 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
+import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.time.Duration;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -57,6 +68,7 @@ import java.util.stream.Collectors;
 @Slf4j
 @Transactional(readOnly = true)
 public class TaskServiceImpl implements TaskService {
+
 
     private final TaskRepository taskRepository;
     private final UserSkillProfileRepository userSkillProfileRepository;
@@ -146,6 +158,68 @@ public class TaskServiceImpl implements TaskService {
                 .map(taskMapper::toDTO)
                 .collect(Collectors.toList());
     }
+
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public UserTasksResponse getUserTasksGroupedByStatus(UUID userId, int pendingPage, int pendingSize,
+                                                         int completedPage, int completedSize) {
+        log.info("Fetching personalized grouped tasks for user: {}", userId);
+
+        List<UserSkillProfile> userProfiles = userSkillProfileRepository.findById_UserId(userId);
+
+        if (userProfiles.isEmpty()) {
+            log.warn("User {} has no skills in profile, returning empty pages", userId);
+            return new UserTasksResponse(
+                    Page.empty(PageRequest.of(pendingPage, pendingSize)),
+                    Page.empty(PageRequest.of(completedPage, completedSize))
+            );
+        }
+
+        Set<UUID> completedTaskIds = submissionRepository.findCompletedTaskIdsByUser(userId);
+        log.debug("User {} has {} completed tasks", userId, completedTaskIds.size());
+
+        Specification<Task> pendingTasksSpec = (root, query, criteriaBuilder) -> {
+            List<Predicate> skillPredicates = userProfiles.stream()
+                    .map(profile -> criteriaBuilder.and(
+                            criteriaBuilder.equal(root.get("taskDefinition").get("skill").get("id"), profile.getId().getSkillId()),
+                            criteriaBuilder.equal(root.get("difficulty"), profile.getDifficulty())
+                    ))
+                    .toList();
+            Predicate personalizedPredicates = criteriaBuilder.or(skillPredicates.toArray(new Predicate[0]));
+
+            Predicate notCompletedPredicate;
+            if (completedTaskIds.isEmpty()) {
+                notCompletedPredicate = criteriaBuilder.conjunction();
+            } else {
+                notCompletedPredicate = root.get("id").in(completedTaskIds).not();
+            }
+
+            return criteriaBuilder.and(personalizedPredicates, notCompletedPredicate);
+        };
+
+        Pageable pendingPageable = PageRequest.of(pendingPage, pendingSize);
+        Page<Task> pendingTasks = taskRepository.findAll(pendingTasksSpec, pendingPageable);
+
+        Pageable completedPageable = PageRequest.of(completedPage, completedSize);
+        Page<Task> completedTasks;
+        if (completedTaskIds.isEmpty()) {
+            completedTasks = Page.empty(completedPageable);
+        } else {
+            completedTasks = taskRepository.findCompletedTasksByIds(completedTaskIds, completedPageable);
+        }
+
+        Page<TaskDTO> pendingDTOs = pendingTasks.map(taskMapper::toDTO);
+        Page<TaskDTO> completedDTOs = completedTasks.map(taskMapper::toDTO);
+
+        log.info("Returning {} personalized pending and {} completed tasks for user {}",
+                pendingDTOs.getTotalElements(), completedDTOs.getTotalElements(), userId);
+
+        return new UserTasksResponse(pendingDTOs, completedDTOs);
+    }
+
 
     /**
      * {@inheritDoc}
@@ -308,8 +382,8 @@ public class TaskServiceImpl implements TaskService {
      *   <li>5-14 correct: MEDIUM</li>
      *   <li>15 or more correct: HARD</li>
      * </ul>
-     *
-     * @param userId the unique identifier of the user
+     *param
+     * @param userId  the unique identifier of the user
      * @param skillId the unique identifier of the skill
      * @return the determined difficulty level
      */
@@ -329,6 +403,21 @@ public class TaskServiceImpl implements TaskService {
         ClassPathResource prompt = new ClassPathResource("prompts/learningPath/learningPath_prompt.json");
         String StringPrompt = Files.readString(prompt.getFile().toPath(), StandardCharsets.UTF_8);
         String updatedFields = updateBlock(StringPrompt, "input", userProfileRequestDTO);
+
+    @Override
+    public McqResponseDTO generateMCQ(McqRequestDTO mcqRequestDTO) throws IOException {
+        Client client = new Client();
+        ClassPathResource prompt = new ClassPathResource("prompts/mcq/mcq_prompt.json");
+
+        String updatedFields = updateFields(
+                Files.readString(prompt.getFile().toPath(), StandardCharsets.UTF_8),
+                Map.of(
+                        "userId", mcqRequestDTO.getUserId().toString(),
+                        "interest", mcqRequestDTO.getInterest(),
+                        "difficulty", mcqRequestDTO.getDifficulty(),
+                        "no_of_questions", String.valueOf(mcqRequestDTO.getNo_of_questions()))
+                );
+
 
         GenerateContentResponse response =
                 client.models.generateContent(
@@ -365,5 +454,59 @@ public class TaskServiceImpl implements TaskService {
             cleanedJson = cleanedJson.substring(0, cleanedJson.length() - 3);
         }
         return cleanedJson.trim();
+            throw new AiServiceException("No response from AI API");
+        }
+        List<MCQquestionDTO> questions = parseJsonToMcqList(response.text());
+
+        saveQuestions(questions);
+
+        return new McqResponseDTO(questions);
+    }
+
+    public static String updateFields (String jsonString, Map < String, String > updates){
+        Gson gson = new Gson();
+        JsonObject jsonObject = gson.fromJson(jsonString, JsonObject.class);
+        updates.forEach(jsonObject::addProperty);
+        return gson.toJson(jsonObject);
+    }
+
+    public static List<MCQquestionDTO> parseJsonToMcqList (String jsonArrayString){
+        Gson gson = new GsonBuilder().setStrictness(Strictness.LENIENT).create();
+
+        Type listType = new TypeToken<List<MCQquestionDTO>>() {
+        }.getType();
+
+        List<MCQquestionDTO> mcqQuestions = gson.fromJson(jsonArrayString, listType);
+
+        return mcqQuestions;
+    }
+
+    public void saveQuestions(List<MCQquestionDTO> questions) {
+
+        for(MCQquestionDTO question : questions) {
+            Task task = new Task().builder()
+                    .title(question.getQuestion_title())
+                    .description(question.getQuestion_description())
+                    .type(TaskType.valueOf(question.getQuestion_type()))
+                    .difficulty(TaskDifficulty.valueOf(question.getQuestion_difficulty()))
+                    .content(createMCQContent(question))
+                    .xpReward(question.getXpReward())
+                    .build();
+
+            taskRepository.save(task);
+        }
+    }
+
+    public McqTaskContent createMCQContent(MCQquestionDTO content) {
+
+        return McqTaskContent.builder()
+                .question_number(content.getQuestion_number())
+                .question_text(content.getQuestion_text())
+                .question_duration(content.getQuestion_duration())
+                .options(content.getOptions())
+                .hint(content.getHint())
+                .correct_answer(content.getCorrect_answer())
+                .explanation(content.getExplanation())
+                .build();
     }
 }

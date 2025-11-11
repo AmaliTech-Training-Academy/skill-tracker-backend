@@ -4,6 +4,7 @@ import com.amalitech.common.security.dto.response.ApiResponse;
 import com.amalitech.task.service.dto.TaskSubmissionDTO;
 import com.amalitech.task.service.dto.request.SubmitAnswerRequest;
 import com.amalitech.task.service.dto.response.SubmissionResponse;
+import com.amalitech.task.service.exception.InvalidUserIdException;
 import com.amalitech.task.service.service.SubmissionService;
 
 import jakarta.validation.Valid;
@@ -58,7 +59,7 @@ public class SubmissionController {
             userId = UUID.fromString(userIdPrincipal);
         } catch (Exception e) {
             log.error("Invalid User ID format in security principal: {}", userIdPrincipal);
-            throw new IllegalArgumentException("Invalid User ID format in token.");
+            throw new InvalidUserIdException("Invalid User ID format in token.", e);
         }
 
         log.info("Submission received from authenticated user: {}", userId);

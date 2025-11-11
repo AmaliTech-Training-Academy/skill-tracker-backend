@@ -17,6 +17,7 @@ import com.amalitech.task.service.model.feedback.impl.EssaySubmissionFeedback;
 import com.amalitech.task.service.repository.TaskRepository;
 import com.amalitech.task.service.repository.TaskSubmissionRepository;
 import com.amalitech.task.service.service.SubmissionService;
+import com.amalitech.task.service.service.TaskService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -44,19 +45,22 @@ public class SubmissionServiceImpl implements SubmissionService {
     private final SubmissionMapper submissionMapper;
     private final ObjectMapper objectMapper;
     private final FallbackFeedbackMapper fallbackMapper;
+    private final TaskService taskService;
 
     public SubmissionServiceImpl(TaskSubmissionRepository submissionRepository,
                                  TaskRepository taskRepository,
                                  EventProducer eventProducer,
                                  SubmissionMapper submissionMapper,
                                  ObjectMapper objectMapper,
-                                 FallbackFeedbackMapper fallbackMapper) {
+                                 FallbackFeedbackMapper fallbackMapper,
+                                 TaskService taskService) {
         this.submissionRepository = submissionRepository;
         this.taskRepository = taskRepository;
         this.eventProducer = eventProducer;
         this.submissionMapper = submissionMapper;
         this.objectMapper = objectMapper;
         this.fallbackMapper = fallbackMapper;
+        this.taskService = taskService;
     }
 
     /**
@@ -158,6 +162,7 @@ public class SubmissionServiceImpl implements SubmissionService {
 
         TaskSubmission updatedSubmission = submissionRepository.save(existingSubmission);
         log.info("Submission {} updated with feedback and results.", updatedSubmission.getId());
+
     }
 
     /**

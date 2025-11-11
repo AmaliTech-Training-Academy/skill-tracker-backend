@@ -79,8 +79,8 @@ public class Task {
     private Boolean isPublished = false;
 
     @CreationTimestamp
-    @Column(nullable = false, updatable = false)
-    private LocalDateTime createdAt;
+    @Column(nullable = false)
+    private LocalDateTime createdAt = LocalDateTime.now();
 
     @UpdateTimestamp
     @Column(nullable = false)

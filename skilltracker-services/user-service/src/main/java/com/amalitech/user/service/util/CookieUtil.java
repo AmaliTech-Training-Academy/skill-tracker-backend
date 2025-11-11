@@ -9,13 +9,11 @@ import jakarta.servlet.http.HttpServletResponse;
 
 @Component
 public class CookieUtil {
-    @Value("${cookie.domain:localhost}")
-    private String cookieDomain;
 
     @Value("${cookie.secure:true}")
     private boolean cookieSecure;
 
-    @Value("${cookie.same-site:Strict}")
+    @Value("${cookie.same-site:None}")
     private String sameSite;
 
     @Value("${cookie.path:/}")
@@ -25,7 +23,6 @@ public class CookieUtil {
      * Retrieves the value of a cookie by name from the request.
      * @param request The HTTP request containing the cookies.
      * @param name The name of the cookie to retrieve.
-     * @return The cookie value if found, or null if not present.
      */
     public String getCookieValue(HttpServletRequest request, String name) {
         if (request.getCookies() != null) {
@@ -55,7 +52,6 @@ public class CookieUtil {
                 .secure(cookieSecure)
                 .sameSite(sameSite)
                 .path(cookiePath)
-                .domain(cookieDomain)
                 .maxAge(maxAgeSeconds)
                 .build();
 
@@ -71,7 +67,6 @@ public class CookieUtil {
                 .secure(cookieSecure)
                 .sameSite(sameSite)
                 .path(cookiePath)
-                .domain(cookieDomain)
                 .maxAge(0)
                 .build();
         response.addHeader("Set-Cookie", cookie.toString());

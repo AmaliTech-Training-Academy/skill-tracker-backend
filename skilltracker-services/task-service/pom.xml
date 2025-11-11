@@ -197,6 +197,12 @@
             <artifactId>json</artifactId>
             <version>20231013</version>
         </dependency>
+            <groupId>com.amalitech</groupId>
+            <artifactId>user-service</artifactId>
+            <version>0.0.1-SNAPSHOT</version>
+            <scope>compile</scope>
+        </dependency>
+
         <dependency>
             <groupId>com.google.genai</groupId>
             <artifactId>google-genai</artifactId>

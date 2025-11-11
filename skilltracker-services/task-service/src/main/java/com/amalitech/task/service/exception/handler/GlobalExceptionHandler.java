@@ -1,8 +1,13 @@
 package com.amalitech.task.service.exception.handler;
 
 import com.amalitech.common.security.dto.response.ApiError;
+import com.amalitech.task.service.exception.AiResponseParsingException;
+import com.amalitech.task.service.exception.AiServiceException;
+import com.amalitech.task.service.exception.InvalidAiResponseException;
+import com.amalitech.task.service.exception.InvalidUserIdException;
 import com.amalitech.task.service.exception.ResourceNotFoundException;
 import com.amalitech.task.service.exception.SkillsNotFoundException;
+import com.amalitech.task.service.exception.TaskGenerationException;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
@@ -103,6 +108,111 @@ public class GlobalExceptionHandler {
         );
 
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+    }
+
+    /**
+     * Handles 502 Bad Gateway errors when AI service API fails.
+     */
+    @ExceptionHandler(AiServiceException.class)
+    public ResponseEntity<ApiError> handleAiServiceException(
+            AiServiceException ex, HttpServletRequest request) {
+
+        log.error("AI service error: {}", ex.getMessage(), ex);
+
+        ApiError error = ApiError.of(
+                HttpStatus.BAD_GATEWAY.value(),
+                "AI service unavailable",
+                "Failed to communicate with AI service. Please try again later.",
+                request.getRequestURI(),
+                null,
+                getTraceId()
+        );
+
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(error);
+    }
+
+    /**
+     * Handles 502 Bad Gateway errors when AI response is malformed.
+     */
+    @ExceptionHandler(InvalidAiResponseException.class)
+    public ResponseEntity<ApiError> handleInvalidAiResponseException(
+            InvalidAiResponseException ex, HttpServletRequest request) {
+
+        log.error("Invalid AI response: {}", ex.getMessage(), ex);
+
+        ApiError error = ApiError.of(
+                HttpStatus.BAD_GATEWAY.value(),
+                "Invalid AI response",
+                "Received unexpected response format from AI service.",
+                request.getRequestURI(),
+                null,
+                getTraceId()
+        );
+
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(error);
+    }
+
+    /**
+     * Handles 502 Bad Gateway errors when AI response parsing fails.
+     */
+    @ExceptionHandler(AiResponseParsingException.class)
+    public ResponseEntity<ApiError> handleAiResponseParsingException(
+            AiResponseParsingException ex, HttpServletRequest request) {
+
+        log.error("Failed to parse AI response: {}", ex.getMessage(), ex);
+
+        ApiError error = ApiError.of(
+                HttpStatus.BAD_GATEWAY.value(),
+                "AI response parsing failed",
+                "Failed to parse response from AI service.",
+                request.getRequestURI(),
+                null,
+                getTraceId()
+        );
+
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(error);
+    }
+
+    /**
+     * Handles 500 Internal Server Errors during task generation.
+     */
+    @ExceptionHandler(TaskGenerationException.class)
+    public ResponseEntity<ApiError> handleTaskGenerationException(
+            TaskGenerationException ex, HttpServletRequest request) {
+
+        log.error("Task generation failed: {}", ex.getMessage(), ex);
+
+        ApiError error = ApiError.of(
+                HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                "Task generation failed",
+                "Failed to generate tasks. Please try again later.",
+                request.getRequestURI(),
+                null,
+                getTraceId()
+        );
+
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+    }
+
+    /**
+     * Handles 400 Bad Request when user ID is invalid.
+     */
+    @ExceptionHandler(InvalidUserIdException.class)
+    public ResponseEntity<ApiError> handleInvalidUserIdException(
+            InvalidUserIdException ex, HttpServletRequest request) {
+
+        log.warn("Invalid user ID format: {}", ex.getMessage());
+
+        ApiError error = ApiError.of(
+                HttpStatus.BAD_REQUEST.value(),
+                "Invalid user ID",
+                ex.getMessage(),
+                request.getRequestURI(),
+                null,
+                getTraceId()
+        );
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
     }
 
     /**

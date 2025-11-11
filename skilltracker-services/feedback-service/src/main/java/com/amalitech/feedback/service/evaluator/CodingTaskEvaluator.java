@@ -9,6 +9,7 @@ import com.amalitech.feedback.service.dto.client.TaskDTO;
 import com.amalitech.feedback.service.dto.client.request.Judge0SubmissionRequest;
 import com.amalitech.feedback.service.dto.client.response.Judge0SubmissionResponse;
 import com.amalitech.feedback.service.dto.client.submission.DetailedEvaluationResponse;
+import com.amalitech.feedback.service.exception.InvalidTaskException;
 import com.amalitech.feedback.service.service.AIFeedbackClient;
 import com.amalitech.feedback.service.service.Judge0Client;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -57,11 +58,11 @@ public class CodingTaskEvaluator implements TaskEvaluator {
      * Runs all test cases against Judge0.
      */
     private Mono<EvaluationData> runTestCases(SubmissionCreatedEvent event) {
-        List<SubmissionCreatedEvent.TestCaseData> testCases = event.getTestCases();
+    List<SubmissionCreatedEvent.TestCaseData> testCases = event.getTestCases();
 
-        if (testCases == null || testCases.isEmpty()) {
-            return Mono.error(new RuntimeException("Task " + event.getTaskId() + " has no test cases."));
-        }
+    if (testCases == null || testCases.isEmpty()) {
+    return Mono.error(new InvalidTaskException("Task " + event.getTaskId() + " has no test cases."));
+    }
 
         return Flux.fromIterable(testCases)
                 .concatMap(testCase -> {
