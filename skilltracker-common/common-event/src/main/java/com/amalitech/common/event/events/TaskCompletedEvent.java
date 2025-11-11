@@ -11,9 +11,21 @@ import java.util.UUID;
  * Event published when a user completes a task (after evaluation).
  *
  * <p>This event contains comprehensive information about task completion including
- * user ID, skill ID, task details, XP earned, pass/fail status, and rubric scores.
+ * user ID, skill ID, task details, XP earned, pass/fail status, and detailed rubric scores.
  * It is published by the task-service after receiving evaluation results and is
  * consumed by analytics services to track user progress and learning metrics.</p>
+ * 
+ * <p><strong>Rubric Scoring:</strong></p>
+ * <ul>
+ *   <li>For CODING tasks, rubric scores are extracted from: correctness (max 50), efficiency (max 30), style (max 20).
+ *   <li>For ESSAY tasks, rubric scores are extracted from: completeness (max 25), accuracy (max 30), 
+ *       clarity (max 25), depth (max 20).
+ *   <li>Each rubric score contains: score (weighted points as Double), maxScore (maximum points), 
+ *       percentage (0-100% achievement).
+ * </ul>
+ * 
+ * <p>The <code>totalXpEarned</code> is calculated based on the overall submission percentage score
+ * (typically: XP = (percentage / 100) × maxXP), independent of individual rubric scores.</p>
  */
 @Data
 @Builder
@@ -41,31 +53,38 @@ public class TaskCompletedEvent {
 
     /**
      * Total XP (experience points) earned by the user for completing this task.
+     * 
+     * <p>Calculated as: (overall_percentage / 100) × task_max_xp</p>
      */
     private Integer totalXpEarned;
 
     /**
      * Whether the user passed the task (true) or failed (false).
+     * Typically determined by: overall_percentage >= 70%.
      */
     private Boolean passed;
 
     /**
-     * Timestamp when the task was completed.
+     * Timestamp when the task was completed (when evaluation was finalized).
      */
     private Instant completedAt;
 
     /**
-     * Type of the task (CODING, MCQ, ESSAY, etc.).
+     * Type of the task (e.g., CODING, MCQ, ESSAY, PROJECT).
      */
     private String taskType;
 
     /**
-     * Difficulty level of the task.
+     * Difficulty level of the task (e.g., EASY, MEDIUM, HARD).
      */
     private String taskDifficulty;
 
     /**
-     * Map of rubric scores where key is rubric name and value is the score details.
+     * Map of rubric scores indexed by rubric name.
+     * 
+     * <p>Keys are rubric category names (e.g., "correctness", "efficiency", "style" for coding tasks;
+     * "completeness", "accuracy", "clarity", "depth" for essay tasks).
+     * Values contain detailed score breakdown including weighted points and achievement percentage.</p>
      */
     private Map<String, RubricScoreData> rubricsScores;
 
