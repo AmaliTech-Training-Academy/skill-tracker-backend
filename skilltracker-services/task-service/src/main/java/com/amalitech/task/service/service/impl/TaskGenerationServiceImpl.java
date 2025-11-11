@@ -238,7 +238,6 @@ public class TaskGenerationServiceImpl implements TaskGenerationService {
 
         TaskDifficulty difficulty = TaskDifficulty.valueOf(skillData.getDifficultyLevel().toUpperCase());
 
-        // Check if sufficient tasks already exist before generating new ones
         long existingTaskCount = taskRepository.countBySkillAndDifficultyAndType(
                 skill.getId(), difficulty, taskType, true);
 
@@ -269,19 +268,15 @@ public class TaskGenerationServiceImpl implements TaskGenerationService {
      * Helper method to save the replicated user skill data.
      */
     private void saveUserSkillProfile(UUID userId, UserOnboardingCompletedEvent.SkillSelectionData skillData) {
-        try {
-            UserSkillProfile.UserSkillId id = new UserSkillProfile.UserSkillId(userId, skillData.getSkillId());
+        UserSkillProfile.UserSkillId id = new UserSkillProfile.UserSkillId(userId, skillData.getSkillId());
 
-            UserSkillProfile profile = UserSkillProfile.builder()
-                    .id(id)
-                    .skillName(skillData.getSkillName())
-                    .difficulty(TaskDifficulty.valueOf(skillData.getDifficultyLevel().toUpperCase()))
-                    .build();
+        UserSkillProfile profile = UserSkillProfile.builder()
+                .id(id)
+                .skillName(skillData.getSkillName())
+                .difficulty(TaskDifficulty.valueOf(skillData.getDifficultyLevel().toUpperCase()))
+                .build();
 
-            userSkillProfileRepository.save(profile);
-            log.info("Saved local user skill profile for user {} and skill {}", userId, skillData.getSkillName());
-        } catch (Exception e) {
-            log.error("Failed to save local user skill profile for user {}: {}", userId, e.getMessage());
-        }
+        userSkillProfileRepository.save(profile);
+        log.info("Saved local user skill profile for user {} and skill {}", userId, skillData.getSkillName());
     }
 }
