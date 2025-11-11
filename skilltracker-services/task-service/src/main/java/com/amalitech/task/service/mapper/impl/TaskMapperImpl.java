@@ -10,15 +10,9 @@ import com.amalitech.task.service.model.TaskDefinition;
 import com.amalitech.task.service.model.view.SkillView;
 import com.amalitech.task.service.model.enums.TaskDifficulty;
 import com.amalitech.task.service.model.enums.TaskType;
-import com.amalitech.user.service.dto.UserRequestDTO;
-import com.amalitech.user.service.model.User;
-import com.amalitech.user.service.model.enums.PremiumTier;
-import com.amalitech.user.service.model.enums.Role;
-import com.amalitech.user.service.model.enums.UserState;
 import org.springframework.stereotype.Component;
 
 import java.util.UUID;
-
 import java.time.LocalDateTime;
 
 @Component
@@ -82,23 +76,6 @@ public class TaskMapperImpl implements TaskMapper {
             return null;
         }
 
-    public static Task toEntity(MCQquestionDTO dto) {
-        if (dto == null) return null;
-        Task task = new Task();
-        task.setTitle(dto.getQuestion_title());
-        task.setDescription(dto.getQuestion_description());
-        task.setType(TaskType.valueOf(dto.getQuestion_type()));
-        task.setDifficulty(TaskDifficulty.valueOf(dto.getQuestion_difficulty()));
-//        task.setContent(dto.getContent()); // Come to this later...
-        task.setTaskDefinition(TaskDefinition.builder().build());
-        task.setEstimatedDurationInMinutes(dto.getQuestion_duration());
-        task.setXpReward(dto.getXpReward());
-        task.setUpdatedAt(LocalDateTime.now());
-
-        return task;
-    }
-}
-
         TaskDefinition definition = task.getTaskDefinition();
         UUID taskDefId = null;
         String skillName = null;
@@ -127,5 +104,21 @@ public class TaskMapperImpl implements TaskMapper {
                 task.getCreatedAt(),
                 task.getUpdatedAt()
         );
+    }
+
+    public static Task toEntity(MCQquestionDTO dto) {
+        if (dto == null) return null;
+        Task task = new Task();
+        task.setTitle(dto.getQuestion_title());
+        task.setDescription(dto.getQuestion_description());
+        task.setType(TaskType.valueOf(dto.getQuestion_type()));
+        task.setDifficulty(TaskDifficulty.valueOf(dto.getQuestion_difficulty()));
+//        task.setContent(dto.getContent()); // Come to this later...
+        task.setTaskDefinition(TaskDefinition.builder().build());
+        task.setEstimatedDurationInMinutes(dto.getQuestion_duration());
+        task.setXpReward(dto.getXpReward());
+        task.setUpdatedAt(LocalDateTime.now());
+
+        return task;
     }
 }
