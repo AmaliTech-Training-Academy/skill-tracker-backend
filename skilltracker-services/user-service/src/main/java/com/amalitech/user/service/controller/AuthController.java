@@ -108,7 +108,7 @@ public class AuthController {
     }
 
     /** Admin endpoint: Create a new user with specified role */
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('ADMIN')")
     @PostMapping("/admin/create-user")
     public ResponseEntity<ApiResponse<UserResponseDTO>> createUserByAdmin(
             @Valid @RequestBody CreateUserByAdminRequest request
