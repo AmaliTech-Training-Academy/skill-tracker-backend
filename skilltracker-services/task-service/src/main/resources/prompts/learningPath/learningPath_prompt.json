@@ -1,0 +1,48 @@
+{
+  "type": "learning_path_generation",
+  "input": {
+    "userId": "UUID",
+    "career_goals": ["Become a Backend Engineer, Master Data Analytics"],
+    "current_progress": {
+      "skill": "Git",
+      "difficulty": "Advanced",
+      "performance_percentage": 67
+    }
+  },
+  "expected_output": {
+    "userId": "String(exact copy from input block)",
+    "summary": "String (brief overview explaining how this path fits the user's goals and skill level)",
+    "current_skill": "String (copied from input.current_progress.skill)",
+    "recommended_next_skill": "String (the most logical next skill that builds on current_skill)",
+    "recommended_activities": [
+      "String (practical Activity 1)",
+      "String (practical Activity 2)",
+      "String (practical Activity 3)",
+      "String (practical Activity 4)"
+    ],
+    "reasoning": "String (why this next skill makes sense based on goals and skill in current_performance block)",
+    "difficulty": "String (should logically be relevant to the details in the input block)"
+  },
+  "validation": [
+    "All links must be verified working URLs from official documentation or established learning platforms",
+    "All links must be tested and confirmed to resolve correctly",
+    "All links must point to current, maintained resources",
+    "Prefer official documentation URLs over third-party tutorials",
+    "Use established platforms: MDN Web Docs, freeCodeCamp, official Git-scm documentation, etc."
+  ],
+  "constraints": [
+    "current_skill is skill in current_performance block.",
+    "recommended_next_skill must be a natural next step after current_skill.",
+    "summary and reasoning must be clear, short, and practical.",
+    "Difficulty should progress logically without skipping levels.",
+    "All output fields must be non-null and match expected_output structure.",
+    "Exclude markdown or any formatting syntax; output must be pure JSON.",
+    "Generated next_skill must be based on skill and correspond with performance in current_performance block",
+    "Always output a single JSON object with the exact expected_output fields.",
+    "recommended_activities should from 1 to 4, list the most impactful and varied activities for developing input skill.",
+    "Resources must ONLY include URLs from official documentation and established, reputable learning platforms",
+    "Do not generate links to random blog posts or unverified third-party content",
+    "Verify all URLs point to current, maintained versions of documentation",
+    "If a verified resource cannot be found, omit the link rather than including a potentially broken one"
+  ]
+}
