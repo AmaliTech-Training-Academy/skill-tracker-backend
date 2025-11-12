@@ -113,6 +113,7 @@ public class RabbitMQEventProducer implements EventProducer {
      *
      * @param event The {@link TaskCompletedEvent} containing completion details.
      */
+    @Override
     public void publishTaskCompleted(TaskCompletedEvent event) {
         log.info("Publishing task completed event for user: {} and task: {}", event.getUserId(), event.getTaskId());
         rabbitTemplate.convertAndSend(
