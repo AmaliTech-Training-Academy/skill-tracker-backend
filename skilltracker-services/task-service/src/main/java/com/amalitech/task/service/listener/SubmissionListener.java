@@ -25,7 +25,7 @@ public class SubmissionListener {
     private final SubmissionService submissionService;
 
     /**
-     * Listens for the {@code SubmissionEvaluatedEvent} published by the feedback Service
+     * Listens for the {@code SubmissionEvaluatedEvent} published by the Feedback Service
      * and processes the results.
      * <p>
      * The method is bound to the {@code submission.evaluated.q} queue. It delegates the
