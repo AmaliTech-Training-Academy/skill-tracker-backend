@@ -4,11 +4,11 @@ import com.amalitech.analytics.service.dto.TaskCompletedEvent;
 import com.amalitech.analytics.service.dto.TaskSubmissionRequestDTO;
 import com.amalitech.analytics.service.events.AnalyticsUpdateEvent;
 import com.amalitech.analytics.service.events.GoalCompletedEvent;
+import com.amalitech.analytics.service.exception.EntityNotFoundException;
 import com.amalitech.analytics.service.model.*;
 import com.amalitech.analytics.service.model.enums.GoalStatus;
 import com.amalitech.analytics.service.repository.*;
 import com.amalitech.analytics.service.service.interfaces.AnalyticsServiceInterface;
-import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
@@ -70,17 +70,18 @@ public class AnalyticsService implements AnalyticsServiceInterface {
     private UserSkillProgress updateSkillProgress(TaskCompletedEvent event) {
         UserSkillProgress progress = getSkillProgress(event.skillId(), event.userId());
         SkillSnapShot snapshot = fetchSkillSnapshot(event.skillId());
-        double proficiency = calculateProficiency(progress.getTotalXpEarned(), snapshot);
+        int totalXp = progress.getTotalXpEarned() + event.totalXpEarned();
+        double proficiency = calculateProficiency(totalXp, snapshot);
         progress.updateProgress(event.totalXpEarned(), Math.min(proficiency, 100.0));
         return skillProgressRepository.save(progress);
     }
 
     private SkillSnapShot fetchSkillSnapshot(UUID skillId) {
         return skillSnapshotRepository.findById(skillId)
-                .orElseThrow(() -> new EntityNotFoundException("Skill snapshot not found: " + skillId));
+                .orElseThrow(() -> new EntityNotFoundException("Skill snapshot not found: ", skillId));
     }
 
-    private double calculateProficiency(int currentXp, SkillSnapShot snapshot) {
+    public double calculateProficiency(int currentXp, SkillSnapShot snapshot) {
         long intermediate = snapshot.getLevelXpMap().getOrDefault("INTERMEDIATE", 1000L);
         long advanced = snapshot.getLevelXpMap().getOrDefault("ADVANCED", 3000L);
         double proficiency;
@@ -177,6 +178,7 @@ public class AnalyticsService implements AnalyticsServiceInterface {
     private UserAggregateStats updateUserAggregateStats(TaskCompletedEvent event) {
         UserAggregateStats stats = fetchOrCreateAggregateStats(event.userId());
         LocalDate practiceDate = event.completedAt().atZone(ZoneOffset.UTC).toLocalDate();
+        stats.incrementTasksCompleted();
         stats.updateStreak(practiceDate);
         return aggregateStatsRepository.save(stats);
     }
