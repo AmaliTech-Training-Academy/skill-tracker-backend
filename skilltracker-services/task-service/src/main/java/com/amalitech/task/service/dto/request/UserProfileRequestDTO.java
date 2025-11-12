@@ -1,7 +1,7 @@
 package com.amalitech.task.service.dto.request;
 
+import com.amalitech.task.service.dto.CurrentProgressDTO;
 import lombok.*;
-import org.gentle.mcqgenerator.dto.CurrentProgressDTO;
 
 import java.util.List;
 import java.util.UUID;
