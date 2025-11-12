@@ -39,6 +39,7 @@ public class RabbitMQEventProducer implements EventProducer {
      *
      * @param request The {@link BatchGenerationRequest} detailing the desired skill, difficulty, and count.
      */
+    @Override
     public void requestBatchTaskGeneration(BatchGenerationRequest request) {
         log.info("Publishing BATCH generation request: {}", request);
         rabbitTemplate.convertAndSend(
