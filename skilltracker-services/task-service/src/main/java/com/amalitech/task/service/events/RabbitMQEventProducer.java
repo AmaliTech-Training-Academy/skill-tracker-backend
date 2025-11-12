@@ -2,6 +2,7 @@ package com.amalitech.task.service.events;
 
 import com.amalitech.common.event.events.SubmissionCreatedEvent;
 import com.amalitech.common.event.events.SubmissionEvaluatedEvent;
+import com.amalitech.common.event.events.TaskCompletedEvent;
 import com.amalitech.task.service.config.RabbitMQConfig;
 import com.amalitech.task.service.dto.request.BatchGenerationRequest;
 import com.amalitech.task.service.dto.request.GenerateTaskRequest;
@@ -38,6 +39,7 @@ public class RabbitMQEventProducer implements EventProducer {
      *
      * @param request The {@link BatchGenerationRequest} detailing the desired skill, difficulty, and count.
      */
+    @Override
     public void requestBatchTaskGeneration(BatchGenerationRequest request) {
         log.info("Publishing BATCH generation request: {}", request);
         rabbitTemplate.convertAndSend(
@@ -55,6 +57,7 @@ public class RabbitMQEventProducer implements EventProducer {
      *
      * @param request The {@link GenerateTaskRequest} detailing the specific task parameters (topic, language, etc.).
      */
+    @Override
     public void requestSpecificTaskGeneration(GenerateTaskRequest request) {
         log.info("Publishing ADMIN generation request: {}", request);
         rabbitTemplate.convertAndSend(
@@ -73,6 +76,7 @@ public class RabbitMQEventProducer implements EventProducer {
      *
      * @param submission The {@link SubmissionCreatedEvent} containing the necessary details for evaluation.
      */
+    @Override
     public void publishSubmissionCreated(SubmissionCreatedEvent submission) {
         log.info("Publishing submission created event: {}", submission.getSubmissionId());
         rabbitTemplate.convertAndSend(
@@ -90,11 +94,31 @@ public class RabbitMQEventProducer implements EventProducer {
      *
      * @param event The fully evaluated {@link SubmissionEvaluatedEvent} with scores and feedback.
      */
+    @Override
     public void publishSubmissionEvaluated(SubmissionEvaluatedEvent event) {
         log.info("Publishing submission evaluated event: {}", event.getSubmissionId());
         rabbitTemplate.convertAndSend(
                 RabbitMQConfig.SUBMISSION_EXCHANGE,
                 RabbitMQConfig.SUBMISSION_EVALUATED_ROUTING_KEY,
+                event
+        );
+    }
+
+    /**
+     * Publishes an event when a task has been completed by a user.
+     * <p>
+     * This event notifies analytics services with comprehensive task completion information
+     * including XP earned, pass/fail status, and detailed rubric scores for analysis
+     * and progress tracking.
+     *
+     * @param event The {@link TaskCompletedEvent} containing completion details.
+     */
+    @Override
+    public void publishTaskCompleted(TaskCompletedEvent event) {
+        log.info("Publishing task completed event for user: {} and task: {}", event.getUserId(), event.getTaskId());
+        rabbitTemplate.convertAndSend(
+                RabbitMQConfig.TASK_EXCHANGE,
+                RabbitMQConfig.TASK_COMPLETED_ROUTING_KEY,
                 event
         );
     }

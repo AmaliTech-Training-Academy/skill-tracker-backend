@@ -55,36 +55,70 @@ public class EssayTaskEvaluator implements TaskEvaluator {
 
     /**
      * Builds the evaluated event with AI essay feedback.
+     * <p>
+     * This method validates that the feedback structure contains all required
+     * category evaluations and overall results. If any required field is null,
+     * it logs a warning and falls back to default values.
      */
     private SubmissionEvaluatedEvent buildSuccessEvent(
             SubmissionCreatedEvent event,
             EssaySubmissionFeedback feedback
     ) {
+        if (feedback == null || feedback.getEvaluation() == null) {
+            log.warn("Feedback or evaluation is null for submission: {}", event.getSubmissionId());
+            return buildFallbackEvent(event);
+        }
+
         EssaySubmissionFeedback.Evaluation eval = feedback.getEvaluation();
         EssaySubmissionFeedback.OverallEvaluation overall = eval.getOverall();
 
-        String overallFeedback = String.format(
-                "Completeness: %s\\nAccuracy: %s\\nClarity: %s\\nDepth: %s\\n\\nOverall: %s\\n\\nNext Steps: %s",
-                eval.getCompleteness().getFeedback(),
-                eval.getAccuracy().getFeedback(),
-                eval.getClarity().getFeedback(),
-                eval.getDepth().getFeedback(),
-                overall.getSummary(),
-                overall.getNextSteps()
-        );
+        if (overall == null) {
+            log.warn("Overall evaluation is null for submission: {}", event.getSubmissionId());
+            return buildFallbackEvent(event);
+        }
+
+        String overallFeedback = buildFeedbackString(eval, overall);
+
+        int score = overall.getPercentage() != null ? overall.getPercentage().intValue() : 0;
+        boolean passed = overall.getPassed() != null ? overall.getPassed() : false;
 
         return SubmissionEvaluatedEvent.builder()
                 .submissionId(event.getSubmissionId())
                 .userId(event.getUserId())
                 .status("COMPLETED")
-                .score(overall.getPercentage().intValue())
-                .isCorrect(overall.getPassed())
+                .score(score)
+                .isCorrect(passed)
                 .feedbackType("ESSAY")
                 .overallFeedback(overallFeedback)
                 .detailedFeedback(serializeDetailedFeedback(feedback))
-                .avgExecutionTimeMs(0.0) // Essays don't have execution time
-                .avgMemoryUsedKb(0) // Essays don't use memory
+                .avgExecutionTimeMs(0.0)
+                .avgMemoryUsedKb(0)
                 .build();
+    }
+
+    /**
+     * Builds the overall feedback string from evaluation categories.
+     * Safely extracts feedback from each category with null-checking.
+     *
+     * @param eval The evaluation containing category details.
+     * @param overall The overall evaluation summary.
+     * @return A formatted feedback string combining all categories.
+     */
+    private String buildFeedbackString(
+            EssaySubmissionFeedback.Evaluation eval,
+            EssaySubmissionFeedback.OverallEvaluation overall
+    ) {
+        String completeness = eval.getCompleteness() != null ? eval.getCompleteness().getFeedback() : "N/A";
+        String accuracy = eval.getAccuracy() != null ? eval.getAccuracy().getFeedback() : "N/A";
+        String clarity = eval.getClarity() != null ? eval.getClarity().getFeedback() : "N/A";
+        String depth = eval.getDepth() != null ? eval.getDepth().getFeedback() : "N/A";
+        String summary = overall.getSummary() != null ? overall.getSummary() : "Evaluation completed.";
+        String nextSteps = overall.getNextSteps() != null ? overall.getNextSteps() : "No additional steps provided.";
+
+        return String.format(
+                "Completeness: %s\\nAccuracy: %s\\nClarity: %s\\nDepth: %s\\n\\nOverall: %s\\n\\nNext Steps: %s",
+                completeness, accuracy, clarity, depth, summary, nextSteps
+        );
     }
 
     /**

@@ -231,9 +231,7 @@ public class AIFeedbackClient {
 
     jsonContent = jsonContent.replace("```json", "").replace("```", "").trim();
 
-    CodingSubmissionFeedback feedback = objectMapper.readValue(jsonContent, CodingSubmissionFeedback.class);
-
-    return feedback;
+        return objectMapper.readValue(jsonContent, CodingSubmissionFeedback.class);
 
     } catch (InvalidAiResponseException e) {
     throw e;

@@ -2,6 +2,7 @@ package com.amalitech.task.service.events;
 
 import com.amalitech.common.event.events.SubmissionCreatedEvent;
 import com.amalitech.common.event.events.SubmissionEvaluatedEvent;
+import com.amalitech.common.event.events.TaskCompletedEvent;
 import com.amalitech.task.service.dto.request.BatchGenerationRequest;
 import com.amalitech.task.service.dto.request.GenerateTaskRequest;
 
@@ -36,4 +37,11 @@ public interface EventProducer {
      * @param submissionDTO The DTO of the fully evaluated submission.
      */
     void publishSubmissionEvaluated(SubmissionEvaluatedEvent submissionDTO);
+
+    /**
+     * Publishes an event when a task has been completed by a user.
+     *
+     * @param event The {@link TaskCompletedEvent} containing completion details.
+     */
+    void publishTaskCompleted(TaskCompletedEvent event);
 }

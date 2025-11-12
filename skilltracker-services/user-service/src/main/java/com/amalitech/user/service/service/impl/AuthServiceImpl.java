@@ -1,14 +1,16 @@
 package com.amalitech.user.service.service.impl;
 
+import com.amalitech.user.service.config.PasswordConfig;
 import com.amalitech.user.service.dto.UserRequestDTO;
 import com.amalitech.user.service.dto.UserResponseDTO;
 import com.amalitech.user.service.dto.request.CreateUserByAdminRequest;
 import com.amalitech.user.service.dto.request.LoginRequest;
 import com.amalitech.user.service.dto.response.AuthResponse;
-import com.amalitech.user.service.dto.response.UserDto;
 import com.amalitech.user.service.exception.*;
 import com.amalitech.user.service.mapper.UserMapper;
-import com.amalitech.user.service.model.*;
+import com.amalitech.user.service.model.User;
+import com.amalitech.user.service.model.UserProfile;
+import com.amalitech.user.service.model.VerificationObject;
 import com.amalitech.user.service.model.enums.GuidedTourStatus;
 import com.amalitech.user.service.model.enums.UserState;
 import com.amalitech.user.service.repository.UserRepository;
@@ -20,6 +22,8 @@ import com.amalitech.user.service.util.CookieUtil;
 import com.amalitech.user.service.util.RedisUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -27,12 +31,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.security.SecureRandom;
-import java.time.Duration;
-import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
@@ -44,9 +44,11 @@ import java.util.stream.Collectors;
 @Service
 public class AuthServiceImpl implements AuthService {
     private static final Logger log = LoggerFactory.getLogger(AuthServiceImpl.class);
+    private static final int MIN_REQUIRED_CHARS = 4;
 
     private final UserRepository userRepository;
     private final BCryptPasswordEncoder passwordEncoder;
+    private final PasswordConfig passwordConfig;
     private final EmailService emailService;
     private final AuthenticationManager authenticationManager;
     private final JwtUtil jwtUtil;
@@ -58,13 +60,16 @@ public class AuthServiceImpl implements AuthService {
     private final String appBaseUrl;
     private Integer tempCode;
     private CookieUtil cookieUtil;
-    @Value("${app.frontend-url}")
-    private String frontendUrl;
+
     private final Map<Integer, VerificationObject> activeVerifications = new ConcurrentHashMap<>();
 
+    @Value("${app.frontend-url}")
+    private String frontendUrl;
+    @Value("${app.frontend.login-url}")
+    private String loginUrl;
 
     public AuthServiceImpl(
-            UserRepository userRepository,
+            UserRepository userRepository, PasswordConfig passwordConfig,
             JwtUtil jwtUtil,
             BCryptPasswordEncoder passwordEncoder,
             EmailService emailService,
@@ -78,6 +83,7 @@ public class AuthServiceImpl implements AuthService {
             CookieUtil cookieUtil
     ) {
         this.userRepository = userRepository;
+        this.passwordConfig = passwordConfig;
         this.passwordEncoder = passwordEncoder;
         this.emailService = emailService;
         this.authenticationManager = authenticationManager;
@@ -381,37 +387,41 @@ public class AuthServiceImpl implements AuthService {
         savedUser.setProfile(userProfile);
         userRepository.save(savedUser);
 
-        emailService.sendAdminCreatedUserEmail(request.email(), tempPassword, adminEmail);
+        emailService.sendAdminCreatedUserEmail(request.email(), tempPassword, adminEmail, loginUrl);
 
         log.info("Admin {} created new {} user: {}", adminEmail, request.role(), request.email());
         return UserMapper.toDto(savedUser);
     }
 
+    /**
+     * Generates a secure temporary password with at least one character from each category
+     * (uppercase, lowercase, number, special character) and shuffles them for randomness.
+     *
+     * @return a randomly generated temporary password
+     */
     private String generateTemporaryPassword() {
-        String upperCaseLetters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-        String lowerCaseLetters = "abcdefghijklmnopqrstuvwxyz";
-        String numbers = "0123456789";
-        String specialCharacters = "@$!%*?&";
-        String allChars = upperCaseLetters + lowerCaseLetters + numbers + specialCharacters;
-
         SecureRandom random = new SecureRandom();
         StringBuilder password = new StringBuilder();
 
-        password.append(upperCaseLetters.charAt(random.nextInt(upperCaseLetters.length())));
-        password.append(lowerCaseLetters.charAt(random.nextInt(lowerCaseLetters.length())));
-        password.append(numbers.charAt(random.nextInt(numbers.length())));
-        password.append(specialCharacters.charAt(random.nextInt(specialCharacters.length())));
+        password.append(passwordConfig.getUppercaseLetters()
+                .charAt(random.nextInt(passwordConfig.getUppercaseLetters().length())));
+        password.append(passwordConfig.getLowercaseLetters()
+                .charAt(random.nextInt(passwordConfig.getLowercaseLetters().length())));
+        password.append(passwordConfig.getNumbers()
+                .charAt(random.nextInt(passwordConfig.getNumbers().length())));
+        password.append(passwordConfig.getSpecialCharacters()
+                .charAt(random.nextInt(passwordConfig.getSpecialCharacters().length())));
 
-        for (int i = 4; i < 12; i++) {
+        String allChars = passwordConfig.getAllCharacters();
+        for (int i = MIN_REQUIRED_CHARS; i < passwordConfig.getLength(); i++) {
             password.append(allChars.charAt(random.nextInt(allChars.length())));
         }
 
-        // Shuffle the password characters to randomize their positions
         List<Character> passwordChars = password.chars()
                 .mapToObj(c -> (char) c)
                 .collect(Collectors.toList());
         Collections.shuffle(passwordChars, random);
-        
+
         return passwordChars.stream()
                 .map(String::valueOf)
                 .collect(Collectors.joining());
