@@ -1,5 +1,6 @@
 package com.amalitech.user.service;
 
+import com.amalitech.user.service.config.PasswordConfig;
 import com.amalitech.user.service.controller.AuthController;
 import com.amalitech.user.service.dto.UserResponseDTO;
 import com.amalitech.user.service.dto.request.CreateUserByAdminRequest;
@@ -41,6 +42,7 @@ import static org.mockito.Mockito.*;
 class AdminUserCreationIntegrationTest {
 
     @Mock private UserRepository userRepository;
+    @Mock private PasswordConfig passwordConfig;
     @Mock private JwtUtil jwtUtil;
     @Mock private BCryptPasswordEncoder passwordEncoder;
     @Mock private EmailService emailService;
@@ -58,11 +60,26 @@ class AdminUserCreationIntegrationTest {
     private static final String REFRESH_PREFIX = "refresh:";
     private static final String RESET_PREFIX = "reset:";
     private static final String APP_BASE_URL = "http://localhost:8080";
+    private static final String LOGIN_URL = "http://localhost:3000/login";
 
     @BeforeEach
     void setUp() {
+        // Configure password config mock
+        String uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        String lowercase = "abcdefghijklmnopqrstuvwxyz";
+        String numbers = "0123456789";
+        String special = "@$!%*?&";
+        lenient().when(passwordConfig.getUppercaseLetters()).thenReturn(uppercase);
+        lenient().when(passwordConfig.getLowercaseLetters()).thenReturn(lowercase);
+        lenient().when(passwordConfig.getNumbers()).thenReturn(numbers);
+        lenient().when(passwordConfig.getSpecialCharacters()).thenReturn(special);
+        lenient().when(passwordConfig.getLength()).thenReturn(12);
+        lenient().when(passwordConfig.getAllCharacters()).thenReturn(uppercase + lowercase + numbers + special);
+        lenient().doNothing().when(emailService).sendAdminCreatedUserEmail(anyString(), anyString(), anyString(), anyString());
+
         authService = new AuthServiceImpl(
                 userRepository,
+                passwordConfig,
                 jwtUtil,
                 passwordEncoder,
                 emailService,
@@ -98,7 +115,6 @@ class AdminUserCreationIntegrationTest {
             user.setUpdatedAt(LocalDateTime.now());
             return user;
         });
-        doNothing().when(emailService).sendAdminCreatedUserEmail(anyString(), anyString(), anyString());
 
         // Mock security context
         Authentication auth = mock(Authentication.class);
@@ -132,7 +148,6 @@ class AdminUserCreationIntegrationTest {
             user.setUpdatedAt(LocalDateTime.now());
             return user;
         });
-        doNothing().when(emailService).sendAdminCreatedUserEmail(anyString(), anyString(), anyString());
 
         Authentication auth = mock(Authentication.class);
         when(auth.getName()).thenReturn(ADMIN_EMAIL);
@@ -169,7 +184,6 @@ class AdminUserCreationIntegrationTest {
             user.setUpdatedAt(LocalDateTime.now());
             return user;
         });
-        doNothing().when(emailService).sendAdminCreatedUserEmail(anyString(), anyString(), anyString());
 
         UserResponseDTO result = authService.createUserByAdmin(request, ADMIN_EMAIL);
 
@@ -185,7 +199,8 @@ class AdminUserCreationIntegrationTest {
         verify(emailService).sendAdminCreatedUserEmail(
                 eq(NEW_USER_EMAIL),
                 anyString(),
-                eq(ADMIN_EMAIL)
+                eq(ADMIN_EMAIL),
+                isNull()
         );
     }
 
@@ -204,7 +219,7 @@ class AdminUserCreationIntegrationTest {
 
         verify(userRepository).existsByEmail(NEW_USER_EMAIL);
         verify(userRepository, never()).save(any(User.class));
-        verify(emailService, never()).sendAdminCreatedUserEmail(anyString(), anyString(), anyString());
+        verify(emailService, never()).sendAdminCreatedUserEmail(anyString(), anyString(), anyString(), anyString());
     }
 
     // ==================== Service-Repository Interaction Tests ====================
@@ -227,7 +242,6 @@ class AdminUserCreationIntegrationTest {
             user.setUpdatedAt(LocalDateTime.now());
             return user;
         });
-        doNothing().when(emailService).sendAdminCreatedUserEmail(anyString(), anyString(), anyString());
 
         authService.createUserByAdmin(request, ADMIN_EMAIL);
 
@@ -273,7 +287,6 @@ class AdminUserCreationIntegrationTest {
             user.setUpdatedAt(LocalDateTime.now());
             return user;
         });
-        doNothing().when(emailService).sendAdminCreatedUserEmail(anyString(), anyString(), anyString());
 
         authService.createUserByAdmin(request, ADMIN_EMAIL);
 
@@ -303,18 +316,18 @@ class AdminUserCreationIntegrationTest {
             user.setUpdatedAt(LocalDateTime.now());
             return user;
         });
-        doNothing().when(emailService).sendAdminCreatedUserEmail(anyString(), anyString(), anyString());
 
         authService.createUserByAdmin(request, ADMIN_EMAIL);
 
         verify(emailService).sendAdminCreatedUserEmail(
                 eq(NEW_USER_EMAIL),
                 anyString(),
-                eq(ADMIN_EMAIL)
+                eq(ADMIN_EMAIL),
+                isNull()
         );
-    }
+        }
 
-    // ==================== User State & Profile Tests ====================
+        // ==================== User State & Profile Tests ====================
 
     @Test
     @DisplayName("Service creates user with REGISTERED state")
@@ -335,7 +348,6 @@ class AdminUserCreationIntegrationTest {
             user.setUpdatedAt(LocalDateTime.now());
             return user;
         });
-        doNothing().when(emailService).sendAdminCreatedUserEmail(anyString(), anyString(), anyString());
 
         authService.createUserByAdmin(request, ADMIN_EMAIL);
 
@@ -363,7 +375,6 @@ class AdminUserCreationIntegrationTest {
             user.setUpdatedAt(LocalDateTime.now());
             return user;
         });
-        doNothing().when(emailService).sendAdminCreatedUserEmail(anyString(), anyString(), anyString());
 
         authService.createUserByAdmin(request, ADMIN_EMAIL);
 
@@ -391,7 +402,6 @@ class AdminUserCreationIntegrationTest {
             user.setUpdatedAt(LocalDateTime.now());
             return user;
         });
-        doNothing().when(emailService).sendAdminCreatedUserEmail(anyString(), anyString(), anyString());
 
         authService.createUserByAdmin(request, ADMIN_EMAIL);
 
@@ -434,7 +444,6 @@ class AdminUserCreationIntegrationTest {
             user.setUpdatedAt(LocalDateTime.now());
             return user;
         });
-        doNothing().when(emailService).sendAdminCreatedUserEmail(anyString(), anyString(), anyString());
 
         // Create users with different admin emails
         UserResponseDTO result1 = authService.createUserByAdmin(request1, admin1Email);
@@ -446,8 +455,8 @@ class AdminUserCreationIntegrationTest {
         assertEquals("user2@example.com", result2.email());
         
         // Verify both admin emails were passed to email service
-        verify(emailService).sendAdminCreatedUserEmail(eq("user1@example.com"), anyString(), eq(admin1Email));
-        verify(emailService).sendAdminCreatedUserEmail(eq("user2@example.com"), anyString(), eq(admin2Email));
+        verify(emailService).sendAdminCreatedUserEmail(eq("user1@example.com"), anyString(), eq(admin1Email), isNull());
+        verify(emailService).sendAdminCreatedUserEmail(eq("user2@example.com"), anyString(), eq(admin2Email), isNull());
     }
 
     @Test
@@ -479,7 +488,6 @@ class AdminUserCreationIntegrationTest {
             user.setUpdatedAt(LocalDateTime.now());
             return user;
         });
-        doNothing().when(emailService).sendAdminCreatedUserEmail(anyString(), anyString(), anyString());
 
         UserResponseDTO userResult = authService.createUserByAdmin(userRequest, ADMIN_EMAIL);
         UserResponseDTO adminResult = authService.createUserByAdmin(adminRequest, ADMIN_EMAIL);
@@ -512,7 +520,6 @@ class AdminUserCreationIntegrationTest {
             user.setUpdatedAt(LocalDateTime.now());
             return user;
         });
-        doNothing().when(emailService).sendAdminCreatedUserEmail(anyString(), anyString(), anyString());
 
         authService.createUserByAdmin(request1, ADMIN_EMAIL);
         authService.createUserByAdmin(request2, ADMIN_EMAIL);

@@ -1,5 +1,6 @@
 package com.amalitech.user.service;
 
+import com.amalitech.user.service.config.PasswordConfig;
 import com.amalitech.user.service.dto.UserRequestDTO;
 import com.amalitech.user.service.dto.UserResponseDTO;
 import com.amalitech.user.service.dto.request.LoginRequest;
@@ -40,6 +41,7 @@ import static org.mockito.Mockito.*;
 class AuthServiceImplTest {
 
     @Mock private UserRepository userRepository;
+    @Mock private PasswordConfig passwordConfig;
     @Mock private JwtUtil jwtUtil;
     @Mock private BCryptPasswordEncoder passwordEncoder;
     @Mock private EmailService emailService;
@@ -65,12 +67,20 @@ class AuthServiceImplTest {
     private static final String REFRESH_PREFIX = "refresh:";
     private static final String RESET_PREFIX = "reset:";
     private static final String APP_BASE_URL = "http://localhost:8080";
+    private static final String LOGIN_URL = "http://localhost:3000/login";
 
     @BeforeEach
     void setUp() {
+        // Configure password config mock
+        lenient().when(passwordConfig.getUppercaseLetters()).thenReturn("ABCDEFGHIJKLMNOPQRSTUVWXYZ");
+        lenient().when(passwordConfig.getLowercaseLetters()).thenReturn("abcdefghijklmnopqrstuvwxyz");
+        lenient().when(passwordConfig.getNumbers()).thenReturn("0123456789");
+        lenient().when(passwordConfig.getSpecialCharacters()).thenReturn("@$!%*?&");
+        lenient().when(passwordConfig.getLength()).thenReturn(12);
 
         authService = new AuthServiceImpl(
                 userRepository,
+                passwordConfig,
                 jwtUtil,
                 passwordEncoder,
                 emailService,
