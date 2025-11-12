@@ -325,7 +325,7 @@ class AdminUserCreationIntegrationTest {
                 eq(ADMIN_EMAIL),
                 isNull()
         );
-        }
+    }
 
         // ==================== User State & Profile Tests ====================
 
