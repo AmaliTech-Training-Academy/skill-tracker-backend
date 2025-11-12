@@ -327,7 +327,7 @@ class AdminUserCreationIntegrationTest {
         );
     }
 
-        // ==================== User State & Profile Tests ====================
+// ==================== User State & Profile Tests ====================
 
     @Test
     @DisplayName("Service creates user with REGISTERED state")
