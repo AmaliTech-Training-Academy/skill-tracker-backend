@@ -76,6 +76,7 @@ public class RabbitMQEventProducer implements EventProducer {
      *
      * @param submission The {@link SubmissionCreatedEvent} containing the necessary details for evaluation.
      */
+    @Override
     public void publishSubmissionCreated(SubmissionCreatedEvent submission) {
         log.info("Publishing submission created event: {}", submission.getSubmissionId());
         rabbitTemplate.convertAndSend(
