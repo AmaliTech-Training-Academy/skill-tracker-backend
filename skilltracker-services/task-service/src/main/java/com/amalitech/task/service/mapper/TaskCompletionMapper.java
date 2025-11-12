@@ -198,6 +198,7 @@ public class TaskCompletionMapper {
         return switch (rubricName) {
             case "correctness" -> 50;
             case "efficiency" -> 30;
+            case "style" -> 20;
             case "completeness" -> 25;
             case "accuracy" -> 30;
             case "clarity" -> 25;
