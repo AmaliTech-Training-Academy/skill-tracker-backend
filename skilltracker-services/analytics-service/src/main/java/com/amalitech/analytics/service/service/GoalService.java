@@ -1,7 +1,7 @@
 package com.amalitech.analytics.service.service;
 import com.amalitech.analytics.service.dto.CreateGoalRequestDTO;
-import com.amalitech.analytics.service.dto.TaskCompletedEvent;
 import com.amalitech.analytics.service.dto.UserGoalDTO;
+import com.amalitech.analytics.service.exception.EntityNotFoundException;
 import com.amalitech.analytics.service.exception.InvalidGoalArgumentException;
 import com.amalitech.analytics.service.model.SkillSnapShot;
 import com.amalitech.analytics.service.model.UserGoal;
@@ -10,7 +10,6 @@ import com.amalitech.analytics.service.repository.SkillSnapshotRepository;
 import com.amalitech.analytics.service.repository.UserGoalRepository;
 import com.amalitech.analytics.service.repository.UserSkillProgressRepository;
 import com.amalitech.analytics.service.service.interfaces.GoalServiceInterface;
-import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,7 +31,7 @@ public class GoalService implements GoalServiceInterface {
     @Transactional
     public UserGoalDTO createGoal(UUID userId, CreateGoalRequestDTO request) {
         SkillSnapShot snapshot = snapshotRepository.findById(request.skillId())
-                .orElseThrow(() -> new EntityNotFoundException("Skill not found: " + request.skillId()));
+                .orElseThrow(() -> new EntityNotFoundException("Skill not found: ", request.skillId()));
 
 
         UserSkillProgress progress = getSkillProgress(request.skillId(), userId);
@@ -103,14 +102,14 @@ public class GoalService implements GoalServiceInterface {
     public UserGoalDTO getGoal(UUID userId, UUID goalId) {
         return goalRepository.findByIdAndUserId(goalId, userId)
                 .map(UserGoalDTO::fromEntity)
-                .orElseThrow(() -> new EntityNotFoundException("Goal not found"));
+                .orElseThrow(() -> new EntityNotFoundException("Goal not found", goalId));
     }
 
     @Override
     @Transactional
     public void deleteGoal(UUID userId, UUID goalId) {
         UserGoal goal = goalRepository.findByIdAndUserId(goalId, userId)
-                .orElseThrow(() -> new EntityNotFoundException("Goal not found"));
+                .orElseThrow(() -> new EntityNotFoundException("Goal not found", goalId));
         goalRepository.delete(goal);
     }
 }
