@@ -56,6 +56,7 @@ public class RabbitMQEventProducer implements EventProducer {
      *
      * @param request The {@link GenerateTaskRequest} detailing the specific task parameters (topic, language, etc.).
      */
+    @Override
     public void requestSpecificTaskGeneration(GenerateTaskRequest request) {
         log.info("Publishing ADMIN generation request: {}", request);
         rabbitTemplate.convertAndSend(
