@@ -65,8 +65,7 @@ public class AuthServiceImpl implements AuthService {
 
     @Value("${app.frontend-url}")
     private String frontendUrl;
-    @Value("${app.frontend.login-url}")
-    private String loginUrl;
+
 
     public AuthServiceImpl(
             UserRepository userRepository, PasswordConfig passwordConfig,
@@ -364,6 +363,7 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public UserResponseDTO createUserByAdmin(CreateUserByAdminRequest request, String adminEmail) {
+        String loginUrl = frontendUrl + "/login";
         if (userRepository.existsByEmail(request.email())) {
             throw new EmailAlreadyExistsException("A user already exists with this email.");
         }
