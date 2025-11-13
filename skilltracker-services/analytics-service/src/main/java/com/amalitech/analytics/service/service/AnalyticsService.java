@@ -53,7 +53,7 @@ public class AnalyticsService implements AnalyticsServiceInterface {
         UserSkillProgress progress = updateSkillProgress(event);
         updateUserAggregateStats(event);
         logSubmission(event);
-        updateTrajectorySnapshot(progress);
+        updateTrajectorySnapshot(event);
         updateGoalProgress(progress);
 
         eventPublisher.publishEvent(new AnalyticsUpdateEvent(this, event.userId()));
@@ -161,26 +161,45 @@ public class AnalyticsService implements AnalyticsServiceInterface {
         }
     }
 
+    private LocalDate getEventDate(TaskCompletedEvent event) {
+        if (event.completedAt() == null) {  // Defensive: Prevent NPE upstream
+            log.warn("Invalid event date for user {} and skill {}", event.userId(), event.skillId());
+        }
+        return event.completedAt().atZone(ZoneOffset.UTC).toLocalDate();
+    }
 
-    private void updateTrajectorySnapshot(UserSkillProgress progress) {
-        SkillTrajectorySnapshot snapshot = fetchOrCreateTrajectorySnapshot(progress);
+
+    private void updateTrajectorySnapshot(TaskCompletedEvent event) {
+        fetchOrCreateTrajectorySnapshot(event);
+    }
+
+    private void fetchOrCreateTrajectorySnapshot(TaskCompletedEvent event) {
+        LocalDate eventDate = getEventDate(event);
+
+        SkillTrajectorySnapshot snapshot =  trajectoryRepository
+                .findByUserIdAndSkillIdAndSnapshotDate(event.userId(), event.skillId(), eventDate)
+                .orElse(null);
+        if (snapshot == null) {
+            snapshot = SkillTrajectorySnapshot.createNew(
+                    event.userId(),
+                    event.skillId(),
+                    eventDate,
+                    event.totalXpEarned()
+            );
+        } else {
+            snapshot.recordTaskCompletion(event.totalXpEarned());
+        }
         trajectoryRepository.save(snapshot);
-    }
 
-    private SkillTrajectorySnapshot fetchOrCreateTrajectorySnapshot(UserSkillProgress progress) {
-        LocalDate today = LocalDate.now(ZoneOffset.UTC);
-        return trajectoryRepository
-                .findByUserIdAndSkillIdAndSnapshotDate(progress.getUserId(), progress.getSkillId(), today)
-                .orElseGet(() -> SkillTrajectorySnapshot.fromProgress(progress, today));
     }
 
 
-    private UserAggregateStats updateUserAggregateStats(TaskCompletedEvent event) {
+    private void updateUserAggregateStats(TaskCompletedEvent event) {
         UserAggregateStats stats = fetchOrCreateAggregateStats(event.userId());
-        LocalDate practiceDate = event.completedAt().atZone(ZoneOffset.UTC).toLocalDate();
+        LocalDate practiceDate = getEventDate(event);
         stats.incrementTasksCompleted();
         stats.updateStreak(practiceDate);
-        return aggregateStatsRepository.save(stats);
+        aggregateStatsRepository.save(stats);
     }
 
     private UserAggregateStats fetchOrCreateAggregateStats(UUID userId) {
@@ -193,6 +212,7 @@ public class AnalyticsService implements AnalyticsServiceInterface {
         TaskSubmissionLog logEntry = buildSubmissionLog(event);
         logRepository.save(logEntry);
         log.debug("Logged new task submission for user {} and skill {}", event.userId(), event.skillId());
+        throw new EntityNotFoundException("Logged new task submission for user {}", event.userId());
     }
 
     private TaskSubmissionLog buildSubmissionLog(TaskCompletedEvent event) {
