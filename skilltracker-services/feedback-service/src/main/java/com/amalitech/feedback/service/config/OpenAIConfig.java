@@ -30,7 +30,7 @@ public class OpenAIConfig {
         return restClientBuilder -> restClientBuilder
                 .requestInterceptor((request, body, execution) -> {
                     request.getHeaders().remove("Authorization");
-                    request.getHeaders().set("X-Api-Key", apiKey);
+                    request.getHeaders().set("X-API-KEY", apiKey);
                     request.getHeaders().set("Provider", "openai");
                     return execution.execute(request, body);
                 });
