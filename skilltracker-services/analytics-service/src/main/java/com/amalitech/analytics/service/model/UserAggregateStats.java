@@ -30,7 +30,6 @@ public class UserAggregateStats {
      @param practiceDate The date the user completed a task.
      */
     public void updateStreak(LocalDate practiceDate) {
-        totalTasksCompleted++;
         if (practiceDate.equals(lastPracticeDate)) {
             return;
         }
@@ -43,5 +42,9 @@ public class UserAggregateStats {
             longestStreakInDays = currentStreakInDays;
         }
         lastPracticeDate = practiceDate;
+    }
+
+    public void incrementTasksCompleted() {
+        this.totalTasksCompleted++;
     }
 }

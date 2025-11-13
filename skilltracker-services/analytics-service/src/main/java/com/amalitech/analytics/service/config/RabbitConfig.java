@@ -49,6 +49,7 @@ public class RabbitConfig {
         return new Queue(RabbitMQConstants.SKILL_QUEUE);
     }
 
+
     /**
      * Creates a binding between the skill queue and the skill exchange
      * using the defined routing key.
@@ -63,6 +64,25 @@ public class RabbitConfig {
                 .to(skillExchange)
                 .with(RabbitMQConstants.SKILL_ROUTING_KEY);
     }
+
+    public Queue taskCompletedQueue() {
+        return new Queue(RabbitMQConstants.TASK_COMPLETION_QUEUE, true);
+    }
+
+    @Bean
+    public TopicExchange taskCompletionExchange() {
+        return new TopicExchange(RabbitMQConstants.TASK_COMPLETION_EXCHANGE);
+    }
+
+    @Bean
+    public Binding taskCompletedBinding(Queue taskCompletedQueue, TopicExchange taskCompletionExchange) {
+        return BindingBuilder.bind(taskCompletedQueue)
+                .to(taskCompletionExchange)
+                .with(RabbitMQConstants.TASK_COMPLETION_ROUTING_KEY);
+    }
+
+
+
 
     /**
      * Provides a message converter that serializes and deserializes

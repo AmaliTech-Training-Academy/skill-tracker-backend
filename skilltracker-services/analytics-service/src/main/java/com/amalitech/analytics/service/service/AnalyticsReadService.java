@@ -249,43 +249,40 @@ public class AnalyticsReadService implements AnalyticsReadServiceInterface {
     /** {@inheritDoc} */
     @Override
     public List<TrajectoryPointDTO> getSkillTrajectory(UUID userId, UUID skillId, Granularity granularity) {
-        if (granularity == Granularity.DAILY) {
-            return queryDailyTrajectory(userId, skillId);
-        }
-        return queryTrajectoryWithGranularity(userId, skillId, granularity);
-    }
-
-    private List<TrajectoryPointDTO> queryDailyTrajectory(UUID userId, UUID skillId) {
-        String sql = """
-                SELECT DISTINCT ON (snapshot_date::date)
-                       snapshot_date::date AS period_start,
-                       average_xp_earned,
-                       tasks_completed_up_to_date
-                FROM skill_trajectory_snapshots
-                WHERE user_id = ? AND skill_id = ?
-                ORDER BY snapshot_date::date, snapshot_date DESC
-                """;
-
-        return jdbcTemplate.query(sql,
-                (rs, rowNum) -> new TrajectoryPointDTO(
-                        rs.getDate("period_start").toLocalDate(),
-                        rs.getDouble("average_xp_earned"),
-                        rs.getInt("tasks_completed_up_to_date")
-                ),
-                userId, skillId);
-    }
-
-    private List<TrajectoryPointDTO> queryTrajectoryWithGranularity(UUID userId, UUID skillId, Granularity granularity) {
         String periodUnit = mapGranularityToPostgresUnit(granularity);
         String sql = String.format("""
-                SELECT DISTINCT ON (DATE_TRUNC('%s', snapshot_date))
-                       DATE_TRUNC('%s', snapshot_date) AS period_start,
-                       average_xp_earned,
-                       tasks_completed_up_to_date
-                FROM skill_trajectory_snapshots
-                WHERE user_id = ? AND skill_id = ?
-                ORDER BY period_start, snapshot_date DESC
-                """, periodUnit, periodUnit);
+        WITH PeriodDeltas AS (
+            -- Step 1: Aggregate daily deltas into the requested period (day, week, month)
+            SELECT
+                DATE_TRUNC('%s', snapshot_date) AS period_start,
+                SUM(tasks_completed_today) AS tasks_in_period,
+                SUM(xp_earned_today) AS xp_in_period
+            FROM
+                skill_trajectory_snapshots
+            WHERE
+                user_id = ? AND skill_id = ?
+            GROUP BY
+                period_start
+        ),
+        CumulativeCalculation AS (
+            -- Step 2: Use window functions to create running totals (cumulative trajectory)
+            SELECT
+                period_start,
+                SUM(tasks_in_period) OVER (ORDER BY period_start) AS cumulative_tasks,
+                SUM(xp_in_period) OVER (ORDER BY period_start) AS cumulative_xp
+            FROM
+                PeriodDeltas
+        )
+        -- Step 3: Select final points, calculating the lifetime average XP as of that date
+        SELECT
+            period_start::date,
+            cumulative_tasks AS tasks_completed_up_to_date,
+            (cumulative_xp / NULLIF(cumulative_tasks, 0)) AS average_xp_earned
+        FROM
+            CumulativeCalculation
+        ORDER BY
+            period_start ASC;
+        """, periodUnit);
 
         return jdbcTemplate.query(sql,
                 (rs, rowNum) -> new TrajectoryPointDTO(
@@ -295,6 +292,7 @@ public class AnalyticsReadService implements AnalyticsReadServiceInterface {
                 ),
                 userId, skillId);
     }
+
 
     /** Maps granularity enum to PostgreSQL DATE_TRUNC unit. */
     private String mapGranularityToPostgresUnit(Granularity granularity) {

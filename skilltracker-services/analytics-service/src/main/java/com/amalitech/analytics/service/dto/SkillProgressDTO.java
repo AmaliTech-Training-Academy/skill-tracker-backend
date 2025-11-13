@@ -17,7 +17,6 @@ public record SkillProgressDTO(
         Double proficiency,
         Integer tasksCompleted,
 
-        // XP Progression
         Integer currentXp,
         String currentLevel,
         String nextLevel,

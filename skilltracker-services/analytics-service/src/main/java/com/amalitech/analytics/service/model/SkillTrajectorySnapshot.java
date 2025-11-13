@@ -14,35 +14,47 @@ import java.util.UUID;
 @Data
 @NoArgsConstructor
 /**
- Represents a daily snapshot of a user's skill trajectory.
+ Represents a daily aggregation (delta) of a user's skill activity.
  */
 public class SkillTrajectorySnapshot {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private java.util.UUID id;
-
     private UUID userId;
     private UUID skillId;
-
     private LocalDate snapshotDate;
-    private Double averageXpEarned;
-    private Integer tasksCompletedUpToDate;
 
+    private Integer xpEarnedToday = 0;
+    private Integer tasksCompletedToday = 0;
+    private Double averageXpEarned = 0.0;
 
     /**
-     Creates a snapshot from a user's current progress for a given date.
-
-     @param progress The user's skill progress.
-     @param date The snapshot date.
-     @return A new SkillTrajectorySnapshot instance.
+     * Updates the daily record based on a new task completion.
+     * This method assumes the entity has already been found or newly created.
+     * @param xpEarned The XP from the latest task submission.
      */
-    public static SkillTrajectorySnapshot fromProgress(UserSkillProgress progress, LocalDate date) {
+    public void recordTaskCompletion(int xpEarned) {
+        this.tasksCompletedToday++;
+        this.xpEarnedToday += xpEarned;
+        this.recalculateAverageXp();
+    }
+
+
+    private void recalculateAverageXp(){
+        if (this.tasksCompletedToday > 0) {
+            this.averageXpEarned = (double) this.xpEarnedToday / this.tasksCompletedToday;
+        } else {
+            this.averageXpEarned = 0.0;
+        }
+    }
+
+
+    public static SkillTrajectorySnapshot createNew(UUID userId, UUID skillId, LocalDate date, int xpEarned) {
         SkillTrajectorySnapshot snapshot = new SkillTrajectorySnapshot();
-        snapshot.setUserId(progress.getUserId());
-        snapshot.setSkillId(progress.getSkillId());
+        snapshot.setUserId(userId);
+        snapshot.setSkillId(skillId);
         snapshot.setSnapshotDate(date);
-        snapshot.setAverageXpEarned(progress.getAverageXpEarned());
-        snapshot.setTasksCompletedUpToDate(progress.getTasksCompleted());
+        snapshot.recordTaskCompletion(xpEarned);
         return snapshot;
     }
 }

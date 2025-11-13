@@ -1,15 +1,14 @@
 package com.amalitech.task.service.service.impl;
 
+import com.amalitech.task.service.dto.LearningPathDTO;
 import com.amalitech.task.service.dto.MCQquestionDTO;
 import com.amalitech.task.service.dto.TaskAvailabilityDTO;
 import com.amalitech.task.service.dto.TaskDTO;
 import com.amalitech.task.service.dto.request.BatchGenerationRequest;
 import com.amalitech.task.service.dto.request.GenerateTaskRequest;
 import com.amalitech.task.service.dto.request.McqRequestDTO;
-import com.amalitech.task.service.dto.response.AdminTaskDetailResponse;
-import com.amalitech.task.service.dto.response.AdminTaskSummaryResponse;
-import com.amalitech.task.service.dto.response.McqResponseDTO;
-import com.amalitech.task.service.dto.response.UserTasksResponse;
+import com.amalitech.task.service.dto.request.UserProfileRequestDTO;
+import com.amalitech.task.service.dto.response.*;
 import com.amalitech.task.service.events.RabbitMQEventProducer;
 import com.amalitech.task.service.exception.AiServiceException;
 import com.amalitech.task.service.exception.ResourceNotFoundException;
@@ -27,10 +26,7 @@ import com.amalitech.task.service.service.SkillService;
 import com.amalitech.task.service.service.TaskService;
 import com.google.genai.Client;
 import com.google.genai.types.GenerateContentResponse;
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.JsonObject;
-import com.google.gson.Strictness;
+import com.google.gson.*;
 import com.google.gson.reflect.TypeToken;
 import jakarta.persistence.criteria.Predicate;
 import lombok.extern.slf4j.Slf4j;
@@ -76,6 +72,7 @@ public class TaskServiceImpl implements TaskService {
     private final RabbitMQEventProducer taskEventProducer;
     private final TaskMapper taskMapper;
     private final StringRedisTemplate redisTemplate;
+    private static final String model = "gemini-2.5-flash";
 
     /**
      * Minimum number of tasks required per difficulty level before triggering generation.
@@ -282,8 +279,6 @@ public class TaskServiceImpl implements TaskService {
     }
 
     /**
-     * --- THIS IS THE ADJUSTED METHOD ---
-     *
      * Retrieves tasks or triggers generation if needed.
      * It now uses simple parameters and has a "guard clause" to prevent
      * generation for anonymous (null) users.
@@ -408,7 +403,6 @@ public class TaskServiceImpl implements TaskService {
                 );
 
 
-        String model = "gemini-2.5-flash";
         GenerateContentResponse response =
                 client.models.generateContent(
                         model,
@@ -425,6 +419,51 @@ public class TaskServiceImpl implements TaskService {
         return new McqResponseDTO(questions);
     }
 
+    @Override
+    public LearningPathResponseDTO generateLearningPath(UserProfileRequestDTO userProfileRequestDTO) throws IOException {
+        Client client = new Client();
+        Gson gson = new GsonBuilder().setPrettyPrinting().create();
+        ClassPathResource prompt = new ClassPathResource("prompts/learningPath/learningPath_prompt.json");
+        String StringPrompt = Files.readString(prompt.getFile().toPath(), StandardCharsets.UTF_8);
+        String updatedFields = updateBlock(StringPrompt, "input", userProfileRequestDTO);
+
+        GenerateContentResponse response =
+                client.models.generateContent(
+                        model,
+                        updatedFields,
+                        null);
+
+        if (response.text() == null) {
+            throw new IOException("No response from Ai API....");
+        }
+
+        String cleanedResponse = cleanModelResponse(response.text());
+
+        LearningPathDTO responseJson = gson.fromJson(cleanedResponse, LearningPathDTO.class);
+
+        return new LearningPathResponseDTO(responseJson);
+    }
+
+    public static String updateBlock(String jsonString, String blockKey, Object blockValue) {
+        Gson gson = new GsonBuilder().setPrettyPrinting().create();
+        JsonObject jsonObject = JsonParser.parseString(jsonString).getAsJsonObject();
+
+        jsonObject.add(blockKey, gson.toJsonTree(blockValue));
+
+        return gson.toJson(jsonObject);
+    }
+
+    public static String cleanModelResponse(String modelResponse) {
+        if (modelResponse == null || modelResponse.isEmpty()) {
+            return modelResponse;
+        }
+        String cleanedJson = modelResponse.replaceFirst("```(json|text|)", "");
+        if (cleanedJson.endsWith("```")) {
+            cleanedJson = cleanedJson.substring(0, cleanedJson.length() - 3);
+        }
+        return cleanedJson.trim();
+    }
+
     public static String updateFields (String jsonString, Map < String, String > updates){
         Gson gson = new Gson();
         JsonObject jsonObject = gson.fromJson(jsonString, JsonObject.class);
@@ -438,9 +477,7 @@ public class TaskServiceImpl implements TaskService {
         Type listType = new TypeToken<List<MCQquestionDTO>>() {
         }.getType();
 
-        List<MCQquestionDTO> mcqQuestions = gson.fromJson(jsonArrayString, listType);
-
-        return mcqQuestions;
+        return gson.fromJson(jsonArrayString, listType);
     }
 
     public void saveQuestions(List<MCQquestionDTO> questions) {

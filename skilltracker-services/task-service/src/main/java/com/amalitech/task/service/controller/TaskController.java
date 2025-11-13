@@ -3,6 +3,8 @@ package com.amalitech.task.service.controller;
 import com.amalitech.common.security.dto.response.ApiResponse;
 import com.amalitech.task.service.dto.TaskDTO;
 import com.amalitech.task.service.dto.request.McqRequestDTO;
+import com.amalitech.task.service.dto.request.UserProfileRequestDTO;
+import com.amalitech.task.service.dto.response.LearningPathResponseDTO;
 import com.amalitech.task.service.dto.response.McqResponseDTO;
 import com.amalitech.task.service.dto.response.UserTasksResponse;
 import com.amalitech.task.service.model.enums.TaskType;
@@ -14,6 +16,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
 
@@ -66,6 +69,15 @@ public class TaskController {
     ) throws Exception {
         McqResponseDTO mcqTask = taskService.generateMCQ(taskDTO);
         return ResponseEntity.ok(ApiResponse.success("MCQ Task Generated Successfully", mcqTask, ""));
+    }
+
+    @PostMapping("/generate/learning-path")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ApiResponse<LearningPathResponseDTO>> generateLearningPath(
+            @RequestBody() UserProfileRequestDTO userProfileRequestDTO
+    ) throws IOException {
+        LearningPathResponseDTO learningPathResponseDTO = taskService.generateLearningPath(userProfileRequestDTO);
+        return ResponseEntity.ok(ApiResponse.success("Learning path Generated Successfully", learningPathResponseDTO, ""));
     }
 
 

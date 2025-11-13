@@ -104,6 +104,10 @@ public class CodingTaskEvaluator implements TaskEvaluator {
 
     /**
      * Builds the evaluated event with AI feedback.
+     * <p>
+     * This method validates that the feedback structure contains all required
+     * evaluation components. If any required field is null, it logs a warning
+     * and falls back to a basic event without detailed feedback.
      */
     private SubmissionEvaluatedEvent buildSuccessEvent(
             SubmissionCreatedEvent event,
@@ -112,7 +116,20 @@ public class CodingTaskEvaluator implements TaskEvaluator {
             List<Judge0SubmissionResponse> results,
             DetailedEvaluationResponse aiFeedback
     ) {
-        String overallFeedback = aiFeedback.getEvaluation().getOverall().getSummary();
+        if (aiFeedback == null || aiFeedback.getEvaluation() == null) {
+            log.warn("Feedback or evaluation is null for submission: {}", event.getSubmissionId());
+            return buildFallbackEvent(event, isCorrect, score, results);
+        }
+
+        DetailedEvaluationResponse.Evaluation eval = aiFeedback.getEvaluation();
+        if (eval.getOverall() == null) {
+            log.warn("Overall evaluation is null for submission: {}", event.getSubmissionId());
+            return buildFallbackEvent(event, isCorrect, score, results);
+        }
+
+        String overallFeedback = eval.getOverall().getSummary() != null
+                ? eval.getOverall().getSummary()
+                : "Code evaluation completed.";
         String detailedFeedback = serializeDetailedFeedback(aiFeedback);
 
         return buildCommonEvent(event, isCorrect, score, results)

@@ -32,22 +32,7 @@ public class SecurityConfig {
                 .httpBasic(ServerHttpSecurity.HttpBasicSpec::disable)
                 .formLogin(ServerHttpSecurity.FormLoginSpec::disable)
                 .authorizeExchange(exchange -> exchange
-                        .pathMatchers(
-                                "/api/v1/auth/**",
-                                "/oauth2/**",
-                                "/login/oauth2/**",
-                                "/error",
-                                "/health",
-                                "/actuator/**",
-
-                                "/swagger-ui.html",
-                                "/swagger-ui/**",
-                                "/v3/api-docs/**",
-                                "/swagger-resources/**",
-                                "/webjars/**",
-                                "/ws/**"
-                        ).permitAll()
-                        .anyExchange().authenticated()
+                        .anyExchange().permitAll()
                 )
                 .oauth2ResourceServer(oauth2 -> oauth2
                         .jwt(jwt -> jwt.jwtDecoder(jwtDecoder()))

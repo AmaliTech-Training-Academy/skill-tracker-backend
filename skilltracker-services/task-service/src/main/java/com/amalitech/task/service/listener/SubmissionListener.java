@@ -2,7 +2,6 @@ package com.amalitech.task.service.listener;
 
 import com.amalitech.common.event.events.SubmissionEvaluatedEvent;
 import com.amalitech.task.service.service.SubmissionService;
-
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.AmqpRejectAndDontRequeueException;
@@ -26,7 +25,7 @@ public class SubmissionListener {
     private final SubmissionService submissionService;
 
     /**
-     * Listens for the {@code SubmissionEvaluatedEvent} published by the Evaluation Service
+     * Listens for the {@code SubmissionEvaluatedEvent} published by the Feedback Service
      * and processes the results.
      * <p>
      * The method is bound to the {@code submission.evaluated.q} queue. It delegates the

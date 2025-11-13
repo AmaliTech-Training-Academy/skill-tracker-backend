@@ -4,11 +4,11 @@ import com.amalitech.analytics.service.dto.TaskCompletedEvent;
 import com.amalitech.analytics.service.dto.TaskSubmissionRequestDTO;
 import com.amalitech.analytics.service.events.AnalyticsUpdateEvent;
 import com.amalitech.analytics.service.events.GoalCompletedEvent;
+import com.amalitech.analytics.service.exception.EntityNotFoundException;
 import com.amalitech.analytics.service.model.*;
 import com.amalitech.analytics.service.model.enums.GoalStatus;
 import com.amalitech.analytics.service.repository.*;
 import com.amalitech.analytics.service.service.interfaces.AnalyticsServiceInterface;
-import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
@@ -53,7 +53,7 @@ public class AnalyticsService implements AnalyticsServiceInterface {
         UserSkillProgress progress = updateSkillProgress(event);
         updateUserAggregateStats(event);
         logSubmission(event);
-        updateTrajectorySnapshot(progress);
+        updateTrajectorySnapshot(event);
         updateGoalProgress(progress);
 
         eventPublisher.publishEvent(new AnalyticsUpdateEvent(this, event.userId()));
@@ -70,17 +70,18 @@ public class AnalyticsService implements AnalyticsServiceInterface {
     private UserSkillProgress updateSkillProgress(TaskCompletedEvent event) {
         UserSkillProgress progress = getSkillProgress(event.skillId(), event.userId());
         SkillSnapShot snapshot = fetchSkillSnapshot(event.skillId());
-        double proficiency = calculateProficiency(progress.getTotalXpEarned(), snapshot);
+        int totalXp = progress.getTotalXpEarned() + event.totalXpEarned();
+        double proficiency = calculateProficiency(totalXp, snapshot);
         progress.updateProgress(event.totalXpEarned(), Math.min(proficiency, 100.0));
         return skillProgressRepository.save(progress);
     }
 
     private SkillSnapShot fetchSkillSnapshot(UUID skillId) {
         return skillSnapshotRepository.findById(skillId)
-                .orElseThrow(() -> new EntityNotFoundException("Skill snapshot not found: " + skillId));
+                .orElseThrow(() -> new EntityNotFoundException("Skill snapshot not found: ", skillId));
     }
 
-    private double calculateProficiency(int currentXp, SkillSnapShot snapshot) {
+    public double calculateProficiency(int currentXp, SkillSnapShot snapshot) {
         long intermediate = snapshot.getLevelXpMap().getOrDefault("INTERMEDIATE", 1000L);
         long advanced = snapshot.getLevelXpMap().getOrDefault("ADVANCED", 3000L);
         double proficiency;
@@ -160,25 +161,45 @@ public class AnalyticsService implements AnalyticsServiceInterface {
         }
     }
 
+    private LocalDate getEventDate(TaskCompletedEvent event) {
+        if (event.completedAt() == null) {  // Defensive: Prevent NPE upstream
+            log.warn("Invalid event date for user {} and skill {}", event.userId(), event.skillId());
+        }
+        return event.completedAt().atZone(ZoneOffset.UTC).toLocalDate();
+    }
 
-    private void updateTrajectorySnapshot(UserSkillProgress progress) {
-        SkillTrajectorySnapshot snapshot = fetchOrCreateTrajectorySnapshot(progress);
+
+    private void updateTrajectorySnapshot(TaskCompletedEvent event) {
+        fetchOrCreateTrajectorySnapshot(event);
+    }
+
+    private void fetchOrCreateTrajectorySnapshot(TaskCompletedEvent event) {
+        LocalDate eventDate = getEventDate(event);
+
+        SkillTrajectorySnapshot snapshot =  trajectoryRepository
+                .findByUserIdAndSkillIdAndSnapshotDate(event.userId(), event.skillId(), eventDate)
+                .orElse(null);
+        if (snapshot == null) {
+            snapshot = SkillTrajectorySnapshot.createNew(
+                    event.userId(),
+                    event.skillId(),
+                    eventDate,
+                    event.totalXpEarned()
+            );
+        } else {
+            snapshot.recordTaskCompletion(event.totalXpEarned());
+        }
         trajectoryRepository.save(snapshot);
-    }
 
-    private SkillTrajectorySnapshot fetchOrCreateTrajectorySnapshot(UserSkillProgress progress) {
-        LocalDate today = LocalDate.now(ZoneOffset.UTC);
-        return trajectoryRepository
-                .findByUserIdAndSkillIdAndSnapshotDate(progress.getUserId(), progress.getSkillId(), today)
-                .orElseGet(() -> SkillTrajectorySnapshot.fromProgress(progress, today));
     }
 
 
-    private UserAggregateStats updateUserAggregateStats(TaskCompletedEvent event) {
+    private void updateUserAggregateStats(TaskCompletedEvent event) {
         UserAggregateStats stats = fetchOrCreateAggregateStats(event.userId());
-        LocalDate practiceDate = event.completedAt().atZone(ZoneOffset.UTC).toLocalDate();
+        LocalDate practiceDate = getEventDate(event);
+        stats.incrementTasksCompleted();
         stats.updateStreak(practiceDate);
-        return aggregateStatsRepository.save(stats);
+        aggregateStatsRepository.save(stats);
     }
 
     private UserAggregateStats fetchOrCreateAggregateStats(UUID userId) {
@@ -191,6 +212,7 @@ public class AnalyticsService implements AnalyticsServiceInterface {
         TaskSubmissionLog logEntry = buildSubmissionLog(event);
         logRepository.save(logEntry);
         log.debug("Logged new task submission for user {} and skill {}", event.userId(), event.skillId());
+        throw new EntityNotFoundException("Logged new task submission for user {}", event.userId());
     }
 
     private TaskSubmissionLog buildSubmissionLog(TaskCompletedEvent event) {
