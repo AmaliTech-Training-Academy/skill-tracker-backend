@@ -547,7 +547,6 @@ public class TaskServiceImpl implements TaskService {
      * @return A Page of TaskDTOs.
      */
     private Page<TaskDTO> getCompletedTasks(UUID userId, UUID skillIdFilter, CompletedTaskPeriod periodFilter, Set<UUID> completedTaskIds, Pageable completedPageable) {
-        // If there are no completed tasks, return empty page without querying
         if (completedTaskIds.isEmpty()) {
             return new PageImpl<>(Collections.emptyList(), completedPageable, 0);
         }
