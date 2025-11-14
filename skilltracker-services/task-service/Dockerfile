@@ -24,7 +24,9 @@ WORKDIR /app/skilltracker-common/common-event
 RUN mvn clean install -DskipTests -B
 
 # Build and install user-service (required by task-service)
-COPY skilltracker-services/user-service skilltracker-services/user-service
+# Copy the entire user-service directory at once
+COPY skilltracker-services/user-service /app/skilltracker-services/user-service
+
 WORKDIR /app/skilltracker-services/user-service
 RUN mvn clean install -DskipTests -B
 
