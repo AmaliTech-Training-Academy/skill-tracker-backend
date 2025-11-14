@@ -88,7 +88,11 @@ public class CodingTaskEvaluator implements TaskEvaluator {
         log.info("gradeAndProvideFeedback START - submission: {}, testCases: {}", event.getSubmissionId(), testCases != null ? testCases.size() : 0);
         
         List<CommonTestResult> commonResults = buildCommonTestResults(testCases, results);
-        log.info("Built commonResults: {} results", commonResults.size());
+        log.info("Built commonResults: {} results | Detailed results:", commonResults.size());
+        for (int i = 0; i < commonResults.size(); i++) {
+            CommonTestResult r = commonResults.get(i);
+            log.info("  TestResult[{}]: passed={}, expected='{}', actual='{}'", i, r.passed(), r.expectedOutput(), r.actualOutput());
+        }
 
         int totalTests = commonResults.size();
         int passedTests = (int) commonResults.stream()
