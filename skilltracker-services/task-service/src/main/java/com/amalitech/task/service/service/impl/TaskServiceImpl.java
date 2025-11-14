@@ -14,6 +14,7 @@ import com.amalitech.task.service.exception.AiServiceException;
 import com.amalitech.task.service.exception.ResourceNotFoundException;
 import com.amalitech.task.service.mapper.TaskMapper;
 import com.amalitech.task.service.model.Task;
+import com.amalitech.task.service.model.UserLearningPath;
 import com.amalitech.task.service.model.TaskSubmission;
 import com.amalitech.task.service.model.UserSkillProfile;
 import com.amalitech.task.service.model.content.impl.McqTaskContent;
@@ -23,6 +24,7 @@ import com.amalitech.task.service.model.enums.TaskType;
 import com.amalitech.task.service.model.view.SkillView;
 import com.amalitech.task.service.repository.TaskRepository;
 import com.amalitech.task.service.repository.TaskSubmissionRepository;
+import com.amalitech.task.service.repository.UserLearningPathRepository;
 import com.amalitech.task.service.repository.UserSkillProfileRepository;
 import com.amalitech.task.service.service.SkillService;
 import com.amalitech.task.service.service.TaskService;
@@ -72,6 +74,7 @@ public class TaskServiceImpl implements TaskService {
     private final TaskMapper taskMapper;
     private final StringRedisTemplate redisTemplate;
     private static final String model = "gemini-2.5-flash";
+    private final UserLearningPathRepository userLPrepo;
 
     /**
      * Minimum number of tasks required per difficulty level before triggering generation.
@@ -88,7 +91,8 @@ public class TaskServiceImpl implements TaskService {
                            SkillService skillService,
                            TaskSubmissionRepository submissionRepository,
                            RabbitMQEventProducer taskEventProducer,
-                           TaskMapper taskMapper, StringRedisTemplate redisTemplate
+                           TaskMapper taskMapper, StringRedisTemplate redisTemplate,
+                           UserLearningPathRepository userLPrepo
     ) {
         this.taskRepository = taskRepository;
         this.userSkillProfileRepository = userSkillProfileRepository;
@@ -97,6 +101,7 @@ public class TaskServiceImpl implements TaskService {
         this.taskEventProducer = taskEventProducer;
         this.taskMapper = taskMapper;
         this.redisTemplate = redisTemplate;
+        this.userLPrepo = userLPrepo;
     }
 
     /**
@@ -358,17 +363,41 @@ public class TaskServiceImpl implements TaskService {
     }
 
     @Override
+    public LearningPathResponseDTO getTaskByUserIdAndCurrentSkill(String userId, String currentSkill) {
+        UserLearningPath learningPath =  userLPrepo.findByUserIdAndCurrentSkill(userId, currentSkill);
+
+        return LearningPathResponseDTO.builder()
+                .learningPath(LearningPathDTO.builder()
+                        .userId(learningPath.getUserId())
+                        .summary(learningPath.getSummary())
+                        .current_skill(learningPath.getCurrentSkill())
+                        .recommended_next_skill(learningPath.getRecommended_next_skill())
+                        .recommended_activities(learningPath.getRecommended_activities())
+                        .reasoning(learningPath.getReasoning())
+                        .difficulty(learningPath.getDifficulty())
+                        .resources(learningPath.getResources())
+                        .build())
+                .build();
+    }
+
+    @Override
     public LearningPathResponseDTO generateLearningPath(UserProfileRequestDTO userProfileRequestDTO) throws IOException {
+        String skill = userProfileRequestDTO.getCurrent_progress().getSkill();
         Client client = new Client();
         Gson gson = new GsonBuilder().setPrettyPrinting().create();
         ClassPathResource prompt = new ClassPathResource("prompts/learningPath/learningPath_prompt.json");
         String StringPrompt = Files.readString(prompt.getFile().toPath(), StandardCharsets.UTF_8);
         String updatedFields = updateBlock(StringPrompt, "input", userProfileRequestDTO);
+        String updatedInfoField = updateBlock(updatedFields, "info", "ALWAYS use resources from these specific, high-quality sources, prioritizing links from: " +
+                "[Udemy, Coursera, edX, Pluralsight, Educative, freeCodeCamp, AWS Training and Certification, Google Cloud Skills Boost, Microsoft Learn (Azure), Kaggle," +
+                " DataCamp, Hugging Face (for ML/AI), GitHub, Stack Overflow Documentation, LeetCode, HackerRank, Nielsen Norman Group (NN/g), Interaction Design Foundation (IDF), " +
+                "Coursera (Product Management), Harvard Business Review (HBR), Dale Carnegie Training, edX (Professional Certificates), SANS Institute (Cybersecurity), " +
+                "Linux Foundation Training, HashiCorp Learn (Terraform/Vault)].");
 
         GenerateContentResponse response =
                 client.models.generateContent(
                         model,
-                        updatedFields,
+                        updatedInfoField,
                         null);
 
         if (response.text() == null) {
@@ -379,7 +408,27 @@ public class TaskServiceImpl implements TaskService {
 
         LearningPathDTO responseJson = gson.fromJson(cleanedResponse, LearningPathDTO.class);
 
-        return new LearningPathResponseDTO(responseJson);
+        UserLearningPath convertedResponse = UserLearningPath.builder()
+                .userId(responseJson.getUserId())
+                .summary(responseJson.getSummary())
+                .currentSkill(responseJson.getCurrent_skill())
+                .recommended_next_skill(responseJson.getRecommended_next_skill())
+                .recommended_activities(responseJson.getRecommended_activities())
+                .reasoning(responseJson.getReasoning())
+                .difficulty(responseJson.getDifficulty())
+                .resources(responseJson.getResources())
+                .build();
+
+        LearningPathResponseDTO userLearningPath = new LearningPathResponseDTO(responseJson);
+
+        if(userLPrepo.findByCurrentSkill(skill) != null){
+            userLPrepo.deleteByCurrentSkill(skill);
+            userLPrepo.save(convertedResponse);
+        }
+
+        userLPrepo.save(convertedResponse);
+
+        return userLearningPath;
     }
 
     public static String updateBlock(String jsonString, String blockKey, Object blockValue) {
