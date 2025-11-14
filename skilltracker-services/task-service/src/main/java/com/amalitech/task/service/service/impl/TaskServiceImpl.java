@@ -14,8 +14,10 @@ import com.amalitech.task.service.exception.AiServiceException;
 import com.amalitech.task.service.exception.ResourceNotFoundException;
 import com.amalitech.task.service.mapper.TaskMapper;
 import com.amalitech.task.service.model.Task;
+import com.amalitech.task.service.model.TaskSubmission;
 import com.amalitech.task.service.model.UserSkillProfile;
 import com.amalitech.task.service.model.content.impl.McqTaskContent;
+import com.amalitech.task.service.model.enums.CompletedTaskPeriod;
 import com.amalitech.task.service.model.enums.TaskDifficulty;
 import com.amalitech.task.service.model.enums.TaskType;
 import com.amalitech.task.service.model.view.SkillView;
@@ -28,14 +30,13 @@ import com.google.genai.Client;
 import com.google.genai.types.GenerateContentResponse;
 import com.google.gson.*;
 import com.google.gson.reflect.TypeToken;
+import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.Predicate;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.core.io.ClassPathResource;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.*;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
@@ -46,10 +47,8 @@ import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.time.Duration;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+import java.time.LocalDateTime;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -152,67 +151,6 @@ public class TaskServiceImpl implements TaskService {
         return tasks.stream()
                 .map(taskMapper::toDTO)
                 .collect(Collectors.toList());
-    }
-
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public UserTasksResponse getUserTasksGroupedByStatus(UUID userId, int pendingPage, int pendingSize,
-                                                         int completedPage, int completedSize) {
-        log.info("Fetching personalized grouped tasks for user: {}", userId);
-
-        List<UserSkillProfile> userProfiles = userSkillProfileRepository.findById_UserId(userId);
-
-        if (userProfiles.isEmpty()) {
-            log.warn("User {} has no skills in profile, returning empty pages", userId);
-            return new UserTasksResponse(
-                    Page.empty(PageRequest.of(pendingPage, pendingSize)),
-                    Page.empty(PageRequest.of(completedPage, completedSize))
-            );
-        }
-
-        Set<UUID> completedTaskIds = submissionRepository.findCompletedTaskIdsByUser(userId);
-        log.debug("User {} has {} completed tasks", userId, completedTaskIds.size());
-
-        Specification<Task> pendingTasksSpec = (root, query, criteriaBuilder) -> {
-            List<Predicate> skillPredicates = userProfiles.stream()
-                    .map(profile -> criteriaBuilder.and(
-                            criteriaBuilder.equal(root.get("taskDefinition").get("skill").get("id"), profile.getId().getSkillId()),
-                            criteriaBuilder.equal(root.get("difficulty"), profile.getDifficulty())
-                    ))
-                    .toList();
-            Predicate personalizedPredicates = criteriaBuilder.or(skillPredicates.toArray(new Predicate[0]));
-
-            Predicate notCompletedPredicate;
-            if (completedTaskIds.isEmpty()) {
-                notCompletedPredicate = criteriaBuilder.conjunction();
-            } else {
-                notCompletedPredicate = root.get("id").in(completedTaskIds).not();
-            }
-
-            return criteriaBuilder.and(personalizedPredicates, notCompletedPredicate);
-        };
-
-        Pageable pendingPageable = PageRequest.of(pendingPage, pendingSize);
-        Page<Task> pendingTasks = taskRepository.findAll(pendingTasksSpec, pendingPageable);
-
-        Pageable completedPageable = PageRequest.of(completedPage, completedSize);
-        Page<Task> completedTasks;
-        if (completedTaskIds.isEmpty()) {
-            completedTasks = Page.empty(completedPageable);
-        } else {
-            completedTasks = taskRepository.findCompletedTasksByIds(completedTaskIds, completedPageable);
-        }
-
-        Page<TaskDTO> pendingDTOs = pendingTasks.map(taskMapper::toDTO);
-        Page<TaskDTO> completedDTOs = completedTasks.map(taskMapper::toDTO);
-
-        log.info("Returning {} personalized pending and {} completed tasks for user {}",
-                pendingDTOs.getTotalElements(), completedDTOs.getTotalElements(), userId);
-
-        return new UserTasksResponse(pendingDTOs, completedDTOs);
     }
 
 
@@ -508,4 +446,189 @@ public class TaskServiceImpl implements TaskService {
                 .explanation(content.getExplanation())
                 .build();
     }
+
+    /**
+     * {@inheritDoc}
+     *
+     * This is the main orchestrator method. It delegates complex logic to private
+     * helper methods for validation, profile filtering, and data fetching.
+     */
+    @Override
+    public UserTasksResponse getUserTasksGroupedByStatus(UUID userId, int pendingPage, int pendingSize,
+                                                         int completedPage, int completedSize,
+                                                         String skillName, String completedPeriodStr) {
+
+        log.info("Fetching grouped tasks for user {} with filters [skill={}, period={}]",
+                userId, skillName, completedPeriodStr);
+
+        List<UserSkillProfile> relevantProfiles;
+        try {
+            relevantProfiles = getRelevantSkillProfiles(userId, skillName);
+        } catch (ResourceNotFoundException e) {
+            log.warn("User {} filtered for unknown skill '{}', returning empty", userId, skillName);
+            return createEmptyUserTasksResponse(pendingPage, pendingSize, completedPage, completedSize);
+        }
+
+        if (relevantProfiles.isEmpty()) {
+            log.warn("User {} has no matching skill profiles for filter, returning empty", userId);
+            return createEmptyUserTasksResponse(pendingPage, pendingSize, completedPage, completedSize);
+        }
+
+        UUID skillIdFilter = (skillName != null) ? relevantProfiles.get(0).getId().getSkillId() : null;
+
+        Pageable pendingPageable = PageRequest.of(pendingPage, pendingSize);
+        Pageable completedPageable = PageRequest.of(completedPage, completedSize, Sort.by(Sort.Direction.DESC, "submittedAt"));
+        CompletedTaskPeriod periodFilter = CompletedTaskPeriod.fromString(completedPeriodStr);
+
+        // Fetch completed task IDs once to avoid duplicate queries
+        Set<UUID> completedTaskIds = submissionRepository.findCompletedTaskIdsByUser(userId);
+
+        Page<TaskDTO> pendingDTOs = getPendingTasks(relevantProfiles, completedTaskIds, pendingPageable);
+        Page<TaskDTO> completedDTOs = getCompletedTasks(userId, skillIdFilter, periodFilter, completedTaskIds, completedPageable);
+
+        log.info("Returning {} pending and {} completed tasks for user {}",
+                pendingDTOs.getTotalElements(), completedDTOs.getTotalElements(), userId);
+
+        return new UserTasksResponse(pendingDTOs, completedDTOs);
+    }
+
+    /**
+     * Fetches and filters the user's skill profiles based on an optional skillName.
+     *
+     * @param userId    The user's ID.
+     * @param skillName The optional skill name to filter by.
+     * @return A list of relevant UserSkillProfile objects.
+     * @throws ResourceNotFoundException if skillName is provided but not found.
+     */
+    private List<UserSkillProfile> getRelevantSkillProfiles(UUID userId, String skillName) {
+        UUID targetSkillId = null;
+        if (skillName != null && !skillName.isBlank()) {
+            SkillView skill = skillService.getSkillByName(skillName);
+            targetSkillId = skill.getId();
+        }
+
+        List<UserSkillProfile> allProfiles = userSkillProfileRepository.findById_UserId(userId);
+        if (allProfiles.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        if (targetSkillId != null) {
+            final UUID finalTargetSkillId = targetSkillId;
+            return allProfiles.stream()
+                    .filter(p -> p.getId().getSkillId().equals(finalTargetSkillId))
+                    .collect(Collectors.toList());
+        }
+
+        return allProfiles;
+    }
+
+    /**
+     * Fetches the paginated list of pending tasks for the user.
+     *
+     * @param relevantProfiles The filtered list of user skill profiles.
+     * @param completedTaskIds The set of task IDs that the user has completed.
+     * @param pendingPageable  The pagination information for pending tasks.
+     * @return A Page of TaskDTOs.
+     */
+    private Page<TaskDTO> getPendingTasks(List<UserSkillProfile> relevantProfiles, Set<UUID> completedTaskIds, Pageable pendingPageable) {
+        Specification<Task> pendingSpec = createPendingTaskSpecification(relevantProfiles, completedTaskIds);
+
+        Page<Task> pendingTasks = taskRepository.findAll(pendingSpec, pendingPageable);
+        return pendingTasks.map(taskMapper::toDTO);
+    }
+
+    /**
+     * Fetches the paginated list of completed tasks for the user.
+     *
+     * @param userId             The user's ID.
+     * @param skillIdFilter      Optional skill ID to filter by.
+     * @param periodFilter       The time period filter.
+     * @param completedTaskIds   The set of task IDs that the user has completed.
+     * @param completedPageable  The pagination information for completed tasks.
+     * @return A Page of TaskDTOs.
+     */
+    private Page<TaskDTO> getCompletedTasks(UUID userId, UUID skillIdFilter, CompletedTaskPeriod periodFilter, Set<UUID> completedTaskIds, Pageable completedPageable) {
+        // If there are no completed tasks, return empty page without querying
+        if (completedTaskIds.isEmpty()) {
+            return new PageImpl<>(Collections.emptyList(), completedPageable, 0);
+        }
+        
+        Specification<TaskSubmission> completedSpec = createCompletedTaskSpecification(userId, skillIdFilter, periodFilter);
+
+        Page<TaskSubmission> completedSubmissions = submissionRepository.findAll(completedSpec, completedPageable);
+
+        return completedSubmissions
+                .map(TaskSubmission::getTask)
+                .map(taskMapper::toDTO);
+    }
+
+    /**
+     * Builds the JPA Specification for querying pending tasks.
+     */
+    private Specification<Task> createPendingTaskSpecification(List<UserSkillProfile> relevantProfiles, Set<UUID> completedTaskIds) {
+        return (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+
+            List<Predicate> skillPredicates = relevantProfiles.stream()
+                    .map(profile -> cb.and(
+                            cb.equal(root.get("taskDefinition").get("skill").get("id"), profile.getId().getSkillId()),
+                            cb.equal(root.get("difficulty"), profile.getDifficulty())
+                    ))
+                    .toList();
+            predicates.add(cb.or(skillPredicates.toArray(new Predicate[0])));
+
+            if (!completedTaskIds.isEmpty()) {
+                predicates.add(root.get("id").in(completedTaskIds).not());
+            }
+
+            predicates.add(cb.equal(root.get("isPublished"), true));
+
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+    }
+
+    /**
+     * Builds the JPA Specification for querying completed tasks.
+     */
+    private Specification<TaskSubmission> createCompletedTaskSpecification(UUID userId, UUID skillIdFilter, CompletedTaskPeriod periodFilter) {
+        return (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+
+            predicates.add(cb.equal(root.get("userId"), userId));
+            predicates.add(cb.equal(root.get("isCorrect"), true));
+
+            if (skillIdFilter != null) {
+                Join<TaskSubmission, Task> taskJoin = root.join("task");
+                Join<Task, Object> taskDefJoin = taskJoin.join("taskDefinition");
+                Join<Object, Object> skillJoin = taskDefJoin.join("skill");
+                predicates.add(cb.equal(skillJoin.get("id"), skillIdFilter));
+            }
+
+            LocalDateTime startDate = periodFilter.getStartDateTime();
+            LocalDateTime endDate = periodFilter.getEndDateTime();
+
+            if (startDate != null) {
+                predicates.add(cb.greaterThanOrEqualTo(root.get("submittedAt"), startDate));
+            }
+            if (endDate != null) {
+                predicates.add(cb.lessThan(root.get("submittedAt"), endDate));
+            }
+
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+    }
+
+    /**
+     * Creates a serializable empty response to avoid JSON errors with Page.empty().
+     */
+    private UserTasksResponse createEmptyUserTasksResponse(int pendingPage, int pendingSize, int completedPage, int completedSize) {
+        Pageable emptyPendingPageable = PageRequest.of(pendingPage, pendingSize);
+        Pageable emptyCompletedPageable = PageRequest.of(completedPage, completedSize);
+
+        return new UserTasksResponse(
+                new PageImpl<>(Collections.emptyList(), emptyPendingPageable, 0),
+                new PageImpl<>(Collections.emptyList(), emptyCompletedPageable, 0)
+        );
+    }
+
 }

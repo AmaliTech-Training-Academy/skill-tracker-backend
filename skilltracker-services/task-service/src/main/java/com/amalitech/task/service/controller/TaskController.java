@@ -8,6 +8,7 @@ import com.amalitech.task.service.dto.response.LearningPathResponseDTO;
 import com.amalitech.task.service.dto.response.McqResponseDTO;
 import com.amalitech.task.service.dto.response.UserTasksResponse;
 import com.amalitech.task.service.model.enums.TaskType;
+import com.amalitech.task.service.service.SkillService;
 import com.amalitech.task.service.service.TaskService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -30,6 +31,7 @@ import java.util.UUID;
 public class TaskController {
 
     private final TaskService taskService;
+    private final SkillService skillService;
 
     /**
      * Retrieves a single, detailed task by its ID.
@@ -100,12 +102,15 @@ public class TaskController {
     /**
      * Retrieves tasks grouped by status (pending/completed) for the authenticated user.
      * Tasks are filtered based on the user's skill profile and only published tasks are returned.
-     * Both pending and completed task lists support independent pagination.
+     * Supports filtering by skill and a time period for completed tasks.
      *
      * @param pendingPage Page number for pending tasks (default: 0)
      * @param pendingSize Page size for pending tasks (default: 10)
      * @param completedPage Page number for completed tasks (default: 0)
      * @param completedSize Page size for completed tasks (default: 10)
+     * @param skillName Optional. The name of the skill to filter by (e.g., "Python").
+     * @param completedPeriod Optional. The time period to filter completed tasks
+     * (e.g., "TODAY", "LAST_7_DAYS"). Default: "ALL_PERIODS".
      * @param authentication Spring Security authentication object containing userId
      * @return ResponseEntity containing UserTasksResponse with paginated pending and completed tasks
      */
@@ -116,12 +121,14 @@ public class TaskController {
             @RequestParam(defaultValue = "10") int pendingSize,
             @RequestParam(defaultValue = "0") int completedPage,
             @RequestParam(defaultValue = "10") int completedSize,
+            @RequestParam(required = false) String skillName,
+            @RequestParam(required = false, defaultValue = "ALL_PERIODS") String completedPeriod,
             Authentication authentication
     ) {
-
         UUID userId = UUID.fromString(authentication.getName());
         UserTasksResponse response = taskService.getUserTasksGroupedByStatus(
-                userId, pendingPage, pendingSize, completedPage, completedSize
+                userId, pendingPage, pendingSize, completedPage, completedSize,
+                skillName, completedPeriod
         );
 
         return ResponseEntity.ok(

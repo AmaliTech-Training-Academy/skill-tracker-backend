@@ -3,7 +3,6 @@ package com.amalitech.task.service.service;
 import com.amalitech.common.event.events.SkillEvent;
 import com.amalitech.task.service.model.view.SkillView;
 import com.amalitech.task.service.repository.SkillViewRepository;
-
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
@@ -50,9 +49,18 @@ public class DataSyncConsumer {
                 return;
             }
 
+            String normalizedName = (skillEvent.getName() != null)
+                    ? skillEvent.getName().toUpperCase()
+                    : null;
+
+            if (normalizedName == null || normalizedName.isBlank()) {
+                log.warn("Skipping skill sync for ID {}: Name is null or blank.", skillEvent.getSkillId());
+                return;
+            }
+
             SkillView skillView = SkillView.builder()
                     .id(skillEvent.getSkillId())
-                    .name(skillEvent.getName())
+                    .name(normalizedName)
                     .description(skillEvent.getDescription())
                     .supportedTaskTypes(new HashSet<>(skillEvent.getSupportedTaskTypes()))
                     .build();

@@ -6,7 +6,9 @@ import com.amalitech.task.service.dto.request.BatchGenerationRequest;
 import com.amalitech.task.service.exception.ResourceNotFoundException;
 import com.amalitech.task.service.mapper.TaskMapper;
 import com.amalitech.task.service.model.Task;
+import com.amalitech.task.service.model.TaskSubmission;
 import com.amalitech.task.service.model.UserSkillProfile;
+import com.amalitech.task.service.model.enums.SubmissionStatus;
 import com.amalitech.task.service.model.enums.TaskDifficulty;
 import com.amalitech.task.service.model.enums.TaskType;
 import com.amalitech.task.service.model.view.SkillView;
@@ -30,6 +32,7 @@ import org.springframework.data.redis.core.ValueOperations;
 import com.amalitech.task.service.dto.response.AdminTaskDetailResponse;
 import com.amalitech.task.service.dto.response.AdminTaskSummaryResponse;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -111,6 +114,17 @@ class TaskServiceImplTest {
 
         when(redisTemplate.opsForValue()).thenReturn(redisOps);
         ReflectionTestUtils.setField(taskService, "minTasksPerDifficulty", 5);
+    }
+
+    private TaskSubmission createTaskSubmission(Task task) {
+        TaskSubmission submission = new TaskSubmission();
+        submission.setId(UUID.randomUUID());
+        submission.setUserId(userId);
+        submission.setTask(task);
+        submission.setIsCorrect(true);
+        submission.setStatus(SubmissionStatus.COMPLETED);
+        submission.setSubmittedAt(LocalDateTime.now());
+        return submission;
     }
 
     @Test
@@ -593,16 +607,16 @@ class TaskServiceImplTest {
                 .build();
 
         Page<Task> pendingPage = new PageImpl<>(List.of(task1, task2), PageRequest.of(0, 10), 2);
-        Page<Task> completedPage = new PageImpl<>(List.of(), PageRequest.of(0, 10), 0);
+        Page<TaskSubmission> completedSubmissionPage = new PageImpl<>(List.of(), PageRequest.of(0, 10), 0);
 
         when(userSkillProfileRepository.findById_UserId(userId)).thenReturn(userProfiles);
         when(submissionRepository.findCompletedTaskIdsByUser(userId)).thenReturn(completedTaskIds);
         when(taskRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(pendingPage);
-        when(taskRepository.findCompletedTasksByIds(completedTaskIds, PageRequest.of(0, 10))).thenReturn(completedPage);
+        when(submissionRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(completedSubmissionPage);
         when(taskMapper.toDTO(any(Task.class))).thenReturn(testTaskDTO);
 
         com.amalitech.task.service.dto.response.UserTasksResponse result = 
-            taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 10);
+            taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 10, null, "ALL_PERIODS");
 
         assertNotNull(result);
         assertNotNull(result.pending());
@@ -618,7 +632,7 @@ class TaskServiceImplTest {
         when(userSkillProfileRepository.findById_UserId(userId)).thenReturn(List.of());
 
         com.amalitech.task.service.dto.response.UserTasksResponse result = 
-            taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 10);
+            taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 10, null, "ALL_PERIODS");
 
         assertNotNull(result);
         assertEquals(0, result.pending().getTotalElements());
@@ -634,16 +648,16 @@ class TaskServiceImplTest {
 
         List<Task> pendingTasks = List.of(testTask, testTask, testTask, testTask, testTask);
         Page<Task> pendingPage = new PageImpl<>(pendingTasks, PageRequest.of(0, 10), 5);
-        Page<Task> completedPage = new PageImpl<>(List.of(), PageRequest.of(0, 10), 0);
+        Page<TaskSubmission> completedSubmissionPage = new PageImpl<>(List.of(), PageRequest.of(0, 10), 0);
 
         when(userSkillProfileRepository.findById_UserId(userId)).thenReturn(userProfiles);
         when(submissionRepository.findCompletedTaskIdsByUser(userId)).thenReturn(completedTaskIds);
         when(taskRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(pendingPage);
-        when(taskRepository.findCompletedTasksByIds(completedTaskIds, PageRequest.of(0, 10))).thenReturn(completedPage);
+        when(submissionRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(completedSubmissionPage);
         when(taskMapper.toDTO(testTask)).thenReturn(testTaskDTO);
 
         com.amalitech.task.service.dto.response.UserTasksResponse result = 
-            taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 10);
+            taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 10, null, "ALL_PERIODS");
 
         assertNotNull(result);
         assertEquals(5, result.pending().getTotalElements());
@@ -672,16 +686,16 @@ class TaskServiceImplTest {
         Set<UUID> completedTaskIds = Set.of();
 
         Page<Task> pendingPage = new PageImpl<>(List.of(testTask), PageRequest.of(0, 10), 20);
-        Page<Task> completedPage = new PageImpl<>(List.of(), PageRequest.of(0, 10), 0);
+        Page<TaskSubmission> completedSubmissionPage = new PageImpl<>(List.of(), PageRequest.of(0, 10), 0);
 
         when(userSkillProfileRepository.findById_UserId(userId)).thenReturn(userProfiles);
         when(submissionRepository.findCompletedTaskIdsByUser(userId)).thenReturn(completedTaskIds);
         when(taskRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(pendingPage);
-        when(taskRepository.findCompletedTasksByIds(completedTaskIds, PageRequest.of(0, 10))).thenReturn(completedPage);
+        when(submissionRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(completedSubmissionPage);
         when(taskMapper.toDTO(testTask)).thenReturn(testTaskDTO);
 
         com.amalitech.task.service.dto.response.UserTasksResponse result = 
-            taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 10);
+            taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 10, null, "ALL_PERIODS");
 
         assertNotNull(result);
         assertEquals(20, result.pending().getTotalElements());
@@ -694,22 +708,22 @@ class TaskServiceImplTest {
         Set<UUID> completedTaskIds = Set.of();
 
         Page<Task> pendingPage = new PageImpl<>(List.of(testTask), PageRequest.of(0, 10), 10);
-        Page<Task> completedPage = Page.empty(PageRequest.of(0, 10));
+        Page<TaskSubmission> completedSubmissionPage = Page.empty(PageRequest.of(0, 10));
 
         when(userSkillProfileRepository.findById_UserId(userId)).thenReturn(userProfiles);
         when(submissionRepository.findCompletedTaskIdsByUser(userId)).thenReturn(completedTaskIds);
         when(taskRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(pendingPage);
-        when(taskRepository.findCompletedTasksByIds(completedTaskIds, PageRequest.of(0, 10))).thenReturn(completedPage);
+        when(submissionRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(completedSubmissionPage);
         when(taskMapper.toDTO(testTask)).thenReturn(testTaskDTO);
 
         com.amalitech.task.service.dto.response.UserTasksResponse result = 
-            taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 10);
+            taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 10, null, "ALL_PERIODS");
 
         assertNotNull(result);
         assertTrue(result.pending().getTotalElements() > 0);
         assertEquals(0, result.completed().getTotalElements());
         verify(taskRepository, times(1)).findAll(any(Specification.class), any(Pageable.class));
-        verify(taskRepository, never()).findCompletedTasksByIds(any(), any());
+        verify(submissionRepository, never()).findAll(any(Specification.class), any(Pageable.class));
     }
 
     @Test
@@ -734,21 +748,21 @@ class TaskServiceImplTest {
                 .build();
 
         Page<Task> pendingPage = new PageImpl<>(List.of(testTask), PageRequest.of(0, 10), 15);
-        Page<Task> completedPage = new PageImpl<>(List.of(completedTask1, completedTask2), PageRequest.of(0, 10), 2);
+        Page<TaskSubmission> completedSubmissionPage = new PageImpl<>(List.of(createTaskSubmission(completedTask1), createTaskSubmission(completedTask2)), PageRequest.of(0, 10), 2);
 
         when(userSkillProfileRepository.findById_UserId(userId)).thenReturn(userProfiles);
         when(submissionRepository.findCompletedTaskIdsByUser(userId)).thenReturn(completedTaskIds);
         when(taskRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(pendingPage);
-        when(taskRepository.findCompletedTasksByIds(completedTaskIds, PageRequest.of(0, 10))).thenReturn(completedPage);
+        when(submissionRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(completedSubmissionPage);
         when(taskMapper.toDTO(any(Task.class))).thenReturn(testTaskDTO);
 
         com.amalitech.task.service.dto.response.UserTasksResponse result = 
-            taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 10);
+            taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 10, null, "ALL_PERIODS");
 
         assertNotNull(result);
         assertEquals(15, result.pending().getTotalElements());
         assertEquals(2, result.completed().getTotalElements());
-        verify(taskRepository, times(1)).findCompletedTasksByIds(completedTaskIds, PageRequest.of(0, 10));
+        verify(submissionRepository, times(1)).findAll(any(Specification.class), any(Pageable.class));
     }
 
     @Test
@@ -765,18 +779,21 @@ class TaskServiceImplTest {
                 .build();
 
         Page<Task> pendingPage = new PageImpl<>(List.of(), PageRequest.of(0, 10), 0);
-        List<Task> completedTasks = List.of(completedTask, completedTask, completedTask, completedTask, 
-                                            completedTask, completedTask, completedTask, completedTask);
-        Page<Task> completedPage = new PageImpl<>(completedTasks, PageRequest.of(0, 10), 8);
+        
+        List<TaskSubmission> completedSubmissions = new ArrayList<>();
+        for (int i = 0; i < 8; i++) {
+            completedSubmissions.add(createTaskSubmission(completedTask));
+        }
+        Page<TaskSubmission> completedSubmissionPage = new PageImpl<>(completedSubmissions, PageRequest.of(0, 10), 8);
 
         when(userSkillProfileRepository.findById_UserId(userId)).thenReturn(userProfiles);
         when(submissionRepository.findCompletedTaskIdsByUser(userId)).thenReturn(completedTaskIds);
         when(taskRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(pendingPage);
-        when(taskRepository.findCompletedTasksByIds(completedTaskIds, PageRequest.of(0, 10))).thenReturn(completedPage);
+        when(submissionRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(completedSubmissionPage);
         when(taskMapper.toDTO(completedTask)).thenReturn(testTaskDTO);
 
         com.amalitech.task.service.dto.response.UserTasksResponse result = 
-            taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 10);
+            taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 10, null, "ALL_PERIODS");
 
         assertNotNull(result);
         assertEquals(0, result.pending().getTotalElements());
@@ -799,16 +816,16 @@ class TaskServiceImplTest {
         }
 
         Page<Task> pendingPage = new PageImpl<>(tasks, PageRequest.of(0, 10), 50);
-        Page<Task> completedPage = new PageImpl<>(List.of(), PageRequest.of(0, 10), 0);
+        Page<TaskSubmission> completedSubmissionPage = new PageImpl<>(List.of(), PageRequest.of(0, 10), 0);
 
         when(userSkillProfileRepository.findById_UserId(userId)).thenReturn(userProfiles);
         when(submissionRepository.findCompletedTaskIdsByUser(userId)).thenReturn(completedTaskIds);
         when(taskRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(pendingPage);
-        when(taskRepository.findCompletedTasksByIds(completedTaskIds, PageRequest.of(0, 10))).thenReturn(completedPage);
+        when(submissionRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(completedSubmissionPage);
         when(taskMapper.toDTO(any(Task.class))).thenReturn(testTaskDTO);
 
         com.amalitech.task.service.dto.response.UserTasksResponse result = 
-            taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 10);
+            taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 10, null, "ALL_PERIODS");
 
         assertNotNull(result);
         assertEquals(10, result.pending().getContent().size());
@@ -832,16 +849,16 @@ class TaskServiceImplTest {
         }
 
         Page<Task> pendingPage = new PageImpl<>(tasks, PageRequest.of(1, 10), 50);
-        Page<Task> completedPage = new PageImpl<>(List.of(), PageRequest.of(0, 10), 0);
+        Page<TaskSubmission> completedSubmissionPage = new PageImpl<>(List.of(), PageRequest.of(0, 10), 0);
 
         when(userSkillProfileRepository.findById_UserId(userId)).thenReturn(userProfiles);
         when(submissionRepository.findCompletedTaskIdsByUser(userId)).thenReturn(completedTaskIds);
         when(taskRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(pendingPage);
-        when(taskRepository.findCompletedTasksByIds(completedTaskIds, PageRequest.of(0, 10))).thenReturn(completedPage);
+        when(submissionRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(completedSubmissionPage);
         when(taskMapper.toDTO(any(Task.class))).thenReturn(testTaskDTO);
 
         com.amalitech.task.service.dto.response.UserTasksResponse result = 
-            taskService.getUserTasksGroupedByStatus(userId, 1, 10, 0, 10);
+            taskService.getUserTasksGroupedByStatus(userId, 1, 10, 0, 10, null, "ALL_PERIODS");
 
         assertNotNull(result);
         assertEquals(1, result.pending().getNumber());
@@ -865,16 +882,16 @@ class TaskServiceImplTest {
         }
 
         Page<Task> pendingPage = new PageImpl<>(tasks, PageRequest.of(0, 20), 60);
-        Page<Task> completedPage = new PageImpl<>(List.of(), PageRequest.of(0, 10), 0);
+        Page<TaskSubmission> completedSubmissionPage = new PageImpl<>(List.of(), PageRequest.of(0, 10), 0);
 
         when(userSkillProfileRepository.findById_UserId(userId)).thenReturn(userProfiles);
         when(submissionRepository.findCompletedTaskIdsByUser(userId)).thenReturn(completedTaskIds);
         when(taskRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(pendingPage);
-        when(taskRepository.findCompletedTasksByIds(completedTaskIds, PageRequest.of(0, 10))).thenReturn(completedPage);
+        when(submissionRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(completedSubmissionPage);
         when(taskMapper.toDTO(any(Task.class))).thenReturn(testTaskDTO);
 
         com.amalitech.task.service.dto.response.UserTasksResponse result = 
-            taskService.getUserTasksGroupedByStatus(userId, 0, 20, 0, 10);
+            taskService.getUserTasksGroupedByStatus(userId, 0, 20, 0, 10, null, "ALL_PERIODS");
 
         assertNotNull(result);
         assertEquals(20, result.pending().getSize());
@@ -889,26 +906,29 @@ class TaskServiceImplTest {
 
         Page<Task> pendingPage = new PageImpl<>(List.of(), PageRequest.of(0, 10), 0);
 
-        List<Task> completedTasks = new ArrayList<>();
+        List<TaskSubmission> completedSubmissions = new ArrayList<>();
+        List<Task> tasksList = new ArrayList<>();
         for (int i = 0; i < 10; i++) {
-            completedTasks.add(Task.builder()
+            Task task = Task.builder()
                     .id(UUID.randomUUID())
                     .title("Completed " + i)
                     .type(TaskType.CODING)
                     .difficulty(TaskDifficulty.BEGINNER)
-                    .build());
+                    .build();
+            tasksList.add(task);
+            completedSubmissions.add(createTaskSubmission(task));
         }
 
-        Page<Task> completedPage = new PageImpl<>(completedTasks, PageRequest.of(0, 10), 30);
+        Page<TaskSubmission> completedSubmissionPage = new PageImpl<>(completedSubmissions, PageRequest.of(0, 10), 30);
 
         when(userSkillProfileRepository.findById_UserId(userId)).thenReturn(userProfiles);
         when(submissionRepository.findCompletedTaskIdsByUser(userId)).thenReturn(completedTaskIds);
         when(taskRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(pendingPage);
-        when(taskRepository.findCompletedTasksByIds(completedTaskIds, PageRequest.of(0, 10))).thenReturn(completedPage);
+        when(submissionRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(completedSubmissionPage);
         when(taskMapper.toDTO(any(Task.class))).thenReturn(testTaskDTO);
 
         com.amalitech.task.service.dto.response.UserTasksResponse result = 
-            taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 10);
+            taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 10, null, "ALL_PERIODS");
 
         assertNotNull(result);
         assertEquals(10, result.completed().getSize());
@@ -924,26 +944,29 @@ class TaskServiceImplTest {
 
         Page<Task> pendingPage = new PageImpl<>(List.of(), PageRequest.of(0, 10), 0);
 
-        List<Task> completedTasks = new ArrayList<>();
+        List<TaskSubmission> completedSubmissions = new ArrayList<>();
+        List<Task> tasksList = new ArrayList<>();
         for (int i = 0; i < 10; i++) {
-            completedTasks.add(Task.builder()
+            Task task = Task.builder()
                     .id(UUID.randomUUID())
                     .title("Completed " + i)
                     .type(TaskType.CODING)
                     .difficulty(TaskDifficulty.BEGINNER)
-                    .build());
+                    .build();
+            tasksList.add(task);
+            completedSubmissions.add(createTaskSubmission(task));
         }
 
-        Page<Task> completedPage = new PageImpl<>(completedTasks, PageRequest.of(1, 10), 30);
+        Page<TaskSubmission> completedSubmissionPage = new PageImpl<>(completedSubmissions, PageRequest.of(1, 10), 30);
 
         when(userSkillProfileRepository.findById_UserId(userId)).thenReturn(userProfiles);
         when(submissionRepository.findCompletedTaskIdsByUser(userId)).thenReturn(completedTaskIds);
         when(taskRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(pendingPage);
-        when(taskRepository.findCompletedTasksByIds(completedTaskIds, PageRequest.of(1, 10))).thenReturn(completedPage);
+        when(submissionRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(completedSubmissionPage);
         when(taskMapper.toDTO(any(Task.class))).thenReturn(testTaskDTO);
 
         com.amalitech.task.service.dto.response.UserTasksResponse result = 
-            taskService.getUserTasksGroupedByStatus(userId, 0, 10, 1, 10);
+            taskService.getUserTasksGroupedByStatus(userId, 0, 10, 1, 10, null, "ALL_PERIODS");
 
         assertNotNull(result);
         assertEquals(1, result.completed().getNumber());
@@ -966,27 +989,30 @@ class TaskServiceImplTest {
                     .build());
         }
 
+        List<TaskSubmission> completedSubmissions = new ArrayList<>();
         List<Task> completedTasks = new ArrayList<>();
         for (int i = 0; i < 20; i++) {
-            completedTasks.add(Task.builder()
+            Task task = Task.builder()
                     .id(UUID.randomUUID())
                     .title("Completed " + i)
                     .type(TaskType.CODING)
                     .difficulty(TaskDifficulty.BEGINNER)
-                    .build());
+                    .build();
+            completedTasks.add(task);
+            completedSubmissions.add(createTaskSubmission(task));
         }
 
         Page<Task> pendingPage = new PageImpl<>(pendingTasks, PageRequest.of(0, 5), 25);
-        Page<Task> completedPage = new PageImpl<>(completedTasks, PageRequest.of(0, 20), 60);
+        Page<TaskSubmission> completedSubmissionPage = new PageImpl<>(completedSubmissions, PageRequest.of(0, 20), 60);
 
         when(userSkillProfileRepository.findById_UserId(userId)).thenReturn(userProfiles);
         when(submissionRepository.findCompletedTaskIdsByUser(userId)).thenReturn(completedTaskIds);
         when(taskRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(pendingPage);
-        when(taskRepository.findCompletedTasksByIds(completedTaskIds, PageRequest.of(0, 20))).thenReturn(completedPage);
+        when(submissionRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(completedSubmissionPage);
         when(taskMapper.toDTO(any(Task.class))).thenReturn(testTaskDTO);
 
         com.amalitech.task.service.dto.response.UserTasksResponse result = 
-            taskService.getUserTasksGroupedByStatus(userId, 0, 5, 0, 20);
+            taskService.getUserTasksGroupedByStatus(userId, 0, 5, 0, 20, null, "ALL_PERIODS");
 
         assertNotNull(result);
         assertEquals(5, result.pending().getSize());
@@ -1001,16 +1027,16 @@ class TaskServiceImplTest {
         Set<UUID> completedTaskIds = Set.of();
 
         Page<Task> pendingPage = new PageImpl<>(List.of(testTask), PageRequest.of(0, 10), 1);
-        Page<Task> completedPage = new PageImpl<>(List.of(), PageRequest.of(0, 10), 0);
+        Page<TaskSubmission> completedSubmissionPage = new PageImpl<>(List.of(), PageRequest.of(0, 10), 0);
 
         when(userSkillProfileRepository.findById_UserId(userId)).thenReturn(userProfiles);
         when(submissionRepository.findCompletedTaskIdsByUser(userId)).thenReturn(completedTaskIds);
         when(taskRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(pendingPage);
-        when(taskRepository.findCompletedTasksByIds(completedTaskIds, PageRequest.of(0, 10))).thenReturn(completedPage);
+        when(submissionRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(completedSubmissionPage);
         when(taskMapper.toDTO(testTask)).thenReturn(testTaskDTO);
 
         com.amalitech.task.service.dto.response.UserTasksResponse result = 
-            taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 10);
+            taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 10, null, "ALL_PERIODS");
 
         assertNotNull(result);
         assertEquals(1, result.pending().getTotalElements());
@@ -1037,16 +1063,16 @@ class TaskServiceImplTest {
                 .build();
 
         Page<Task> pendingPage = new PageImpl<>(List.of(task1, task2), PageRequest.of(0, 10), 2);
-        Page<Task> completedPage = new PageImpl<>(List.of(), PageRequest.of(0, 10), 0);
+        Page<TaskSubmission> completedSubmissionPage = new PageImpl<>(List.of(), PageRequest.of(0, 10), 0);
 
         when(userSkillProfileRepository.findById_UserId(userId)).thenReturn(userProfiles);
         when(submissionRepository.findCompletedTaskIdsByUser(userId)).thenReturn(completedTaskIds);
         when(taskRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(pendingPage);
-        when(taskRepository.findCompletedTasksByIds(completedTaskIds, PageRequest.of(0, 10))).thenReturn(completedPage);
+        when(submissionRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(completedSubmissionPage);
         when(taskMapper.toDTO(any(Task.class))).thenReturn(testTaskDTO);
 
         com.amalitech.task.service.dto.response.UserTasksResponse result = 
-            taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 10);
+            taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 10, null, "ALL_PERIODS");
 
         assertNotNull(result);
         verify(taskMapper, times(2)).toDTO(any(Task.class));
@@ -1059,15 +1085,15 @@ class TaskServiceImplTest {
         Set<UUID> completedTaskIds = Set.of();
 
         Page<Task> pendingPage = new PageImpl<>(List.of(), PageRequest.of(0, 10), 0);
-        Page<Task> completedPage = new PageImpl<>(List.of(), PageRequest.of(0, 10), 0);
+        Page<TaskSubmission> completedSubmissionPage = new PageImpl<>(List.of(), PageRequest.of(0, 10), 0);
 
         when(userSkillProfileRepository.findById_UserId(userId)).thenReturn(userProfiles);
         when(submissionRepository.findCompletedTaskIdsByUser(userId)).thenReturn(completedTaskIds);
         when(taskRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(pendingPage);
-        when(taskRepository.findCompletedTasksByIds(completedTaskIds, PageRequest.of(0, 10))).thenReturn(completedPage);
+        when(submissionRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(completedSubmissionPage);
 
         com.amalitech.task.service.dto.response.UserTasksResponse result = 
-            taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 10);
+            taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 10, null, "ALL_PERIODS");
 
         assertNotNull(result);
         assertEquals(0, result.pending().getTotalElements());
@@ -1090,16 +1116,16 @@ class TaskServiceImplTest {
         }
 
         Page<Task> pendingPage = new PageImpl<>(largePendingList, PageRequest.of(0, 100), 1000);
-        Page<Task> completedPage = new PageImpl<>(List.of(), PageRequest.of(0, 10), 0);
+        Page<TaskSubmission> completedSubmissionPage = new PageImpl<>(List.of(), PageRequest.of(0, 10), 0);
 
         when(userSkillProfileRepository.findById_UserId(userId)).thenReturn(userProfiles);
         when(submissionRepository.findCompletedTaskIdsByUser(userId)).thenReturn(completedTaskIds);
         when(taskRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(pendingPage);
-        when(taskRepository.findCompletedTasksByIds(completedTaskIds, PageRequest.of(0, 10))).thenReturn(completedPage);
+        when(submissionRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(completedSubmissionPage);
         when(taskMapper.toDTO(any(Task.class))).thenReturn(testTaskDTO);
 
         com.amalitech.task.service.dto.response.UserTasksResponse result = 
-            taskService.getUserTasksGroupedByStatus(userId, 0, 100, 0, 10);
+            taskService.getUserTasksGroupedByStatus(userId, 0, 100, 0, 10, null, "ALL_PERIODS");
 
         assertNotNull(result);
         assertEquals(100, result.pending().getContent().size());
@@ -1114,16 +1140,16 @@ class TaskServiceImplTest {
         Set<UUID> completedTaskIds = Set.of();
 
         Page<Task> pendingPage = new PageImpl<>(List.of(testTask), PageRequest.of(0, 10), 5);
-        Page<Task> completedPage = new PageImpl<>(List.of(), PageRequest.of(0, 10), 0);
+        Page<TaskSubmission> completedSubmissionPage = new PageImpl<>(List.of(), PageRequest.of(0, 10), 0);
 
         when(userSkillProfileRepository.findById_UserId(userId)).thenReturn(userProfiles);
         when(submissionRepository.findCompletedTaskIdsByUser(userId)).thenReturn(completedTaskIds);
         when(taskRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(pendingPage);
-        when(taskRepository.findCompletedTasksByIds(completedTaskIds, PageRequest.of(0, 10))).thenReturn(completedPage);
+        when(submissionRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(completedSubmissionPage);
         when(taskMapper.toDTO(testTask)).thenReturn(testTaskDTO);
 
         com.amalitech.task.service.dto.response.UserTasksResponse result = 
-            taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 10);
+            taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 10, null, "ALL_PERIODS");
 
         assertNotNull(result);
         verify(userSkillProfileRepository, times(1)).findById_UserId(userId);
@@ -1136,21 +1162,21 @@ class TaskServiceImplTest {
         Set<UUID> completedTaskIds = Set.of();
 
         Page<Task> pendingPage = new PageImpl<>(List.of(testTask), PageRequest.of(0, 10), 10);
-        Page<Task> completedPage = Page.empty(PageRequest.of(0, 10));
+        Page<TaskSubmission> completedSubmissionPage = Page.empty(PageRequest.of(0, 10));
 
         when(userSkillProfileRepository.findById_UserId(userId)).thenReturn(userProfiles);
         when(submissionRepository.findCompletedTaskIdsByUser(userId)).thenReturn(completedTaskIds);
         when(taskRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(pendingPage);
-        when(taskRepository.findCompletedTasksByIds(completedTaskIds, PageRequest.of(0, 10))).thenReturn(completedPage);
+        when(submissionRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(completedSubmissionPage);
         when(taskMapper.toDTO(testTask)).thenReturn(testTaskDTO);
 
         com.amalitech.task.service.dto.response.UserTasksResponse result = 
-            taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 10);
+            taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 10, null, "ALL_PERIODS");
 
         assertNotNull(result);
         assertEquals(10, result.pending().getTotalElements());
         assertEquals(0, result.completed().getTotalElements());
-        verify(taskRepository, never()).findCompletedTasksByIds(any(), any());
+        verify(submissionRepository, never()).findAll(any(Specification.class), any(Pageable.class));
     }
 
     @Test
@@ -1159,15 +1185,15 @@ class TaskServiceImplTest {
         Set<UUID> completedTaskIds = Set.of();
 
         Page<Task> emptyPendingPage = Page.empty(PageRequest.of(0, 10));
-        Page<Task> emptyCompletedPage = Page.empty(PageRequest.of(0, 10));
+        Page<TaskSubmission> emptyCompletedPage = Page.empty(PageRequest.of(0, 10));
 
         when(userSkillProfileRepository.findById_UserId(userId)).thenReturn(emptyProfiles);
         when(submissionRepository.findCompletedTaskIdsByUser(userId)).thenReturn(completedTaskIds);
         when(taskRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(emptyPendingPage);
-        when(taskRepository.findCompletedTasksByIds(completedTaskIds, PageRequest.of(0, 10))).thenReturn(emptyCompletedPage);
+        when(submissionRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(emptyCompletedPage);
 
         com.amalitech.task.service.dto.response.UserTasksResponse result = 
-            taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 10);
+            taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 10, null, "ALL_PERIODS");
 
         assertNotNull(result);
         assertEquals(0, result.pending().getTotalElements());
@@ -1201,16 +1227,16 @@ class TaskServiceImplTest {
         );
 
         Page<Task> pendingPage = new PageImpl<>(mixedTasks, PageRequest.of(0, 10), 3);
-        Page<Task> completedPage = Page.empty(PageRequest.of(0, 10));
+        Page<TaskSubmission> completedSubmissionPage = Page.empty(PageRequest.of(0, 10));
 
         when(userSkillProfileRepository.findById_UserId(userId)).thenReturn(userProfiles);
         when(submissionRepository.findCompletedTaskIdsByUser(userId)).thenReturn(completedTaskIds);
         when(taskRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(pendingPage);
-        when(taskRepository.findCompletedTasksByIds(completedTaskIds, PageRequest.of(0, 10))).thenReturn(completedPage);
+        when(submissionRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(completedSubmissionPage);
         when(taskMapper.toDTO(any(Task.class))).thenReturn(testTaskDTO);
 
         com.amalitech.task.service.dto.response.UserTasksResponse result = 
-            taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 10);
+            taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 10, null, "ALL_PERIODS");
 
         assertNotNull(result);
         assertEquals(3, result.pending().getTotalElements());
@@ -1225,26 +1251,29 @@ class TaskServiceImplTest {
 
         Page<Task> pendingPage = new PageImpl<>(List.of(), PageRequest.of(0, 10), 0);
 
+        List<TaskSubmission> completedSubmissions = new ArrayList<>();
         List<Task> completedTasks = new ArrayList<>();
         for (int i = 0; i < 15; i++) {
-            completedTasks.add(Task.builder()
+            Task task = Task.builder()
                     .id(UUID.randomUUID())
                     .title("Completed " + i)
                     .type(TaskType.CODING)
                     .difficulty(TaskDifficulty.BEGINNER)
-                    .build());
+                    .build();
+            completedTasks.add(task);
+            completedSubmissions.add(createTaskSubmission(task));
         }
 
-        Page<Task> completedPage = new PageImpl<>(completedTasks, PageRequest.of(0, 15), 45);
+        Page<TaskSubmission> completedSubmissionPage = new PageImpl<>(completedSubmissions, PageRequest.of(0, 15), 45);
 
         when(userSkillProfileRepository.findById_UserId(userId)).thenReturn(userProfiles);
         when(submissionRepository.findCompletedTaskIdsByUser(userId)).thenReturn(completedTaskIds);
         when(taskRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(pendingPage);
-        when(taskRepository.findCompletedTasksByIds(completedTaskIds, PageRequest.of(0, 15))).thenReturn(completedPage);
+        when(submissionRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(completedSubmissionPage);
         when(taskMapper.toDTO(any(Task.class))).thenReturn(testTaskDTO);
 
         com.amalitech.task.service.dto.response.UserTasksResponse result = 
-            taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 15);
+            taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 15, null, "ALL_PERIODS");
 
         assertNotNull(result);
         assertEquals(15, result.completed().getSize());
@@ -1257,15 +1286,15 @@ class TaskServiceImplTest {
         Set<UUID> completedTaskIds = Set.of();
 
         Page<Task> emptyPage = new PageImpl<>(List.of(), PageRequest.of(10, 10), 5);
-        Page<Task> completedPage = new PageImpl<>(List.of(), PageRequest.of(0, 10), 0);
+        Page<TaskSubmission> completedSubmissionPage = new PageImpl<>(List.of(), PageRequest.of(0, 10), 0);
 
         when(userSkillProfileRepository.findById_UserId(userId)).thenReturn(userProfiles);
         when(submissionRepository.findCompletedTaskIdsByUser(userId)).thenReturn(completedTaskIds);
         when(taskRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(emptyPage);
-        when(taskRepository.findCompletedTasksByIds(completedTaskIds, PageRequest.of(0, 10))).thenReturn(completedPage);
+        when(submissionRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(completedSubmissionPage);
 
         com.amalitech.task.service.dto.response.UserTasksResponse result = 
-            taskService.getUserTasksGroupedByStatus(userId, 10, 10, 0, 10);
+            taskService.getUserTasksGroupedByStatus(userId, 10, 10, 0, 10, null, "ALL_PERIODS");
 
         assertNotNull(result);
         assertEquals(0, result.pending().getContent().size());
@@ -1287,27 +1316,30 @@ class TaskServiceImplTest {
                     .build());
         }
 
+        List<TaskSubmission> completedSubmissions = new ArrayList<>();
         List<Task> completedTasks = new ArrayList<>();
         for (int i = 0; i < 10; i++) {
-            completedTasks.add(Task.builder()
+            Task task = Task.builder()
                     .id(UUID.randomUUID())
                     .title("Completed " + i)
                     .type(TaskType.CODING)
                     .difficulty(TaskDifficulty.BEGINNER)
-                    .build());
+                    .build();
+            completedTasks.add(task);
+            completedSubmissions.add(createTaskSubmission(task));
         }
 
         Page<Task> pendingPage = new PageImpl<>(pendingTasks, PageRequest.of(0, 10), 50);
-        Page<Task> completedPage = new PageImpl<>(completedTasks, PageRequest.of(2, 10), 50);
+        Page<TaskSubmission> completedSubmissionPage = new PageImpl<>(completedSubmissions, PageRequest.of(2, 10), 50);
 
         when(userSkillProfileRepository.findById_UserId(userId)).thenReturn(userProfiles);
         when(submissionRepository.findCompletedTaskIdsByUser(userId)).thenReturn(completedTaskIds);
         when(taskRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(pendingPage);
-        when(taskRepository.findCompletedTasksByIds(any(), any(Pageable.class))).thenReturn(completedPage);
+        when(submissionRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(completedSubmissionPage);
         when(taskMapper.toDTO(any(Task.class))).thenReturn(testTaskDTO);
 
         com.amalitech.task.service.dto.response.UserTasksResponse result = 
-            taskService.getUserTasksGroupedByStatus(userId, 0, 10, 2, 10);
+            taskService.getUserTasksGroupedByStatus(userId, 0, 10, 2, 10, null, "ALL_PERIODS");
 
         assertNotNull(result);
         assertEquals(0, result.pending().getNumber());
@@ -1342,16 +1374,16 @@ class TaskServiceImplTest {
                 .build();
 
         Page<Task> pendingPage = new PageImpl<>(List.of(task1, task2), PageRequest.of(0, 10), 2);
-        Page<Task> completedPage = Page.empty(PageRequest.of(0, 10));
+        Page<TaskSubmission> completedSubmissionPage = Page.empty(PageRequest.of(0, 10));
 
         when(userSkillProfileRepository.findById_UserId(userId)).thenReturn(userProfiles);
         when(submissionRepository.findCompletedTaskIdsByUser(userId)).thenReturn(completedTaskIds);
         when(taskRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(pendingPage);
-        when(taskRepository.findCompletedTasksByIds(completedTaskIds, PageRequest.of(0, 10))).thenReturn(completedPage);
+        when(submissionRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(completedSubmissionPage);
         when(taskMapper.toDTO(any(Task.class))).thenReturn(testTaskDTO);
 
         com.amalitech.task.service.dto.response.UserTasksResponse result = 
-            taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 10);
+            taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 10, null, "ALL_PERIODS");
 
         assertNotNull(result);
         assertEquals(2, result.pending().getTotalElements());

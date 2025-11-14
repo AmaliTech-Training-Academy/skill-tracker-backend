@@ -2,6 +2,7 @@ package com.amalitech.task.service.repository;
 
 import com.amalitech.task.service.model.TaskSubmission;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -11,7 +12,8 @@ import java.util.Set;
 import java.util.UUID;
 
 @Repository
-public interface TaskSubmissionRepository extends JpaRepository<TaskSubmission, UUID> {
+public interface TaskSubmissionRepository extends JpaRepository<TaskSubmission, UUID>,
+        JpaSpecificationExecutor<TaskSubmission> {
 
     /**
      * Find all submissions by user
@@ -43,7 +45,11 @@ public interface TaskSubmissionRepository extends JpaRepository<TaskSubmission, 
     Integer getTotalScoreByUser(@Param("userId") UUID userId);
 
 
+    /**
+     * Gets the set of Task IDs that the user has correctly submitted.
+     * This is the single source of truth for "completion"
+     */
     @Query("SELECT ts.task.id FROM TaskSubmission ts " +
-            "WHERE ts.userId = :userId AND ts.status = 'COMPLETED'")
+            "WHERE ts.userId = :userId AND ts.isCorrect = true")
     Set<UUID> findCompletedTaskIdsByUser(@Param("userId") UUID userId);
 }
