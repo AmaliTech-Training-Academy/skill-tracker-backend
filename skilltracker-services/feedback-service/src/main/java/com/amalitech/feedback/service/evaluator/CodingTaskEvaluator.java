@@ -43,7 +43,7 @@ public class CodingTaskEvaluator implements TaskEvaluator {
     @Override
     public Mono<SubmissionEvaluatedEvent> evaluate(SubmissionCreatedEvent event) {
         log.info("Evaluating CODING task submission: {}", event.getSubmissionId());
-        
+
         return runTestCases(event)
                 .doOnNext(data -> publishExecutionResults(event, data.results()))
                 .flatMap(data -> gradeAndProvideFeedback(data.event(), data.results()));
@@ -54,15 +54,17 @@ public class CodingTaskEvaluator implements TaskEvaluator {
         return "CODING";
     }
 
-    /**
-     * Runs all test cases against Judge0.
-     */
-    private Mono<EvaluationData> runTestCases(SubmissionCreatedEvent event) {
-    List<SubmissionCreatedEvent.TestCaseData> testCases = event.getTestCases();
-
-    if (testCases == null || testCases.isEmpty()) {
-    return Mono.error(new InvalidTaskException("Task " + event.getTaskId() + " has no test cases."));
+    private String normalize(String s) {
+        if (s == null) return "";
+        return s.replace("\r", "").replace("\n", "").trim();
     }
+
+    private Mono<EvaluationData> runTestCases(SubmissionCreatedEvent event) {
+        List<SubmissionCreatedEvent.TestCaseData> testCases = event.getTestCases();
+
+        if (testCases == null || testCases.isEmpty()) {
+            return Mono.error(new InvalidTaskException("Task " + event.getTaskId() + " has no test cases."));
+        }
 
         return Flux.fromIterable(testCases)
                 .concatMap(testCase -> {
@@ -70,7 +72,7 @@ public class CodingTaskEvaluator implements TaskEvaluator {
                             .languageId(event.getLanguageId())
                             .sourceCode(event.getContentToEvaluate())
                             .stdin(testCase.getInput())
-                            .expectedOutput(testCase.getExpectedOutput())
+                            .expectedOutput(null)
                             .build();
                     return judge0Client.executeSubmission(request);
                 })
@@ -78,19 +80,20 @@ public class CodingTaskEvaluator implements TaskEvaluator {
                 .map(results -> new EvaluationData(event, results));
     }
 
-    /**
-     * Grades the results and generates AI feedback.
-     */
     private Mono<SubmissionEvaluatedEvent> gradeAndProvideFeedback(
             SubmissionCreatedEvent event,
             List<Judge0SubmissionResponse> results
     ) {
-        int totalTests = results.size();
-        int passedTests = (int) results.stream()
-                .filter(r -> r.getStatus() != null && r.getStatus().getId() == 3)
+        List<SubmissionCreatedEvent.TestCaseData> testCases = event.getTestCases();
+        List<CommonTestResult> commonResults = buildCommonTestResults(testCases, results);
+
+        int totalTests = commonResults.size();
+        int passedTests = (int) commonResults.stream()
+                .filter(CommonTestResult::passed)
                 .count();
-        boolean isCorrect = totalTests > 0 && passedTests == totalTests;
-        int score = isCorrect ? 100 : (int) (((double) passedTests / totalTests) * 100);
+
+        int score = totalTests > 0 ? (int) (((double) passedTests / totalTests) * 100) : 0;
+        boolean isCorrect = score >= 70;
 
         TaskDTO task = buildTaskDTO(event);
 
@@ -102,13 +105,6 @@ public class CodingTaskEvaluator implements TaskEvaluator {
                 });
     }
 
-    /**
-     * Builds the evaluated event with AI feedback.
-     * <p>
-     * This method validates that the feedback structure contains all required
-     * evaluation components. If any required field is null, it logs a warning
-     * and falls back to a basic event without detailed feedback.
-     */
     private SubmissionEvaluatedEvent buildSuccessEvent(
             SubmissionCreatedEvent event,
             boolean isCorrect,
@@ -138,27 +134,18 @@ public class CodingTaskEvaluator implements TaskEvaluator {
                 .build();
     }
 
-    /**
-     * Serializes the detailed feedback to JSON, adding the polymorphic key.
-     */
     private String serializeDetailedFeedback(DetailedEvaluationResponse feedback) {
         try {
             Map<String, Object> polymorphicFeedback = new HashMap<>();
-
             polymorphicFeedback.put("feedbackType", "CODING");
             polymorphicFeedback.put("evaluation", feedback.getEvaluation());
-
             return objectMapper.writeValueAsString(polymorphicFeedback);
-
         } catch (JsonProcessingException e) {
             log.warn("Failed to serialize detailed CODING feedback map: {}", e.getMessage());
             return null;
         }
     }
 
-    /**
-     * Builds a fallback event when AI feedback fails.
-     */
     private SubmissionEvaluatedEvent buildFallbackEvent(
             SubmissionCreatedEvent event,
             boolean isCorrect,
@@ -166,13 +153,17 @@ public class CodingTaskEvaluator implements TaskEvaluator {
             List<Judge0SubmissionResponse> results
     ) {
         Judge0SubmissionResponse firstError = results.stream()
-                .filter(r -> r.getStatus() != null && r.getStatus().getId() != 3)
+                .filter(r -> r.getStatus() == null || r.getStatus().getId() != 3)
                 .findFirst()
                 .orElse(null);
 
         String statusDescription = firstError != null && firstError.getStatus() != null
                 ? firstError.getStatus().getDescription()
                 : (isCorrect ? "All Tests Passed" : "Tests Failed");
+
+        if (firstError == null && !isCorrect) {
+            statusDescription = "Wrong Answer";
+        }
 
         String overallFeedback = "Status: " + statusDescription + ". AI feedback unavailable.";
 
@@ -182,17 +173,13 @@ public class CodingTaskEvaluator implements TaskEvaluator {
                 .build();
     }
 
-    /**
-     * This method contains all the duplicated logic.
-     * It builds and returns a pre-populated EventBuilder.
-     */
     private SubmissionEvaluatedEventBuilder buildCommonEvent(
             SubmissionCreatedEvent event,
             boolean isCorrect,
             int score,
             List<Judge0SubmissionResponse> results)
     {
-        Judge0SubmissionResponse firstResult = results.isEmpty() ? null : results.get(0);
+        Judge0SubmissionResponse firstResult = results.isEmpty() ? null : results.getFirst();
 
         double avgTime = results.stream()
                 .filter(r -> r.getTime() != null)
@@ -225,9 +212,6 @@ public class CodingTaskEvaluator implements TaskEvaluator {
                 .avgMemoryUsedKb(avgMemory);
     }
 
-    /**
-     * Builds structured test case results with detailed information.
-     */
     private List<SubmissionEvaluatedEvent.TestResultData> buildStructuredTestResults(
             List<SubmissionCreatedEvent.TestCaseData> testCases,
             List<Judge0SubmissionResponse> results
@@ -247,9 +231,6 @@ public class CodingTaskEvaluator implements TaskEvaluator {
                 .collect(Collectors.toList());
     }
 
-    /**
-     * Builds a minimal TaskDTO from the event for AI feedback.
-     */
     private TaskDTO buildTaskDTO(SubmissionCreatedEvent event) {
         return TaskDTO.builder()
                 .id(event.getTaskId())
@@ -257,88 +238,87 @@ public class CodingTaskEvaluator implements TaskEvaluator {
                 .build();
     }
 
-    /**
-     * Publishes execution results immediately (before AI evaluation).
-     * This provides fast feedback to users showing code output and test results.
-     */
     private void publishExecutionResults(SubmissionCreatedEvent event, List<Judge0SubmissionResponse> results) {
         log.info("Publishing immediate execution results for submission: {}", event.getSubmissionId());
-        
+
         Judge0SubmissionResponse firstResult = results.isEmpty() ? null : results.get(0);
         String stdout = firstResult != null ? firstResult.getStdout() : null;
         String stderr = firstResult != null ? firstResult.getStderr() : null;
-        
-        int passedCount = (int) results.stream()
-                .filter(r -> r.getStatus() != null && r.getStatus().getId() == 3)
-                .count();
-        boolean allPassed = !results.isEmpty() && passedCount == results.size();
-        
-        List<SubmissionExecutedEvent.TestResultData> testResults = buildExecutedTestResults(
-                event.getTestCases(), 
-                results
-        );
-        
-        double avgTime;
-        avgTime = results.stream()
-                .filter(r -> r.getTime() != null)
-                .mapToDouble(Judge0SubmissionResponse::getTime)
-                .average()
-                .orElse(0.0) * 1000;
 
-        int avgMemory = (int) results.stream()
-                .filter(r -> r.getMemory() != null)
-                .mapToInt(Judge0SubmissionResponse::getMemory)
-                .average()
-                .orElse(0.0);
-        
+        AggregatedTestResults aggregated = aggregateTestResults(event.getTestCases(), results);
+
+        int totalTests = aggregated.testResults().size();
+        boolean allPassed = !aggregated.testResults().isEmpty() && (aggregated.passedCount() == totalTests);
+
         SubmissionExecutedEvent executedEvent = SubmissionExecutedEvent.builder()
                 .submissionId(event.getSubmissionId())
                 .userId(event.getUserId())
                 .stdout(stdout)
                 .stderr(stderr)
-                .testResults(testResults)
+                .testResults(aggregated.testResults())
                 .allTestsPassed(allPassed)
-                .testsPassed(passedCount)
-                .testsTotal(results.size())
-                .avgExecutionTimeMs(avgTime)
-                .avgMemoryUsedKb(avgMemory)
+                .testsPassed(aggregated.passedCount())
+                .testsTotal(totalTests)
+                .avgExecutionTimeMs(aggregated.avgTimeMs())
+                .avgMemoryUsedKb(aggregated.avgMemoryKb())
                 .build();
-        
+
         rabbitTemplate.convertAndSend(
                 RabbitMQConfig.SUBMISSION_EXCHANGE,
                 RabbitMQConfig.SUBMISSION_EXECUTED_ROUTING_KEY,
                 executedEvent
         );
-        
+
         log.info("Published execution results for submission: {}", event.getSubmissionId());
     }
 
     /**
-     * Builds structured test results for SubmissionExecutedEvent.
+     * Builds the TestResultData list AND calculates all aggregates
+     * (passedCount, avgTime, avgMemory) in a single pass.
      */
-    private List<SubmissionExecutedEvent.TestResultData> buildExecutedTestResults(
+    private AggregatedTestResults aggregateTestResults(
             List<SubmissionCreatedEvent.TestCaseData> testCases,
             List<Judge0SubmissionResponse> results
     ) {
         List<CommonTestResult> commonResults = buildCommonTestResults(testCases, results);
 
-        return commonResults.stream()
-                .map(r -> SubmissionExecutedEvent.TestResultData.builder()
-                        .passed(r.passed())
-                        .input(r.input())
-                        .expectedOutput(r.expectedOutput())
-                        .actualOutput(r.actualOutput())
-                        .executionTimeMs(r.execTime())
-                        .memoryUsedKb(r.memory())
-                        .statusDescription(r.statusDesc())
-                        .build())
-                .collect(Collectors.toList());
+        List<SubmissionExecutedEvent.TestResultData> testResultsList = new java.util.ArrayList<>();
+        int passedCount = 0;
+        double totalTimeMs = 0;
+        int totalMemoryKb = 0;
+        int timeRecordCount = 0;
+        int memoryRecordCount = 0;
+
+        for (CommonTestResult r : commonResults) {
+            testResultsList.add(SubmissionExecutedEvent.TestResultData.builder()
+                    .passed(r.passed())
+                    .input(r.input())
+                    .expectedOutput(r.expectedOutput())
+                    .actualOutput(r.actualOutput())
+                    .executionTimeMs(r.execTime())
+                    .memoryUsedKb(r.memory())
+                    .statusDescription(r.statusDesc())
+                    .build());
+
+            if (r.passed()) {
+                passedCount++;
+            }
+            if (r.execTime() != null) {
+                totalTimeMs += r.execTime();
+                timeRecordCount++;
+            }
+            if (r.memory() != null) {
+                totalMemoryKb += r.memory();
+                memoryRecordCount++;
+            }
+        }
+
+        double avgTimeMs = (timeRecordCount > 0) ? (totalTimeMs / timeRecordCount) : 0.0;
+        int avgMemoryKb = (memoryRecordCount > 0) ? (totalMemoryKb / memoryRecordCount) : 0;
+
+        return new AggregatedTestResults(testResultsList, passedCount, avgTimeMs, avgMemoryKb);
     }
 
-    /**
-     * Contains the shared logic that was previously in two methods.
-     * It loops through results and builds a list of common, intermediate objects.
-     */
     private List<CommonTestResult> buildCommonTestResults(
             List<SubmissionCreatedEvent.TestCaseData> testCases,
             List<Judge0SubmissionResponse> results
@@ -349,25 +329,46 @@ public class CodingTaskEvaluator implements TaskEvaluator {
             Judge0SubmissionResponse result = results.get(i);
             SubmissionCreatedEvent.TestCaseData testCase = i < testCases.size() ? testCases.get(i) : null;
 
-            boolean passed = result.getStatus() != null && result.getStatus().getId() == 3;
-            String statusDesc = result.getStatus() != null ? result.getStatus().getDescription() : "Unknown";
-            Long execTime = result.getTime() != null ? (long)(result.getTime() * 1000) : null;
-            Integer memory = result.getMemory();
+            String expected = testCase != null ? normalize(testCase.getExpectedOutput()) : "";
+            String actual = result.getStdout() != null ? normalize(result.getStdout()) : "";
             String input = testCase != null ? testCase.getInput() : "";
-            String expected = testCase != null ? testCase.getExpectedOutput() : "";
-            String actual = result.getStdout() != null ? result.getStdout() : "";
+
+            boolean isExecuted = result.getStatus() != null && result.getStatus().getId() == 3;
+            boolean isCorrect = isExecuted && expected.equals(actual);
+
+            String statusDesc = result.getStatus() != null ? result.getStatus().getDescription() : "Unknown";
+
+            if (isExecuted && !isCorrect) {
+                statusDesc = "Wrong Answer";
+            }
+
+            Long execTime = result.getTime() != null ? (long)(result.getTime() * 1000) : null;
+
+            Integer memory = result.getMemory();
 
             commonResults.add(new CommonTestResult(
-                    passed, input, expected, actual, execTime, memory, statusDesc
+                    isCorrect, input, expected, actual, execTime, memory, statusDesc
             ));
         }
         return commonResults;
     }
 
+
+    private record EvaluationData(
+            SubmissionCreatedEvent event,
+            List<Judge0SubmissionResponse> results)
+    {}
+
     /**
-     * Internal record to hold evaluation data.
+     * Internal record to hold all aggregated results from a single pass
+     * over the test case results.
      */
-    private record EvaluationData(SubmissionCreatedEvent event, List<Judge0SubmissionResponse> results) {}
+    private record AggregatedTestResults(
+            List<SubmissionExecutedEvent.TestResultData> testResults,
+            int passedCount,
+            double avgTimeMs,
+            int avgMemoryKb
+    ) {}
 
     private record CommonTestResult(
             boolean passed,
