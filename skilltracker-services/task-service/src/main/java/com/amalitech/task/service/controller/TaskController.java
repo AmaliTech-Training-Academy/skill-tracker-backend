@@ -59,6 +59,25 @@ public class TaskController {
         return ResponseEntity.ok(response);
     }
 
+    @GetMapping("/learning-path")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ApiResponse<LearningPathResponseDTO>> getLearningPathByUserId(
+            @PathVariable("id") String userId,
+            @RequestParam("skill") String skill
+    ) {
+        log.info("Fetching Learning path by user ID: {}", userId);
+
+        LearningPathResponseDTO learningPath = taskService.getTaskByUserIdAndCurrentSkill(userId, skill);
+
+        ApiResponse<LearningPathResponseDTO> response = ApiResponse.success(
+                "Learning path retrieved successfully.",
+                learningPath,
+                ""
+        );
+
+        return ResponseEntity.ok(response);
+    }
+
 
     /**
      * This accepts an McqResponseDTO and returns a McqResponseDTO*/

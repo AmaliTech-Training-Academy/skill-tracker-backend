@@ -12,4 +12,5 @@ public interface UserLearningPathRepository extends JpaRepository<UserLearningPa
     @Transactional
     void deleteByCurrentSkill(String userId);
     UserLearningPath findByCurrentSkill(String skill);
+    UserLearningPath findByUserIdAndCurrentSkill(String userId, String currentSkill);
 }

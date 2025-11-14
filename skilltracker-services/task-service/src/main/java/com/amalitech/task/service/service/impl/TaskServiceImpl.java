@@ -425,6 +425,24 @@ public class TaskServiceImpl implements TaskService {
     }
 
     @Override
+    public LearningPathResponseDTO getTaskByUserIdAndCurrentSkill(String userId, String currentSkill) {
+        UserLearningPath learningPath =  userLPrepo.findByUserIdAndCurrentSkill(userId, currentSkill);
+
+        return LearningPathResponseDTO.builder()
+                .learningPath(LearningPathDTO.builder()
+                        .userId(learningPath.getUserId())
+                        .summary(learningPath.getSummary())
+                        .current_skill(learningPath.getCurrentSkill())
+                        .recommended_next_skill(learningPath.getRecommended_next_skill())
+                        .recommended_activities(learningPath.getRecommended_activities())
+                        .reasoning(learningPath.getReasoning())
+                        .difficulty(learningPath.getDifficulty())
+                        .resources(learningPath.getResources())
+                        .build())
+                .build();
+    }
+
+    @Override
     public LearningPathResponseDTO generateLearningPath(UserProfileRequestDTO userProfileRequestDTO) throws IOException {
         String skill = userProfileRequestDTO.getCurrent_progress().getSkill();
         Client client = new Client();

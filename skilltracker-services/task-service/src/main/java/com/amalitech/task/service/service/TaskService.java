@@ -26,6 +26,8 @@ public interface TaskService {
 
     LearningPathResponseDTO generateLearningPath(UserProfileRequestDTO userProfileRequestDTO) throws IOException;
 
+    LearningPathResponseDTO getTaskByUserIdAndCurrentSkill(String userId, String currentSkill);
+
     /**
      * Get personalized tasks for a user based on their skill and difficulty.
      * Triggers asynchronous generation if no cached tasks are available.
