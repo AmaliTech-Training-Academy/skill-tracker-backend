@@ -119,14 +119,7 @@ public class TaskServiceImpl implements TaskService {
         TaskDifficulty difficulty = profile.getDifficulty();
         log.debug("Found local profile: skillId={}, difficulty={} for user: {}", skillId, difficulty, userId);
 
-        List<Task> tasks = getOrGenerateTasksForSkillAndDifficulty(
-                userId,
-                profile.getSkillName(),
-                profile.getId().getUserId(),
-                difficulty,
-                taskType,
-                limit
-        );
+        List<Task> tasks = getTasksBySkillAndDifficultyWithOptionalType(skillId, difficulty, taskType, limit);
 
         return tasks.stream()
                 .map(taskMapper::toDTO)
@@ -144,14 +137,7 @@ public class TaskServiceImpl implements TaskService {
         SkillView skill = skillService.getSkillByName(skillName);
         UUID skillId = skill.getId();
 
-        List<Task> tasks = getOrGenerateTasksForSkillAndDifficulty(
-                null,
-                skillName,
-                skillId,
-                difficulty,
-                taskType,
-                limit
-        );
+        List<Task> tasks = getTasksBySkillAndDifficultyWithOptionalType(skillId, difficulty, taskType, limit);
 
         return tasks.stream()
                 .map(taskMapper::toDTO)
