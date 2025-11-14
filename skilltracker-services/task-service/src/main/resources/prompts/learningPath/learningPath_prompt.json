@@ -21,14 +21,22 @@
       "String (practical Activity 4)"
     ],
     "reasoning": "String (why this next skill makes sense based on goals and skill in current_performance block)",
-    "difficulty": "String (should logically be relevant to the details in the input block)"
+    "difficulty": "String (should logically be relevant to the details in the input block)",
+    "resources": [
+      "Link 1",
+      "Link 2",
+      "Link 3",
+      "Link 4",
+      "Link 5",
+      "Link 6",
+      "Link 7"
+    ]
   },
   "validation": [
     "All links must be verified working URLs from official documentation or established learning platforms",
     "All links must be tested and confirmed to resolve correctly",
     "All links must point to current, maintained resources",
-    "Prefer official documentation URLs over third-party tutorials",
-    "Use established platforms: MDN Web Docs, freeCodeCamp, official Git-scm documentation, etc."
+    "Prefer official documentation URLs over third-party tutorials"
   ],
   "constraints": [
     "current_skill is skill in current_performance block.",
