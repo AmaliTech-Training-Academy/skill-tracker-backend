@@ -34,6 +34,7 @@ public interface TaskService {
      *
      * @param userId The ID of the user
      * @param skillName The name of the skill
+     * @param taskType Optional. The type of task to filter by (e.g., CODING, MCQ). If null, all task types are returned.
      * @param limit The maximum number of tasks to return
      * @return A list of TaskDTOs, which may be empty if tasks are being generated.
      */
@@ -45,6 +46,7 @@ public interface TaskService {
      *
      * @param skillName The name of the skill
      * @param difficulty The requested task difficulty
+     * @param taskType Optional. The type of task to filter by (e.g., CODING, MCQ). If null, all task types are returned.
      * @param limit The maximum number of tasks to return
      * @return A list of TaskDTOs, which may be empty if tasks are being generated.
      */

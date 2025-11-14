@@ -229,20 +229,14 @@ public class TaskServiceImpl implements TaskService {
      * @param userId The ID of the user (can be null for anonymous requests)
      * @param skillName The name of the skill (e.g., "PYTHON")
      * @param difficulty The difficulty level (e.g., "BEGINNER")
-     * @param taskType The type of task (e.g., "CODING")
+     * @param taskType Optional. The type of task to filter by (e.g., "CODING"). If null, all task types are returned.
      * @param limit The number of tasks to fetch
      * @return A list of tasks found in the database.
      */
     private List<Task> getOrGenerateTasksForSkillAndDifficulty(
             UUID userId, String skillName, UUID skillId, TaskDifficulty difficulty, TaskType taskType, int limit) {
 
-        List<Task> cachedTasks = taskRepository.findBySkillIdAndDifficultyAndType(
-                skillId,
-                difficulty,
-                taskType,
-                true,
-                PageRequest.of(0, limit)
-        );
+        List<Task> cachedTasks = getTasksBySkillAndDifficultyWithOptionalType(skillId, difficulty, taskType, limit);
 
         if (cachedTasks.size() >= limit) {
             log.info("Cache hit: Using {} cached tasks for {}/{}",
@@ -256,7 +250,7 @@ public class TaskServiceImpl implements TaskService {
             return cachedTasks;
         }
 
-        String lockKey = FETCH_LOCK_PREFIX + skillName + ":" + difficulty + ":" + taskType;
+        String lockKey = FETCH_LOCK_PREFIX + skillName + ":" + difficulty + ":" + (taskType != null ? taskType : "ALL");
         Boolean lockAcquired = redisTemplate.opsForValue()
                 .setIfAbsent(lockKey, "generating", FETCH_LOCK_TIMEOUT);
 
@@ -286,6 +280,36 @@ public class TaskServiceImpl implements TaskService {
             redisTemplate.delete(lockKey);
         }
         return cachedTasks;
+    }
+
+    /**
+     * Fetches tasks by skill and difficulty with an optional type filter.
+     * Uses JPA Specifications to dynamically build the query based on whether taskType is provided.
+     *
+     * @param skillId The ID of the skill
+     * @param difficulty The difficulty level
+     * @param taskType Optional. If null, all task types are included; otherwise, filters to this type.
+     * @param limit The maximum number of tasks to return
+     * @return A list of tasks matching the criteria
+     */
+    private List<Task> getTasksBySkillAndDifficultyWithOptionalType(
+            UUID skillId, TaskDifficulty difficulty, TaskType taskType, int limit) {
+
+        Specification<Task> spec = (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+
+            predicates.add(cb.equal(root.get("taskDefinition").get("skill").get("id"), skillId));
+            predicates.add(cb.equal(root.get("difficulty"), difficulty));
+            predicates.add(cb.equal(root.get("isPublished"), true));
+
+            if (taskType != null) {
+                predicates.add(cb.equal(root.get("type"), taskType));
+            }
+
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+
+        return taskRepository.findAll(spec, PageRequest.of(0, limit)).getContent();
     }
 
     /**
