@@ -85,7 +85,10 @@ public class CodingTaskEvaluator implements TaskEvaluator {
             List<Judge0SubmissionResponse> results
     ) {
         List<SubmissionCreatedEvent.TestCaseData> testCases = event.getTestCases();
+        log.info("gradeAndProvideFeedback START - submission: {}, testCases: {}", event.getSubmissionId(), testCases != null ? testCases.size() : 0);
+        
         List<CommonTestResult> commonResults = buildCommonTestResults(testCases, results);
+        log.info("Built commonResults: {} results", commonResults.size());
 
         int totalTests = commonResults.size();
         int passedTests = (int) commonResults.stream()
@@ -101,9 +104,13 @@ public class CodingTaskEvaluator implements TaskEvaluator {
         TaskDTO task = buildTaskDTO(event);
 
         return aiFeedbackClient.generateDetailedFeedback(task, event.getContentToEvaluate(), results)
-                .map(aiFeedback -> buildSuccessEvent(event, isCorrect, score, results, aiFeedback))
+                .map(aiFeedback -> {
+                    log.info("Successfully got AI feedback for {}", event.getSubmissionId());
+                    return buildSuccessEvent(event, isCorrect, score, results, aiFeedback);
+                })
                 .onErrorResume(e -> {
-                    log.error("AI DETAILED feedback generation failed for {}: {}", event.getSubmissionId(), e.getMessage());
+                    log.error("AI DETAILED feedback generation failed for {}: {}", event.getSubmissionId(), e.getMessage(), e);
+                    log.info("Using fallback event with isCorrect={}, score={}", isCorrect, score);
                     return Mono.just(buildFallbackEvent(event, isCorrect, score, results));
                 });
     }
@@ -203,7 +210,7 @@ public class CodingTaskEvaluator implements TaskEvaluator {
 
         log.info("Building event for submission {}: score={}, isCorrect={}", event.getSubmissionId(), score, isCorrect);
         
-        return SubmissionEvaluatedEvent.builder()
+        SubmissionEvaluatedEvent.SubmissionEvaluatedEventBuilder builder = SubmissionEvaluatedEvent.builder()
                 .submissionId(event.getSubmissionId())
                 .userId(event.getUserId())
                 .status("COMPLETED")
@@ -215,6 +222,9 @@ public class CodingTaskEvaluator implements TaskEvaluator {
                 .testResults(structuredTestResults)
                 .avgExecutionTimeMs(avgTime)
                 .avgMemoryUsedKb(avgMemory);
+        
+        log.debug("Builder state - score={}, isCorrect={}", score, isCorrect);
+        return builder;
     }
 
     private List<SubmissionEvaluatedEvent.TestResultData> buildStructuredTestResults(
