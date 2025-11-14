@@ -23,9 +23,13 @@ RUN mvn clean install -DskipTests -B
 WORKDIR /app/skilltracker-common/common-event
 RUN mvn clean install -DskipTests -B
 
-WORKDIR /app/skilltracker-services/task-service/
+# Build and install user-service (required by task-service)
+COPY skilltracker-services/user-service skilltracker-services/user-service
+WORKDIR /app/skilltracker-services/user-service
+RUN mvn clean install -DskipTests -B
 
-RUN mvn dependency:go-offline -B
+WORKDIR /app/skilltracker-services/task-service/
+RUN mvn dependency:go-offline -B 
 
 COPY skilltracker-services/task-service/src src
 
