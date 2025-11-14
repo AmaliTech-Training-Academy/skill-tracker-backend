@@ -98,29 +98,51 @@ public class CodingTaskEvaluator implements TaskEvaluator {
             log.info("  TestResult[{}]: passed={}, expected='{}', actual='{}'", i, r.passed(), r.expectedOutput(), r.actualOutput());
         }
 
+        // Initial calculation (used as fallback if AI fails)
         int totalTests = commonResults.size();
         int passedTests = (int) commonResults.stream()
                 .filter(CommonTestResult::passed)
                 .count();
-
-        int score = totalTests > 0 ? (int) (((double) passedTests / totalTests) * 100) : 0;
-        boolean isCorrect = score >= 70;
+        int fallbackScore = totalTests > 0 ? (int) (((double) passedTests / totalTests) * 100) : 0;
+        boolean fallbackIsCorrect = fallbackScore >= 70;
         
-        log.info("Score calculation: totalTests={}, passedTests={}, score={}, isCorrect={}", 
-                 totalTests, passedTests, score, isCorrect);
+        log.info("Judge0 calculation: totalTests={}, passedTests={}, score={}, isCorrect={}", 
+                 totalTests, passedTests, fallbackScore, fallbackIsCorrect);
 
         TaskDTO task = buildTaskDTO(event);
 
         return aiFeedbackClient.generateDetailedFeedback(task, event.getContentToEvaluate(), results)
                 .map(aiFeedback -> {
                     log.info("Successfully got AI feedback for {}", event.getSubmissionId());
-                    return buildSuccessEvent(event, isCorrect, score, results, aiFeedback);
+                    
+                    // Extract score from AI feedback's overall assessment
+                    int aiScore = extractScoreFromAIFeedback(aiFeedback);
+                    boolean aiIsCorrect = aiScore >= 70;
+                    log.info("AI feedback score: {}, isCorrect: {}", aiScore, aiIsCorrect);
+                    
+                    return buildSuccessEvent(event, aiIsCorrect, aiScore, results, aiFeedback);
                 })
                 .onErrorResume(e -> {
                     log.error("AI DETAILED feedback generation failed for {}: {}", event.getSubmissionId(), e.getMessage(), e);
-                    log.info("Using fallback event with isCorrect={}, score={}", isCorrect, score);
-                    return Mono.just(buildFallbackEvent(event, isCorrect, score, results));
+                    log.info("Using fallback event with isCorrect={}, score={}", fallbackIsCorrect, fallbackScore);
+                    return Mono.just(buildFallbackEvent(event, fallbackIsCorrect, fallbackScore, results));
                 });
+    }
+    
+    private int extractScoreFromAIFeedback(DetailedEvaluationResponse aiFeedback) {
+        if (aiFeedback == null || aiFeedback.getEvaluation() == null) {
+            return 0;
+        }
+        
+        DetailedEvaluationResponse.Evaluation eval = aiFeedback.getEvaluation();
+        if (eval.getOverall() != null) {
+            int percentage = eval.getOverall().getPercentage();
+            log.debug("Extracted overall percentage from AI feedback: {}", percentage);
+            return percentage;
+        }
+        
+        log.warn("Could not extract score from AI feedback");
+        return 0;
     }
 
     private SubmissionEvaluatedEvent buildSuccessEvent(
