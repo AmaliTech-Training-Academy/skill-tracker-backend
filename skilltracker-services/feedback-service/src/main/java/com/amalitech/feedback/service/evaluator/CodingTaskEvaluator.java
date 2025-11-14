@@ -35,6 +35,10 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class CodingTaskEvaluator implements TaskEvaluator {
 
+    static {
+        System.out.println("========== CodingTaskEvaluator CLASS LOADED (BUILD 215e5e1) ==========");
+    }
+
     private final Judge0Client judge0Client;
     private final AIFeedbackClient aiFeedbackClient;
     private final RabbitTemplate rabbitTemplate;
