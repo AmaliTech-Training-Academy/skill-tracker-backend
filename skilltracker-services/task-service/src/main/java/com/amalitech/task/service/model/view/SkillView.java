@@ -8,6 +8,7 @@ import jakarta.persistence.Table;
 import lombok.*;
 import org.hibernate.annotations.Type;
 
+import java.io.Serializable;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
@@ -41,7 +42,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class SkillView {
+public class SkillView implements Serializable {
     @Id
     private UUID id;
 
@@ -54,4 +55,3 @@ public class SkillView {
     @Column(name = "supported_task_types", columnDefinition = "text[]")
     private Set<String> supportedTaskTypes = new HashSet<>();
 }
-

@@ -200,12 +200,12 @@ class AdminUserCreationIntegrationTest {
                 eq(NEW_USER_EMAIL),
                 anyString(),
                 eq(ADMIN_EMAIL),
-                isNull()
+                eq("null/login")
         );
-    }
+        }
 
-    @Test
-    @DisplayName("Integration - Duplicate email prevents user creation and email sending")
+        @Test
+        @DisplayName("Integration - Duplicate email prevents user creation and email sending")
     void integrationFlow_DuplicateEmailPreventsCreation() {
         CreateUserByAdminRequest request = CreateUserByAdminRequest.builder()
                 .email(NEW_USER_EMAIL)
@@ -323,11 +323,11 @@ class AdminUserCreationIntegrationTest {
                 eq(NEW_USER_EMAIL),
                 anyString(),
                 eq(ADMIN_EMAIL),
-                isNull()
+                eq("null/login")
         );
-    }
+        }
 
-// ==================== User State & Profile Tests ====================
+        // ==================== User State & Profile Tests ====================
 
     @Test
     @DisplayName("Service creates user with REGISTERED state")
@@ -455,8 +455,8 @@ class AdminUserCreationIntegrationTest {
         assertEquals("user2@example.com", result2.email());
         
         // Verify both admin emails were passed to email service
-        verify(emailService).sendAdminCreatedUserEmail(eq("user1@example.com"), anyString(), eq(admin1Email), isNull());
-        verify(emailService).sendAdminCreatedUserEmail(eq("user2@example.com"), anyString(), eq(admin2Email), isNull());
+        verify(emailService).sendAdminCreatedUserEmail(eq("user1@example.com"), anyString(), eq(admin1Email), eq("null/login"));
+        verify(emailService).sendAdminCreatedUserEmail(eq("user2@example.com"), anyString(), eq(admin2Email), eq("null/login"));
     }
 
     @Test

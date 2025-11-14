@@ -151,11 +151,11 @@ class AdminUserCreationTest {
         verify(userRepository).existsByEmail(NEW_USER_EMAIL);
         verify(passwordEncoder).encode(anyString());
         verify(userRepository, times(2)).save(any(User.class));
-        verify(emailService).sendAdminCreatedUserEmail(eq(NEW_USER_EMAIL), anyString(), eq(ADMIN_EMAIL), isNull());
-    }
+        verify(emailService).sendAdminCreatedUserEmail(eq(NEW_USER_EMAIL), anyString(), eq(ADMIN_EMAIL), eq("null/login"));
+        }
 
-    @Test
-    @DisplayName("createUserByAdmin - Successfully creates ADMIN")
+        @Test
+        @DisplayName("createUserByAdmin - Successfully creates ADMIN")
     void createUserByAdmin_SuccessfullyCreatesAdmin() {
         CreateUserByAdminRequest request = CreateUserByAdminRequest.builder()
                 .email(NEW_USER_EMAIL)
@@ -291,7 +291,7 @@ class AdminUserCreationTest {
                 eq(NEW_USER_EMAIL),
                 anyString(),
                 eq(ADMIN_EMAIL),
-                isNull()
+                eq("null/login")
         );
     }
 
@@ -522,7 +522,7 @@ class AdminUserCreationTest {
                 eq(NEW_USER_EMAIL),
                 anyString(),
                 eq(specificAdminEmail),
-                isNull()
+                eq("null/login")
         );
     }
 }
