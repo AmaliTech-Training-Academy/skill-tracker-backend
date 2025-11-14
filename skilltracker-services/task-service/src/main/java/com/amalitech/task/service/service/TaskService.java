@@ -106,6 +106,7 @@ public interface TaskService {
      * @return UserTasksResponse containing paginated pending and completed tasks
      */
     UserTasksResponse getUserTasksGroupedByStatus(UUID userId, int pendingPage, int pendingSize,
-                                                  int completedPage, int completedSize);
+                                                  int completedPage, int completedSize,
+                                                  String skillName, String completedPeriod);
 
 }

@@ -273,7 +273,7 @@ public class TaskGenerationServiceImpl implements TaskGenerationService {
 
         UserSkillProfile profile = UserSkillProfile.builder()
                 .id(id)
-                .skillName(skillData.getSkillName())
+                .skillName(skillData.getSkillName().toUpperCase())
                 .difficulty(TaskDifficulty.valueOf(skillData.getDifficultyLevel().toUpperCase()))
                 .build();
 

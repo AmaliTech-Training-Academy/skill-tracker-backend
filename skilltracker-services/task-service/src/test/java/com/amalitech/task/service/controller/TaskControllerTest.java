@@ -174,11 +174,11 @@ class TaskControllerTest {
             new com.amalitech.task.service.dto.response.UserTasksResponse(pendingPage, completedPage);
 
         when(authentication.getName()).thenReturn(userId.toString());
-        when(taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 10))
+        when(taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 10, null, "ALL_PERIODS"))
                 .thenReturn(userTasksResponse);
 
         ResponseEntity<ApiResponse<com.amalitech.task.service.dto.response.UserTasksResponse>> response = 
-            taskController.getUserTasks(0, 10, 0, 10, authentication);
+            taskController.getUserTasks(0, 10, 0, 10, null, "ALL_PERIODS", authentication);
 
         assertNotNull(response);
         assertEquals(HttpStatus.OK, response.getStatusCode());
@@ -186,7 +186,7 @@ class TaskControllerTest {
         assertEquals("Tasks retrieved successfully", response.getBody().getMessage());
         assertEquals(1, response.getBody().getData().pending().getTotalElements());
         assertEquals(0, response.getBody().getData().completed().getTotalElements());
-        verify(taskService, times(1)).getUserTasksGroupedByStatus(userId, 0, 10, 0, 10);
+        verify(taskService, times(1)).getUserTasksGroupedByStatus(userId, 0, 10, 0, 10, null, "ALL_PERIODS");
     }
 
     @Test
@@ -218,17 +218,17 @@ class TaskControllerTest {
             new com.amalitech.task.service.dto.response.UserTasksResponse(pendingPage, completedPage);
 
         when(authentication.getName()).thenReturn(userId.toString());
-        when(taskService.getUserTasksGroupedByStatus(userId, 1, 20, 2, 15))
+        when(taskService.getUserTasksGroupedByStatus(userId, 1, 20, 2, 15, null, "ALL_PERIODS"))
                 .thenReturn(userTasksResponse);
 
         ResponseEntity<ApiResponse<com.amalitech.task.service.dto.response.UserTasksResponse>> response = 
-            taskController.getUserTasks(1, 20, 2, 15, authentication);
+            taskController.getUserTasks(1, 20, 2, 15, null, "ALL_PERIODS", authentication);
 
         assertNotNull(response);
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertEquals(40, response.getBody().getData().pending().getTotalElements());
         assertEquals(45, response.getBody().getData().completed().getTotalElements());
-        verify(taskService, times(1)).getUserTasksGroupedByStatus(userId, 1, 20, 2, 15);
+        verify(taskService, times(1)).getUserTasksGroupedByStatus(userId, 1, 20, 2, 15, null, "ALL_PERIODS");
     }
 
     @Test
@@ -244,14 +244,14 @@ class TaskControllerTest {
             new com.amalitech.task.service.dto.response.UserTasksResponse(emptyPendingPage, emptyCompletedPage);
 
         when(authentication.getName()).thenReturn(userId.toString());
-        when(taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 10))
+        when(taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 10, null, "ALL_PERIODS"))
                 .thenReturn(userTasksResponse);
 
-        taskController.getUserTasks(0, 10, 0, 10, authentication);
+        taskController.getUserTasks(0, 10, 0, 10, null, "ALL_PERIODS", authentication);
 
         verify(taskService, times(1)).getUserTasksGroupedByStatus(
                 argThat(uuid -> uuid.equals(userId)), 
-                eq(0), eq(10), eq(0), eq(10)
+                eq(0), eq(10), eq(0), eq(10), eq(null), eq("ALL_PERIODS")
         );
     }
 
@@ -268,11 +268,11 @@ class TaskControllerTest {
             new com.amalitech.task.service.dto.response.UserTasksResponse(pendingPage, completedPage);
 
         when(authentication.getName()).thenReturn(userId.toString());
-        when(taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 10))
+        when(taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 10, null, "ALL_PERIODS"))
                 .thenReturn(userTasksResponse);
 
         ResponseEntity<ApiResponse<com.amalitech.task.service.dto.response.UserTasksResponse>> response = 
-            taskController.getUserTasks(0, 10, 0, 10, authentication);
+            taskController.getUserTasks(0, 10, 0, 10, null, "ALL_PERIODS", authentication);
 
         assertNotNull(response.getBody());
         assertNotNull(response.getBody().getData());
@@ -300,11 +300,11 @@ class TaskControllerTest {
             new com.amalitech.task.service.dto.response.UserTasksResponse(pendingPage, completedPage);
 
         when(authentication.getName()).thenReturn(userId.toString());
-        when(taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 10))
+        when(taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 10, null, "ALL_PERIODS"))
                 .thenReturn(userTasksResponse);
 
         ResponseEntity<ApiResponse<com.amalitech.task.service.dto.response.UserTasksResponse>> response = 
-            taskController.getUserTasks(0, 10, 0, 10, authentication);
+            taskController.getUserTasks(0, 10, 0, 10, null, "ALL_PERIODS", authentication);
 
         assertNotNull(response.getBody().getData().pending());
         assertNotNull(response.getBody().getData().completed());
@@ -325,11 +325,11 @@ class TaskControllerTest {
             new com.amalitech.task.service.dto.response.UserTasksResponse(emptyPendingPage, emptyCompletedPage);
 
         when(authentication.getName()).thenReturn(userId.toString());
-        when(taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 10))
+        when(taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 10, null, "ALL_PERIODS"))
                 .thenReturn(userTasksResponse);
 
         ResponseEntity<ApiResponse<com.amalitech.task.service.dto.response.UserTasksResponse>> response = 
-            taskController.getUserTasks(0, 10, 0, 10, authentication);
+            taskController.getUserTasks(0, 10, 0, 10, null, "ALL_PERIODS", authentication);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertEquals(0, response.getBody().getData().pending().getTotalElements());
@@ -353,11 +353,11 @@ class TaskControllerTest {
             new com.amalitech.task.service.dto.response.UserTasksResponse(pendingPage, emptyCompletedPage);
 
         when(authentication.getName()).thenReturn(userId.toString());
-        when(taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 10))
+        when(taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 10, null, "ALL_PERIODS"))
                 .thenReturn(userTasksResponse);
 
         ResponseEntity<ApiResponse<com.amalitech.task.service.dto.response.UserTasksResponse>> response = 
-            taskController.getUserTasks(0, 10, 0, 10, authentication);
+            taskController.getUserTasks(0, 10, 0, 10, null, "ALL_PERIODS", authentication);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertTrue(response.getBody().getData().pending().getTotalElements() > 0);
@@ -381,11 +381,11 @@ class TaskControllerTest {
             new com.amalitech.task.service.dto.response.UserTasksResponse(emptyPendingPage, completedPage);
 
         when(authentication.getName()).thenReturn(userId.toString());
-        when(taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 10))
+        when(taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 10, null, "ALL_PERIODS"))
                 .thenReturn(userTasksResponse);
 
         ResponseEntity<ApiResponse<com.amalitech.task.service.dto.response.UserTasksResponse>> response = 
-            taskController.getUserTasks(0, 10, 0, 10, authentication);
+            taskController.getUserTasks(0, 10, 0, 10, null, "ALL_PERIODS", authentication);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertEquals(0, response.getBody().getData().pending().getTotalElements());
@@ -421,11 +421,11 @@ class TaskControllerTest {
             new com.amalitech.task.service.dto.response.UserTasksResponse(pendingPage, completedPage);
 
         when(authentication.getName()).thenReturn(userId.toString());
-        when(taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 10))
+        when(taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 10, null, "ALL_PERIODS"))
                 .thenReturn(userTasksResponse);
 
         ResponseEntity<ApiResponse<com.amalitech.task.service.dto.response.UserTasksResponse>> response = 
-            taskController.getUserTasks(0, 10, 0, 10, authentication);
+            taskController.getUserTasks(0, 10, 0, 10, null, "ALL_PERIODS", authentication);
 
         assertEquals(10, response.getBody().getData().pending().getContent().size());
         assertEquals(10, response.getBody().getData().completed().getContent().size());
@@ -446,11 +446,11 @@ class TaskControllerTest {
             new com.amalitech.task.service.dto.response.UserTasksResponse(pendingPage, completedPage);
 
         when(authentication.getName()).thenReturn(userId.toString());
-        when(taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 10))
+        when(taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 10, null, "ALL_PERIODS"))
                 .thenReturn(userTasksResponse);
 
         ResponseEntity<ApiResponse<com.amalitech.task.service.dto.response.UserTasksResponse>> response = 
-            taskController.getUserTasks(0, 10, 0, 10, authentication);
+            taskController.getUserTasks(0, 10, 0, 10, null, "ALL_PERIODS", authentication);
 
         assertEquals("Tasks retrieved successfully", response.getBody().getMessage());
     }
@@ -476,11 +476,11 @@ class TaskControllerTest {
             new com.amalitech.task.service.dto.response.UserTasksResponse(pendingPage, completedPage);
 
         when(authentication.getName()).thenReturn(userId.toString());
-        when(taskService.getUserTasksGroupedByStatus(userId, 0, 50, 0, 10))
+        when(taskService.getUserTasksGroupedByStatus(userId, 0, 50, 0, 10, null, "ALL_PERIODS"))
                 .thenReturn(userTasksResponse);
 
         ResponseEntity<ApiResponse<com.amalitech.task.service.dto.response.UserTasksResponse>> response = 
-            taskController.getUserTasks(0, 50, 0, 10, authentication);
+            taskController.getUserTasks(0, 50, 0, 10, null, "ALL_PERIODS", authentication);
 
         assertEquals(50, response.getBody().getData().pending().getContent().size());
         assertEquals(100, response.getBody().getData().pending().getTotalElements());

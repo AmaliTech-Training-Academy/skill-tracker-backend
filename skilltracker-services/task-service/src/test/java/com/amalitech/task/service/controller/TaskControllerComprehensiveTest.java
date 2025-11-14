@@ -627,11 +627,11 @@ class TaskControllerComprehensiveTest {
             UserTasksResponse userTasksResponse = new UserTasksResponse(pendingPage, completedPage);
 
             when(authentication.getName()).thenReturn(userId.toString());
-            when(taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 10))
+            when(taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 10, null, "ALL_PERIODS"))
                     .thenReturn(userTasksResponse);
 
             ResponseEntity<ApiResponse<UserTasksResponse>> response = 
-                    taskController.getUserTasks(0, 10, 0, 10, authentication);
+                    taskController.getUserTasks(0, 10, 0, 10, null, "ALL_PERIODS", authentication);
 
             assertNotNull(response);
             assertEquals(HttpStatus.OK, response.getStatusCode());
@@ -639,7 +639,7 @@ class TaskControllerComprehensiveTest {
             assertEquals("Tasks retrieved successfully", response.getBody().getMessage());
             assertEquals(1, response.getBody().getData().pending().getTotalElements());
             assertEquals(0, response.getBody().getData().completed().getTotalElements());
-            verify(taskService, times(1)).getUserTasksGroupedByStatus(userId, 0, 10, 0, 10);
+            verify(taskService, times(1)).getUserTasksGroupedByStatus(userId, 0, 10, 0, 10, null, "ALL_PERIODS");
         }
 
         @Test
@@ -656,15 +656,15 @@ class TaskControllerComprehensiveTest {
             UserTasksResponse userTasksResponse = new UserTasksResponse(pendingPage, completedPage);
 
             when(authentication.getName()).thenReturn(userId.toString());
-            when(taskService.getUserTasksGroupedByStatus(userId, 1, 20, 2, 15))
+            when(taskService.getUserTasksGroupedByStatus(userId, 1, 20, 2, 15, null, "ALL_PERIODS"))
                     .thenReturn(userTasksResponse);
 
             ResponseEntity<ApiResponse<UserTasksResponse>> response = 
-                    taskController.getUserTasks(1, 20, 2, 15, authentication);
+                    taskController.getUserTasks(1, 20, 2, 15, null, "ALL_PERIODS", authentication);
 
             assertEquals(40, response.getBody().getData().pending().getTotalElements());
             assertEquals(45, response.getBody().getData().completed().getTotalElements());
-            verify(taskService, times(1)).getUserTasksGroupedByStatus(userId, 1, 20, 2, 15);
+            verify(taskService, times(1)).getUserTasksGroupedByStatus(userId, 1, 20, 2, 15, null, "ALL_PERIODS");
         }
 
         @Test
@@ -679,14 +679,14 @@ class TaskControllerComprehensiveTest {
             UserTasksResponse userTasksResponse = new UserTasksResponse(emptyPendingPage, emptyCompletedPage);
 
             when(authentication.getName()).thenReturn(specificUserId.toString());
-            when(taskService.getUserTasksGroupedByStatus(specificUserId, 0, 10, 0, 10))
+            when(taskService.getUserTasksGroupedByStatus(specificUserId, 0, 10, 0, 10, null, "ALL_PERIODS"))
                     .thenReturn(userTasksResponse);
 
-            taskController.getUserTasks(0, 10, 0, 10, authentication);
+            taskController.getUserTasks(0, 10, 0, 10, null, "ALL_PERIODS", authentication);
 
             verify(taskService, times(1)).getUserTasksGroupedByStatus(
                     argThat(uuid -> uuid.equals(specificUserId)), 
-                    eq(0), eq(10), eq(0), eq(10)
+                    eq(0), eq(10), eq(0), eq(10), eq(null), eq("ALL_PERIODS")
             );
         }
 
@@ -701,11 +701,11 @@ class TaskControllerComprehensiveTest {
             UserTasksResponse userTasksResponse = new UserTasksResponse(pendingPage, completedPage);
 
             when(authentication.getName()).thenReturn(userId.toString());
-            when(taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 10))
+            when(taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 10, null, "ALL_PERIODS"))
                     .thenReturn(userTasksResponse);
 
             ResponseEntity<ApiResponse<UserTasksResponse>> response = 
-                    taskController.getUserTasks(0, 10, 0, 10, authentication);
+                    taskController.getUserTasks(0, 10, 0, 10, null, "ALL_PERIODS", authentication);
 
             assertNotNull(response.getBody());
             assertNotNull(response.getBody().getData());
@@ -723,11 +723,11 @@ class TaskControllerComprehensiveTest {
             UserTasksResponse userTasksResponse = new UserTasksResponse(emptyPendingPage, emptyCompletedPage);
 
             when(authentication.getName()).thenReturn(userId.toString());
-            when(taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 10))
+            when(taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 10, null, "ALL_PERIODS"))
                     .thenReturn(userTasksResponse);
 
             ResponseEntity<ApiResponse<UserTasksResponse>> response = 
-                    taskController.getUserTasks(0, 10, 0, 10, authentication);
+                    taskController.getUserTasks(0, 10, 0, 10, null, "ALL_PERIODS", authentication);
 
             assertEquals(HttpStatus.OK, response.getStatusCode());
             assertEquals(0, response.getBody().getData().pending().getTotalElements());
@@ -747,11 +747,11 @@ class TaskControllerComprehensiveTest {
             UserTasksResponse userTasksResponse = new UserTasksResponse(pendingPage, emptyCompletedPage);
 
             when(authentication.getName()).thenReturn(userId.toString());
-            when(taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 10))
+            when(taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 10, null, "ALL_PERIODS"))
                     .thenReturn(userTasksResponse);
 
             ResponseEntity<ApiResponse<UserTasksResponse>> response = 
-                    taskController.getUserTasks(0, 10, 0, 10, authentication);
+                    taskController.getUserTasks(0, 10, 0, 10, null, "ALL_PERIODS", authentication);
 
             assertEquals(HttpStatus.OK, response.getStatusCode());
             assertTrue(response.getBody().getData().pending().getTotalElements() > 0);
@@ -771,11 +771,11 @@ class TaskControllerComprehensiveTest {
             UserTasksResponse userTasksResponse = new UserTasksResponse(emptyPendingPage, completedPage);
 
             when(authentication.getName()).thenReturn(userId.toString());
-            when(taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 10))
+            when(taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 10, null, "ALL_PERIODS"))
                     .thenReturn(userTasksResponse);
 
             ResponseEntity<ApiResponse<UserTasksResponse>> response = 
-                    taskController.getUserTasks(0, 10, 0, 10, authentication);
+                    taskController.getUserTasks(0, 10, 0, 10, null, "ALL_PERIODS", authentication);
 
             assertEquals(HttpStatus.OK, response.getStatusCode());
             assertEquals(0, response.getBody().getData().pending().getTotalElements());
@@ -796,11 +796,11 @@ class TaskControllerComprehensiveTest {
             UserTasksResponse userTasksResponse = new UserTasksResponse(pendingPage, completedPage);
 
             when(authentication.getName()).thenReturn(userId.toString());
-            when(taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 10))
+            when(taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 10, null, "ALL_PERIODS"))
                     .thenReturn(userTasksResponse);
 
             ResponseEntity<ApiResponse<UserTasksResponse>> response = 
-                    taskController.getUserTasks(0, 10, 0, 10, authentication);
+                    taskController.getUserTasks(0, 10, 0, 10, null, "ALL_PERIODS", authentication);
 
             assertNotNull(response.getBody().getData().pending());
             assertNotNull(response.getBody().getData().completed());
@@ -822,11 +822,11 @@ class TaskControllerComprehensiveTest {
             UserTasksResponse userTasksResponse = new UserTasksResponse(pendingPage, completedPage);
 
             when(authentication.getName()).thenReturn(userId.toString());
-            when(taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 10))
+            when(taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 10, null, "ALL_PERIODS"))
                     .thenReturn(userTasksResponse);
 
             ResponseEntity<ApiResponse<UserTasksResponse>> response = 
-                    taskController.getUserTasks(0, 10, 0, 10, authentication);
+                    taskController.getUserTasks(0, 10, 0, 10, null, "ALL_PERIODS", authentication);
 
             assertEquals(10, response.getBody().getData().pending().getContent().size());
             assertEquals(10, response.getBody().getData().completed().getContent().size());
@@ -845,11 +845,11 @@ class TaskControllerComprehensiveTest {
             UserTasksResponse userTasksResponse = new UserTasksResponse(pendingPage, completedPage);
 
             when(authentication.getName()).thenReturn(userId.toString());
-            when(taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 10))
+            when(taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 10, null, "ALL_PERIODS"))
                     .thenReturn(userTasksResponse);
 
             ResponseEntity<ApiResponse<UserTasksResponse>> response = 
-                    taskController.getUserTasks(0, 10, 0, 10, authentication);
+                    taskController.getUserTasks(0, 10, 0, 10, null, "ALL_PERIODS", authentication);
 
             assertEquals("Tasks retrieved successfully", response.getBody().getMessage());
         }
@@ -867,11 +867,11 @@ class TaskControllerComprehensiveTest {
             UserTasksResponse userTasksResponse = new UserTasksResponse(pendingPage, completedPage);
 
             when(authentication.getName()).thenReturn(userId.toString());
-            when(taskService.getUserTasksGroupedByStatus(userId, 0, 50, 0, 10))
+            when(taskService.getUserTasksGroupedByStatus(userId, 0, 50, 0, 10, null, "ALL_PERIODS"))
                     .thenReturn(userTasksResponse);
 
             ResponseEntity<ApiResponse<UserTasksResponse>> response = 
-                    taskController.getUserTasks(0, 50, 0, 10, authentication);
+                    taskController.getUserTasks(0, 50, 0, 10, null, "ALL_PERIODS", authentication);
 
             assertEquals(50, response.getBody().getData().pending().getContent().size());
             assertEquals(100, response.getBody().getData().pending().getTotalElements());
@@ -891,13 +891,13 @@ class TaskControllerComprehensiveTest {
             UserTasksResponse userTasksResponse = new UserTasksResponse(pendingPage, completedPage);
 
             when(authentication.getName()).thenReturn(userId.toString());
-            when(taskService.getUserTasksGroupedByStatus(userId, 2, 25, 3, 15))
+            when(taskService.getUserTasksGroupedByStatus(userId, 2, 25, 3, 15, null, "ALL_PERIODS"))
                     .thenReturn(userTasksResponse);
 
             ResponseEntity<ApiResponse<UserTasksResponse>> response = 
-                    taskController.getUserTasks(2, 25, 3, 15, authentication);
+                    taskController.getUserTasks(2, 25, 3, 15, null, "ALL_PERIODS", authentication);
 
-            verify(taskService).getUserTasksGroupedByStatus(userId, 2, 25, 3, 15);
+            verify(taskService).getUserTasksGroupedByStatus(userId, 2, 25, 3, 15, null, "ALL_PERIODS");
             assertEquals(75, response.getBody().getData().pending().getTotalElements());
             assertEquals(60, response.getBody().getData().completed().getTotalElements());
         }
@@ -913,13 +913,337 @@ class TaskControllerComprehensiveTest {
             UserTasksResponse userTasksResponse = new UserTasksResponse(pendingPage, completedPage);
 
             when(authentication.getName()).thenReturn(userId.toString());
-            when(taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 10))
+            when(taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 10, null, "ALL_PERIODS"))
                     .thenReturn(userTasksResponse);
 
             ResponseEntity<ApiResponse<UserTasksResponse>> response = 
-                    taskController.getUserTasks(0, 10, 0, 10, authentication);
+                    taskController.getUserTasks(0, 10, 0, 10, null, "ALL_PERIODS", authentication);
 
             assertEquals(HttpStatus.OK, response.getStatusCode());
+        }
+
+        @Test
+        @DisplayName("Should filter by skill name when provided")
+        void testGetUserTasks_FilterBySkillName() {
+            TaskDTO pythonTask = buildTaskDTO("Python Task", UUID.randomUUID());
+            pythonTask.setSkillName("Python");
+
+            PageImpl<TaskDTO> pendingPage = new PageImpl<>(List.of(pythonTask), 
+                    PageRequest.of(0, 10), 1);
+            PageImpl<TaskDTO> completedPage = new PageImpl<>(List.of(), 
+                    PageRequest.of(0, 10), 0);
+
+            UserTasksResponse userTasksResponse = new UserTasksResponse(pendingPage, completedPage);
+
+            when(authentication.getName()).thenReturn(userId.toString());
+            when(taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 10, "Python", "ALL_PERIODS"))
+                    .thenReturn(userTasksResponse);
+
+            ResponseEntity<ApiResponse<UserTasksResponse>> response = 
+                    taskController.getUserTasks(0, 10, 0, 10, "Python", "ALL_PERIODS", authentication);
+
+            verify(taskService).getUserTasksGroupedByStatus(userId, 0, 10, 0, 10, "Python", "ALL_PERIODS");
+            assertEquals(1, response.getBody().getData().pending().getTotalElements());
+        }
+
+        @Test
+        @DisplayName("Should handle multiple skill names (different calls)")
+        void testGetUserTasks_DifferentSkills() {
+            TaskDTO javaTask = buildTaskDTO("Java Task", UUID.randomUUID());
+            javaTask.setSkillName("Java");
+
+            PageImpl<TaskDTO> pendingPage = new PageImpl<>(List.of(javaTask), 
+                    PageRequest.of(0, 10), 1);
+            PageImpl<TaskDTO> completedPage = new PageImpl<>(List.of(), 
+                    PageRequest.of(0, 10), 0);
+
+            UserTasksResponse userTasksResponse = new UserTasksResponse(pendingPage, completedPage);
+
+            when(authentication.getName()).thenReturn(userId.toString());
+            when(taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 10, "Java", "ALL_PERIODS"))
+                    .thenReturn(userTasksResponse);
+
+            taskController.getUserTasks(0, 10, 0, 10, "Java", "ALL_PERIODS", authentication);
+
+            verify(taskService).getUserTasksGroupedByStatus(userId, 0, 10, 0, 10, "Java", "ALL_PERIODS");
+        }
+
+        @Test
+        @DisplayName("Should handle completed period filter TODAY")
+        void testGetUserTasks_FilterByCompletedPeriod_Today() {
+            PageImpl<TaskDTO> pendingPage = new PageImpl<>(List.of(testTaskDTO), 
+                    PageRequest.of(0, 10), 1);
+            PageImpl<TaskDTO> completedPage = new PageImpl<>(List.of(testTaskDTO), 
+                    PageRequest.of(0, 10), 1);
+
+            UserTasksResponse userTasksResponse = new UserTasksResponse(pendingPage, completedPage);
+
+            when(authentication.getName()).thenReturn(userId.toString());
+            when(taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 10, null, "TODAY"))
+                    .thenReturn(userTasksResponse);
+
+            ResponseEntity<ApiResponse<UserTasksResponse>> response = 
+                    taskController.getUserTasks(0, 10, 0, 10, null, "TODAY", authentication);
+
+            verify(taskService).getUserTasksGroupedByStatus(userId, 0, 10, 0, 10, null, "TODAY");
+            assertEquals(1, response.getBody().getData().completed().getTotalElements());
+        }
+
+        @Test
+        @DisplayName("Should handle completed period filter LAST_7_DAYS")
+        void testGetUserTasks_FilterByCompletedPeriod_Last7Days() {
+            List<TaskDTO> completedTasks = createTaskList(5, "Completed");
+
+            PageImpl<TaskDTO> pendingPage = new PageImpl<>(List.of(testTaskDTO), 
+                    PageRequest.of(0, 10), 1);
+            PageImpl<TaskDTO> completedPage = new PageImpl<>(completedTasks, 
+                    PageRequest.of(0, 10), 5);
+
+            UserTasksResponse userTasksResponse = new UserTasksResponse(pendingPage, completedPage);
+
+            when(authentication.getName()).thenReturn(userId.toString());
+            when(taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 10, null, "LAST_7_DAYS"))
+                    .thenReturn(userTasksResponse);
+
+            ResponseEntity<ApiResponse<UserTasksResponse>> response = 
+                    taskController.getUserTasks(0, 10, 0, 10, null, "LAST_7_DAYS", authentication);
+
+            verify(taskService).getUserTasksGroupedByStatus(userId, 0, 10, 0, 10, null, "LAST_7_DAYS");
+            assertEquals(5, response.getBody().getData().completed().getTotalElements());
+        }
+
+        @Test
+        @DisplayName("Should handle completed period filter LAST_30_DAYS")
+        void testGetUserTasks_FilterByCompletedPeriod_Last30Days() {
+            List<TaskDTO> completedTasks = createTaskList(10, "Completed");
+
+            PageImpl<TaskDTO> pendingPage = new PageImpl<>(List.of(), 
+                    PageRequest.of(0, 10), 0);
+            PageImpl<TaskDTO> completedPage = new PageImpl<>(completedTasks, 
+                    PageRequest.of(0, 10), 10);
+
+            UserTasksResponse userTasksResponse = new UserTasksResponse(pendingPage, completedPage);
+
+            when(authentication.getName()).thenReturn(userId.toString());
+            when(taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 10, null, "LAST_30_DAYS"))
+                    .thenReturn(userTasksResponse);
+
+            ResponseEntity<ApiResponse<UserTasksResponse>> response = 
+                    taskController.getUserTasks(0, 10, 0, 10, null, "LAST_30_DAYS", authentication);
+
+            verify(taskService).getUserTasksGroupedByStatus(userId, 0, 10, 0, 10, null, "LAST_30_DAYS");
+            assertEquals(10, response.getBody().getData().completed().getTotalElements());
+        }
+
+        @Test
+        @DisplayName("Should handle skill filter with completed period filter")
+        void testGetUserTasks_SkillAndPeriodFilters() {
+            List<TaskDTO> pendingTasks = createTaskList(3, "Pending Task");
+            List<TaskDTO> completedTasks = createTaskList(2, "Completed Task");
+
+            PageImpl<TaskDTO> pendingPage = new PageImpl<>(pendingTasks, 
+                    PageRequest.of(0, 10), 3);
+            PageImpl<TaskDTO> completedPage = new PageImpl<>(completedTasks, 
+                    PageRequest.of(0, 10), 2);
+
+            UserTasksResponse userTasksResponse = new UserTasksResponse(pendingPage, completedPage);
+
+            when(authentication.getName()).thenReturn(userId.toString());
+            when(taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 10, "Python", "LAST_7_DAYS"))
+                    .thenReturn(userTasksResponse);
+
+            ResponseEntity<ApiResponse<UserTasksResponse>> response = 
+                    taskController.getUserTasks(0, 10, 0, 10, "Python", "LAST_7_DAYS", authentication);
+
+            verify(taskService).getUserTasksGroupedByStatus(userId, 0, 10, 0, 10, "Python", "LAST_7_DAYS");
+            assertEquals(3, response.getBody().getData().pending().getTotalElements());
+            assertEquals(2, response.getBody().getData().completed().getTotalElements());
+        }
+
+        @Test
+        @DisplayName("Should handle page index and size independently")
+        void testGetUserTasks_IndependentPageSizes() {
+            List<TaskDTO> pendingTasks = createTaskList(30, "Pending");
+            List<TaskDTO> completedTasks = createTaskList(20, "Completed");
+
+            PageImpl<TaskDTO> pendingPage = new PageImpl<>(pendingTasks, 
+                    PageRequest.of(3, 30), 150);
+            PageImpl<TaskDTO> completedPage = new PageImpl<>(completedTasks, 
+                    PageRequest.of(1, 20), 100);
+
+            UserTasksResponse userTasksResponse = new UserTasksResponse(pendingPage, completedPage);
+
+            when(authentication.getName()).thenReturn(userId.toString());
+            when(taskService.getUserTasksGroupedByStatus(userId, 3, 30, 1, 20, null, "ALL_PERIODS"))
+                    .thenReturn(userTasksResponse);
+
+            ResponseEntity<ApiResponse<UserTasksResponse>> response = 
+                    taskController.getUserTasks(3, 30, 1, 20, null, "ALL_PERIODS", authentication);
+
+            verify(taskService).getUserTasksGroupedByStatus(userId, 3, 30, 1, 20, null, "ALL_PERIODS");
+            assertEquals(150, response.getBody().getData().pending().getTotalElements());
+            assertEquals(100, response.getBody().getData().completed().getTotalElements());
+        }
+
+        @Test
+        @DisplayName("Should maintain pagination even with zero results")
+        void testGetUserTasks_PaginationWithZeroResults() {
+            PageImpl<TaskDTO> emptyPendingPage = new PageImpl<>(List.of(), 
+                    PageRequest.of(5, 10), 0);
+            PageImpl<TaskDTO> emptyCompletedPage = new PageImpl<>(List.of(), 
+                    PageRequest.of(5, 10), 0);
+
+            UserTasksResponse userTasksResponse = new UserTasksResponse(emptyPendingPage, emptyCompletedPage);
+
+            when(authentication.getName()).thenReturn(userId.toString());
+            when(taskService.getUserTasksGroupedByStatus(userId, 5, 10, 5, 10, null, "ALL_PERIODS"))
+                    .thenReturn(userTasksResponse);
+
+            ResponseEntity<ApiResponse<UserTasksResponse>> response = 
+                    taskController.getUserTasks(5, 10, 5, 10, null, "ALL_PERIODS", authentication);
+
+            assertEquals(0, response.getBody().getData().pending().getTotalElements());
+            assertEquals(0, response.getBody().getData().completed().getTotalElements());
+            assertEquals(HttpStatus.OK, response.getStatusCode());
+        }
+
+        @Test
+        @DisplayName("Should handle authentication name conversion to UUID")
+        void testGetUserTasks_AuthenticationNameConversion() {
+            UUID expectedUserId = UUID.randomUUID();
+            PageImpl<TaskDTO> pendingPage = new PageImpl<>(List.of(), 
+                    PageRequest.of(0, 10), 0);
+            PageImpl<TaskDTO> completedPage = new PageImpl<>(List.of(), 
+                    PageRequest.of(0, 10), 0);
+
+            UserTasksResponse userTasksResponse = new UserTasksResponse(pendingPage, completedPage);
+
+            when(authentication.getName()).thenReturn(expectedUserId.toString());
+            when(taskService.getUserTasksGroupedByStatus(expectedUserId, 0, 10, 0, 10, null, "ALL_PERIODS"))
+                    .thenReturn(userTasksResponse);
+
+            taskController.getUserTasks(0, 10, 0, 10, null, "ALL_PERIODS", authentication);
+
+            verify(authentication).getName();
+            verify(taskService).getUserTasksGroupedByStatus(expectedUserId, 0, 10, 0, 10, null, "ALL_PERIODS");
+        }
+
+        @Test
+        @DisplayName("Should correctly pass all parameters to service")
+        void testGetUserTasks_AllParametersPassed() {
+            PageImpl<TaskDTO> pendingPage = new PageImpl<>(List.of(), 
+                    PageRequest.of(0, 10), 0);
+            PageImpl<TaskDTO> completedPage = new PageImpl<>(List.of(), 
+                    PageRequest.of(0, 10), 0);
+
+            UserTasksResponse userTasksResponse = new UserTasksResponse(pendingPage, completedPage);
+
+            String skillName = "JavaScript";
+            String period = "LAST_7_DAYS";
+            int pendingPage_param = 1;
+            int pendingSize_param = 15;
+            int completedPage_param = 2;
+            int completedSize_param = 20;
+
+            when(authentication.getName()).thenReturn(userId.toString());
+            when(taskService.getUserTasksGroupedByStatus(userId, pendingPage_param, pendingSize_param, 
+                    completedPage_param, completedSize_param, skillName, period))
+                    .thenReturn(userTasksResponse);
+
+            ResponseEntity<ApiResponse<UserTasksResponse>> response = 
+                    taskController.getUserTasks(pendingPage_param, pendingSize_param, 
+                            completedPage_param, completedSize_param, skillName, period, authentication);
+
+            verify(taskService).getUserTasksGroupedByStatus(
+                    userId, pendingPage_param, pendingSize_param, 
+                    completedPage_param, completedSize_param, skillName, period
+            );
+        }
+
+        @Test
+        @DisplayName("Should handle null skill parameter")
+        void testGetUserTasks_NullSkillParameter() {
+            PageImpl<TaskDTO> pendingPage = new PageImpl<>(List.of(testTaskDTO), 
+                    PageRequest.of(0, 10), 1);
+            PageImpl<TaskDTO> completedPage = new PageImpl<>(List.of(), 
+                    PageRequest.of(0, 10), 0);
+
+            UserTasksResponse userTasksResponse = new UserTasksResponse(pendingPage, completedPage);
+
+            when(authentication.getName()).thenReturn(userId.toString());
+            when(taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 10, null, "ALL_PERIODS"))
+                    .thenReturn(userTasksResponse);
+
+            ResponseEntity<ApiResponse<UserTasksResponse>> response = 
+                    taskController.getUserTasks(0, 10, 0, 10, null, "ALL_PERIODS", authentication);
+
+            verify(taskService).getUserTasksGroupedByStatus(userId, 0, 10, 0, 10, null, "ALL_PERIODS");
+        }
+
+        @Test
+        @DisplayName("Should handle minimum page sizes")
+        void testGetUserTasks_MinimumPageSizes() {
+            TaskDTO task = buildTaskDTO("Task", UUID.randomUUID());
+
+            PageImpl<TaskDTO> pendingPage = new PageImpl<>(List.of(task), 
+                    PageRequest.of(0, 1), 5);
+            PageImpl<TaskDTO> completedPage = new PageImpl<>(List.of(task), 
+                    PageRequest.of(0, 1), 3);
+
+            UserTasksResponse userTasksResponse = new UserTasksResponse(pendingPage, completedPage);
+
+            when(authentication.getName()).thenReturn(userId.toString());
+            when(taskService.getUserTasksGroupedByStatus(userId, 0, 1, 0, 1, null, "ALL_PERIODS"))
+                    .thenReturn(userTasksResponse);
+
+            ResponseEntity<ApiResponse<UserTasksResponse>> response = 
+                    taskController.getUserTasks(0, 1, 0, 1, null, "ALL_PERIODS", authentication);
+
+            assertEquals(1, response.getBody().getData().pending().getContent().size());
+            assertEquals(1, response.getBody().getData().completed().getContent().size());
+        }
+
+        @Test
+        @DisplayName("Should verify service called exactly once")
+        void testGetUserTasks_ServiceCalledOnce() {
+            PageImpl<TaskDTO> pendingPage = new PageImpl<>(List.of(), 
+                    PageRequest.of(0, 10), 0);
+            PageImpl<TaskDTO> completedPage = new PageImpl<>(List.of(), 
+                    PageRequest.of(0, 10), 0);
+
+            UserTasksResponse userTasksResponse = new UserTasksResponse(pendingPage, completedPage);
+
+            when(authentication.getName()).thenReturn(userId.toString());
+            when(taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 10, null, "ALL_PERIODS"))
+                    .thenReturn(userTasksResponse);
+
+            taskController.getUserTasks(0, 10, 0, 10, null, "ALL_PERIODS", authentication);
+
+            verify(taskService, times(1)).getUserTasksGroupedByStatus(userId, 0, 10, 0, 10, null, "ALL_PERIODS");
+        }
+
+        @Test
+        @DisplayName("Should return data wrapped correctly in response")
+        void testGetUserTasks_ResponseDataWrapped() {
+            PageImpl<TaskDTO> pendingPage = new PageImpl<>(List.of(testTaskDTO), 
+                    PageRequest.of(0, 10), 1);
+            PageImpl<TaskDTO> completedPage = new PageImpl<>(List.of(testTaskDTO), 
+                    PageRequest.of(0, 10), 1);
+
+            UserTasksResponse userTasksResponse = new UserTasksResponse(pendingPage, completedPage);
+
+            when(authentication.getName()).thenReturn(userId.toString());
+            when(taskService.getUserTasksGroupedByStatus(userId, 0, 10, 0, 10, null, "ALL_PERIODS"))
+                    .thenReturn(userTasksResponse);
+
+            ResponseEntity<ApiResponse<UserTasksResponse>> response = 
+                    taskController.getUserTasks(0, 10, 0, 10, null, "ALL_PERIODS", authentication);
+
+            assertNotNull(response.getBody().getData());
+            assertNotNull(response.getBody().getData().pending());
+            assertNotNull(response.getBody().getData().completed());
+            assertTrue(response.getBody().isSuccess());
+            assertEquals("Tasks retrieved successfully", response.getBody().getMessage());
         }
     }
 
