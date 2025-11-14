@@ -2,7 +2,6 @@ package com.amalitech.feedback.service.service;
 
 import com.amalitech.feedback.service.dto.client.request.Judge0SubmissionRequest;
 import com.amalitech.feedback.service.dto.client.response.Judge0SubmissionResponse;
-
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
@@ -30,7 +29,9 @@ public class Judge0Client {
      * @return A Mono containing the raw execution result from Judge0.
      */
     public Mono<Judge0SubmissionResponse> executeSubmission(Judge0SubmissionRequest request) {
-        log.info("Sending submission to Judge0 for languageId: {}", request.getLanguageId());
+        log.info("Sending submission to Judge0: languageId={}, codeLength={}",
+                request.getLanguageId(),
+                request.getSourceCode() != null ? request.getSourceCode().length() : 0);
 
         return judge0ApiClient.post()
                 .uri(uriBuilder -> uriBuilder

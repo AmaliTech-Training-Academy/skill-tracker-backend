@@ -6,7 +6,6 @@ import com.amalitech.task.service.dto.request.SubmitAnswerRequest;
 import com.amalitech.task.service.dto.response.SubmissionResponse;
 import com.amalitech.task.service.exception.InvalidUserIdException;
 import com.amalitech.task.service.service.SubmissionService;
-
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -61,7 +60,6 @@ public class SubmissionController {
             log.error("Invalid User ID format in security principal: {}", userIdPrincipal);
             throw new InvalidUserIdException("Invalid User ID format in token.", e);
         }
-
         log.info("Submission received from authenticated user: {}", userId);
 
         TaskSubmissionDTO submissionDTO = submissionService.createSubmission(request, userId);

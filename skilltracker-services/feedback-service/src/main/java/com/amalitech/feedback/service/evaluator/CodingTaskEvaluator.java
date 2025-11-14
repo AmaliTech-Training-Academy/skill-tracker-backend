@@ -94,6 +94,9 @@ public class CodingTaskEvaluator implements TaskEvaluator {
 
         int score = totalTests > 0 ? (int) (((double) passedTests / totalTests) * 100) : 0;
         boolean isCorrect = score >= 70;
+        
+        log.info("Score calculation: totalTests={}, passedTests={}, score={}, isCorrect={}", 
+                 totalTests, passedTests, score, isCorrect);
 
         TaskDTO task = buildTaskDTO(event);
 
@@ -198,6 +201,8 @@ public class CodingTaskEvaluator implements TaskEvaluator {
                 results
         );
 
+        log.info("Building event for submission {}: score={}, isCorrect={}", event.getSubmissionId(), score, isCorrect);
+        
         return SubmissionEvaluatedEvent.builder()
                 .submissionId(event.getSubmissionId())
                 .userId(event.getUserId())
