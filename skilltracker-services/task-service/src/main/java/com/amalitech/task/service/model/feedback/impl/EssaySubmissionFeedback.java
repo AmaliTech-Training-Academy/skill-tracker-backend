@@ -26,7 +26,7 @@ public class EssaySubmissionFeedback implements SubmissionFeedback {
     private Evaluation evaluation;
 
     /**
-     * Main evaluation container matching the AI prompt structure.
+     * The main evaluation container matching the AI prompt structure.
      */
     @Data
     @NoArgsConstructor
