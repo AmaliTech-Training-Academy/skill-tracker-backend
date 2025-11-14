@@ -73,7 +73,7 @@ public class TaskServiceImpl implements TaskService {
     private final RabbitMQEventProducer taskEventProducer;
     private final TaskMapper taskMapper;
     private final StringRedisTemplate redisTemplate;
-    private static final String model = "gemini-2.5-flash";
+    private static final String model = System.getenv("model");
     private final UserLearningPathRepository userLPrepo;
 
     /**
