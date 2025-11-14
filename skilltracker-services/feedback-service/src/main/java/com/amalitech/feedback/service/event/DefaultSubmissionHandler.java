@@ -52,13 +52,7 @@ public class DefaultSubmissionHandler implements SubmissionHandler {
      * Publishes the final evaluated result to RabbitMQ.
      */
     private Mono<Void> publishEvaluatedEvent(SubmissionEvaluatedEvent evaluatedEvent) {
-        log.info("========== PUBLISHING EVALUATED EVENT ==========");
-        log.info("Submission ID: {}", evaluatedEvent.getSubmissionId());
-        log.info("Score: {} (from event.getScore())", evaluatedEvent.getScore());
-        log.info("IsCorrect: {} (from event.isCorrect())", evaluatedEvent.isCorrect());
-        log.info("Status: {}", evaluatedEvent.getStatus());
-        log.info("FeedbackType: {}", evaluatedEvent.getFeedbackType());
-        log.info("===============================================");
+        log.info("Publishing submission.evaluated event for ID: {}", evaluatedEvent.getSubmissionId());
 
         rabbitTemplate.convertAndSend(
                 RabbitMQConfig.SUBMISSION_EXCHANGE,

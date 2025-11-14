@@ -35,10 +35,6 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class CodingTaskEvaluator implements TaskEvaluator {
 
-    static {
-        System.out.println("========== CodingTaskEvaluator CLASS LOADED (BUILD 215e5e1) ==========");
-    }
-
     private final Judge0Client judge0Client;
     private final AIFeedbackClient aiFeedbackClient;
     private final RabbitTemplate rabbitTemplate;
@@ -89,14 +85,8 @@ public class CodingTaskEvaluator implements TaskEvaluator {
             List<Judge0SubmissionResponse> results
     ) {
         List<SubmissionCreatedEvent.TestCaseData> testCases = event.getTestCases();
-        log.info("gradeAndProvideFeedback START - submission: {}, testCases: {}", event.getSubmissionId(), testCases != null ? testCases.size() : 0);
         
         List<CommonTestResult> commonResults = buildCommonTestResults(testCases, results);
-        log.info("Built commonResults: {} results | Detailed results:", commonResults.size());
-        for (int i = 0; i < commonResults.size(); i++) {
-            CommonTestResult r = commonResults.get(i);
-            log.info("  TestResult[{}]: passed={}, expected='{}', actual='{}'", i, r.passed(), r.expectedOutput(), r.actualOutput());
-        }
 
         // Initial calculation (used as fallback if AI fails)
         int totalTests = commonResults.size();
@@ -105,20 +95,14 @@ public class CodingTaskEvaluator implements TaskEvaluator {
                 .count();
         int fallbackScore = totalTests > 0 ? (int) (((double) passedTests / totalTests) * 100) : 0;
         boolean fallbackIsCorrect = fallbackScore >= 70;
-        
-        log.info("Judge0 calculation: totalTests={}, passedTests={}, score={}, isCorrect={}", 
-                 totalTests, passedTests, fallbackScore, fallbackIsCorrect);
 
         TaskDTO task = buildTaskDTO(event);
 
         return aiFeedbackClient.generateDetailedFeedback(task, event.getContentToEvaluate(), results)
                 .map(aiFeedback -> {
-                    log.info("Successfully got AI feedback for {}", event.getSubmissionId());
-                    
                     // Extract score from AI feedback's overall assessment
                     int aiScore = extractScoreFromAIFeedback(aiFeedback);
                     boolean aiIsCorrect = aiScore >= 70;
-                    log.info("AI feedback score: {}, isCorrect: {}", aiScore, aiIsCorrect);
                     
                     return buildSuccessEvent(event, aiIsCorrect, aiScore, results, aiFeedback);
                 })
@@ -136,12 +120,9 @@ public class CodingTaskEvaluator implements TaskEvaluator {
         
         DetailedEvaluationResponse.Evaluation eval = aiFeedback.getEvaluation();
         if (eval.getOverall() != null) {
-            int percentage = eval.getOverall().getPercentage();
-            log.debug("Extracted overall percentage from AI feedback: {}", percentage);
-            return percentage;
+            return eval.getOverall().getPercentage();
         }
         
-        log.warn("Could not extract score from AI feedback");
         return 0;
     }
 
@@ -238,9 +219,7 @@ public class CodingTaskEvaluator implements TaskEvaluator {
                 results
         );
 
-        log.info("Building event for submission {}: score={}, isCorrect={}", event.getSubmissionId(), score, isCorrect);
-        
-        SubmissionEvaluatedEvent.SubmissionEvaluatedEventBuilder builder = SubmissionEvaluatedEvent.builder()
+        return SubmissionEvaluatedEvent.builder()
                 .submissionId(event.getSubmissionId())
                 .userId(event.getUserId())
                 .status("COMPLETED")
@@ -252,9 +231,6 @@ public class CodingTaskEvaluator implements TaskEvaluator {
                 .testResults(structuredTestResults)
                 .avgExecutionTimeMs(avgTime)
                 .avgMemoryUsedKb(avgMemory);
-        
-        log.debug("Builder state - score={}, isCorrect={}", score, isCorrect);
-        return builder;
     }
 
     private List<SubmissionEvaluatedEvent.TestResultData> buildStructuredTestResults(
