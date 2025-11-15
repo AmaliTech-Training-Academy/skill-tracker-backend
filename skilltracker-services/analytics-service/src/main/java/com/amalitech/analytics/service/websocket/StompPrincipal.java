@@ -2,7 +2,6 @@ package com.amalitech.analytics.service.websocket;
 
 import java.security.Principal;
 
-// Simple Principal wrapper
 public class StompPrincipal implements Principal {
     private final String name;
 

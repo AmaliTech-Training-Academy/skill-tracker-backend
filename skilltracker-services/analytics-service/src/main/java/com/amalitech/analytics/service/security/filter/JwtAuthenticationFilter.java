@@ -80,10 +80,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
 
-        System.out.printf("JWT token found in cookie (masked): {}", maskToken(token));
+        log.info("JWT token found in cookie (masked): {}", maskToken(token));
 
         if (log.isDebugEnabled()) {
-            log.debug("JWT Token received from cookie (masked): {}", maskToken(token));
+            log.info("JWT Token received from cookie (masked): {}", maskToken(token));
         }
 
         if (redisUtil.exists("blacklist:" + token)) {
@@ -96,7 +96,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             if (jwtUtil.isValid(token)) {
                 String userId = jwtUtil.extractUserId(token);
                 List<String> roles = jwtUtil.extractRoles(token);
-                System.out.printf("Token valid for user: [%s] with roles: %s%n", userId, roles);
+                log.info("Token valid for user: {} with roles: {}", userId, roles);
                 List<GrantedAuthority> authorities = roles.stream()
                         .map(SimpleGrantedAuthority::new)
                         .collect(Collectors.toList());
@@ -106,7 +106,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
                 authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                 SecurityContextHolder.getContext().setAuthentication(authToken);
-                log.debug("Authenticated user: {}", userId);
+                log.info("Authenticated user: {}", userId);
             }
         } catch (Exception e) {
             log.error("JWT Authentication failed for token (masked): {}", maskToken(token), e);

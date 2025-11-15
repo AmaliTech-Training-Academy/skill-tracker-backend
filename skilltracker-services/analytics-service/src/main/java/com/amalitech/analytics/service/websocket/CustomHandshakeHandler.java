@@ -1,5 +1,8 @@
 package com.amalitech.analytics.service.websocket;
 
+import com.amalitech.analytics.service.security.filter.JwtAuthenticationFilter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.server.ServerHttpRequest;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.WebSocketHandler;
@@ -10,6 +13,7 @@ import java.util.Map;
 
 @Component
 public class CustomHandshakeHandler extends DefaultHandshakeHandler {
+    private static final Logger log = LoggerFactory.getLogger(CustomHandshakeHandler.class);
 
     @Override
     protected Principal determineUser(ServerHttpRequest request,
@@ -17,7 +21,7 @@ public class CustomHandshakeHandler extends DefaultHandshakeHandler {
                                       Map<String, Object> attributes) {
 
         Principal userPrincipal = (Principal) attributes.get("userPrincipal");
-        System.out.println("Determined Principal => " + (userPrincipal != null ? userPrincipal.getName() : "null"));
+        log.info("Determined Principal => {}" , (userPrincipal != null ? userPrincipal.getName() : "null"));
         return userPrincipal;
     }
 }
