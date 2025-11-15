@@ -104,10 +104,16 @@ services:
     ports:
       - "5672:5672"
       - "15672:15672"
+      - "61613:61613"
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
     networks:
       - skilltracker-network
+    command: >
+      sh -c "
+      rabbitmq-plugins enable rabbitmq_stomp &&
+      rabbitmq-server
+      "
     healthcheck:
       test: ["CMD", "rabbitmqctl", "status"]
       interval: 10s
