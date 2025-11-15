@@ -12,6 +12,8 @@ import com.amalitech.analytics.service.service.interfaces.AnalyticsServiceInterf
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -55,6 +57,8 @@ public class AnalyticsService implements AnalyticsServiceInterface {
         logSubmission(event);
         updateTrajectorySnapshot(event);
         updateGoalProgress(progress);
+
+        log.debug("Publishing AnalyticsUpdateEvent for user: {}", event.userId());
 
         eventPublisher.publishEvent(new AnalyticsUpdateEvent(this, event.userId()));
     }
@@ -212,7 +216,6 @@ public class AnalyticsService implements AnalyticsServiceInterface {
         TaskSubmissionLog logEntry = buildSubmissionLog(event);
         logRepository.save(logEntry);
         log.debug("Logged new task submission for user {} and skill {}", event.userId(), event.skillId());
-        throw new EntityNotFoundException("Logged new task submission for user {}", event.userId());
     }
 
     private TaskSubmissionLog buildSubmissionLog(TaskCompletedEvent event) {
