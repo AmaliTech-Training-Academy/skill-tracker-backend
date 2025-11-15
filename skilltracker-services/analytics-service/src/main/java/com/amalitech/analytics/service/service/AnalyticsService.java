@@ -1,5 +1,6 @@
 package com.amalitech.analytics.service.service;
 
+import com.amalitech.analytics.service.dto.RubricScoreDTO;
 import com.amalitech.analytics.service.dto.TaskCompletedEvent;
 import com.amalitech.analytics.service.dto.TaskSubmissionRequestDTO;
 import com.amalitech.analytics.service.events.AnalyticsUpdateEvent;
@@ -12,8 +13,7 @@ import com.amalitech.analytics.service.service.interfaces.AnalyticsServiceInterf
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -46,6 +46,7 @@ public class AnalyticsService implements AnalyticsServiceInterface {
     private final ApplicationEventPublisher eventPublisher;
     private final SkillSnapshotRepository skillSnapshotRepository;
     private final UserGoalRepository goalRepository;
+    private final JdbcTemplate jdbcTemplate;
 
     @Override
     @Transactional
@@ -55,6 +56,7 @@ public class AnalyticsService implements AnalyticsServiceInterface {
         UserSkillProgress progress = updateSkillProgress(event);
         updateUserAggregateStats(event);
         logSubmission(event);
+        updateRubricAggregates(event);
         updateTrajectorySnapshot(event);
         updateGoalProgress(progress);
 
@@ -135,6 +137,37 @@ public class AnalyticsService implements AnalyticsServiceInterface {
 
     private List<UserGoal> fetchActiveGoals(UUID userId, UUID skillId) {
         return goalRepository.findByUserIdAndSkillIdAndStatus(userId, skillId, GoalStatus.ACTIVE);
+    }
+
+    private void updateRubricAggregates(TaskCompletedEvent event) {
+        if (event.rubricsScores() == null || event.rubricsScores().isEmpty()) {
+            return;
+        }
+
+        String sql = """
+        INSERT INTO user_rubric_stats (user_id, rubric, total_score, total_max_score, submission_count, updated_at)
+        VALUES (?::uuid, ?::text, ?::bigint, ?::bigint, 1, NOW())
+        ON CONFLICT (user_id, rubric) DO UPDATE SET
+            total_score = user_rubric_stats.total_score + EXCLUDED.total_score,
+            total_max_score = user_rubric_stats.total_max_score + EXCLUDED.total_max_score,
+            submission_count = user_rubric_stats.submission_count +  1,
+            updated_at = NOW()
+        """;
+
+        List<Object[]> batch = event.rubricsScores().entrySet().stream()
+                .map(entry -> {
+                    String rubric = entry.getKey();
+                    RubricScoreDTO dto = entry.getValue();
+                    return new Object[] {
+                            event.userId(),
+                            rubric,
+                            (long) dto.score(),      // safe cast, scores are small
+                            (long) dto.maxScore()
+                    };
+                })
+                .toList();
+
+        jdbcTemplate.batchUpdate(sql, batch);
     }
 
     private boolean updateSingleGoal(UserGoal goal, UserSkillProgress progress) {

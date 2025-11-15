@@ -11,6 +11,10 @@ import com.amalitech.analytics.service.model.enums.Granularity;
 import com.amalitech.analytics.service.repository.*;
 import com.amalitech.analytics.service.service.interfaces.AnalyticsReadServiceInterface;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,6 +22,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collectors;
+
+import static com.amalitech.analytics.service.service.DashboardMaterializer.MAPPER;
 
 /**
  * Default implementation of {@link AnalyticsReadServiceInterface}.
@@ -40,8 +46,11 @@ import java.util.stream.Collectors;
 @Transactional(readOnly = true)
 public class AnalyticsReadService implements AnalyticsReadServiceInterface {
 
-    private static final double LOW_RUBRIC_SCORE_THRESHOLD = 70.0;
+    private static final Logger log = LoggerFactory.getLogger(AnalyticsReadService.class);
 
+
+    @Value("${analytics.score.low-rubric-threshold}")
+    private double lowRubricScoreThreshold;
     private final UserAggregateStatsRepository aggregateStatsRepository;
     private final UserSkillProgressRepository skillProgressRepository;
     private final SkillSnapshotRepository skillSnapshotRepository;
@@ -52,10 +61,26 @@ public class AnalyticsReadService implements AnalyticsReadServiceInterface {
     /** {@inheritDoc} */
     @Override
     public DashboardDTO buildDashboard(UUID userId) {
+        String sql = "SELECT data FROM user_dashboard_materialized WHERE user_id = ?";
+
+        try {
+            String json = jdbcTemplate.queryForObject(sql, String.class, userId);
+            return MAPPER.readValue(json, DashboardDTO.class);
+        } catch (EmptyResultDataAccessException e) {
+            log.info("First time for user {} — building from scratch", userId);
+            return buildFromScratch(userId);
+        } catch (Exception e) {
+            log.warn("Materialized data corrupt for user {} — rebuilding", userId, e);
+            return buildFromScratch(userId);
+        }
+    }
+
+
+    protected DashboardDTO buildFromScratch(UUID userId) {
         UserStatsDTO userStats = getUserStats(userId);
         List<SkillProgressDTO> skillProgress = getSkillProgress(userId);
         List<GoalStatusDTO> goalStatus = getActiveGoalStatus(userId);
-        List<SkillGapDTO> skillGaps = getSkillGaps(userId);
+        List<SkillGapDTO> skillGaps = getSkillGaps(userId);  // ← now <3ms due to aggregates
         List<RecommendationDTO> recommendations = getRecommendations(skillGaps);
         GlobalRankDTO globalRank = null;
 
@@ -201,33 +226,23 @@ public class AnalyticsReadService implements AnalyticsReadServiceInterface {
     /** Identifies skill gaps based on rubric scores. */
     private List<SkillGapDTO> getSkillGaps(UUID userId) {
         String sql = """
-                SELECT key AS rubric,
-                    CASE
-                        WHEN SUM((value ->> 'maxScore')::numeric) = 0 THEN 0
-                        ELSE (SUM((value ->> 'score')::numeric) / SUM((value ->> 'maxScore')::numeric)) * 100
-                    END AS avg_score
-                FROM task_submission_logs,
-                     jsonb_each(rubrics) AS t(key, value)
-                WHERE user_id = ?
-                GROUP BY key
-                HAVING
-                    CASE
-                        WHEN SUM((value ->> 'maxScore')::numeric) = 0 THEN 0
-                        ELSE (SUM((value ->> 'score')::numeric) / SUM((value ->> 'maxScore')::numeric)) * 100
-                    END < ?
-                ORDER BY avg_score ASC
-                """;
+                    SELECT 
+                        rubric,
+                        (total_score::numeric / NULLIF(total_max_score, 0)) * 100 AS score_pct
+                    FROM user_rubric_stats
+                    WHERE user_id = ? 
+                      AND total_max_score > 0 
+                      AND (total_score::numeric / NULLIF(total_max_score, 0)) * 100 < ?
+                    ORDER BY score_pct ASC
+                    LIMIT 10
+                    """;
 
-        return jdbcTemplate.query(
-                sql,
-                (rs, rowNum) -> new SkillGapDTO(
-                        rs.getString("rubric"),
-                        rs.getDouble("avg_score"),
-                        String.format("Weak performance in %s (Avg: %.1f/100)",
-                                rs.getString("rubric"), rs.getDouble("avg_score"))
-                ),
-                userId, LOW_RUBRIC_SCORE_THRESHOLD
-        );
+        return jdbcTemplate.query(sql, (rs, __) -> new SkillGapDTO(
+                rs.getString("rubric"),
+                rs.getDouble("score_pct"),
+                String.format("Weak in %s, (Score: %.1f%%)",
+                rs.getString("rubric"), rs.getDouble("score_pct"))
+        ), userId, lowRubricScoreThreshold);
     }
 
 
