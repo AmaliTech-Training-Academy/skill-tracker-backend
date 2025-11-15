@@ -94,19 +94,19 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         try {
             if (jwtUtil.isValid(token)) {
-                String email = jwtUtil.extractEmail(token);
+                String userId = jwtUtil.extractUserId(token);
                 List<String> roles = jwtUtil.extractRoles(token);
-                System.out.printf("Token valid for user: [%s] with roles: %s%n", email, roles);
+                System.out.printf("Token valid for user: [%s] with roles: %s%n", userId, roles);
                 List<GrantedAuthority> authorities = roles.stream()
                         .map(SimpleGrantedAuthority::new)
                         .collect(Collectors.toList());
 
                 UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                        email, null, authorities);
+                        userId, null, authorities);
 
                 authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                 SecurityContextHolder.getContext().setAuthentication(authToken);
-                log.debug("Authenticated user: {}", email);
+                log.debug("Authenticated user: {}", userId);
             }
         } catch (Exception e) {
             log.error("JWT Authentication failed for token (masked): {}", maskToken(token), e);

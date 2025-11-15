@@ -1,12 +1,16 @@
-package com.amalitech.analytics.service.config;
+package com.amalitech.analytics.service.websocket.config;
 
 
+import com.amalitech.analytics.service.websocket.CustomHandshakeHandler;
+import com.amalitech.analytics.service.websocket.HeaderHandshakeInterceptor;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
 import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
+import org.springframework.web.socket.server.support.HttpSessionHandshakeInterceptor;
 
 
 /**
@@ -37,7 +41,11 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
  */
 @Configuration
 @EnableWebSocketMessageBroker
+@RequiredArgsConstructor
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
+
+    public final HeaderHandshakeInterceptor headerHandshakeInterceptor;
+    private final CustomHandshakeHandler customHandshakeHandler;
 
     @Value("${stomp.relay.host}")
     private String rabbitStompHost;
@@ -69,6 +77,8 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                 .setClientPasscode(rabbitSystemPassword)
                 .setSystemLogin(rabbitSystemUsername)
                 .setSystemPasscode(rabbitSystemPassword)
+                .setSystemHeartbeatSendInterval(10000)
+                .setSystemHeartbeatReceiveInterval(10000)
                 .setUserDestinationBroadcast("/topic/unresolved-user-destination")
                 .setUserRegistryBroadcast("/topic/user-registry");
 
@@ -93,6 +103,10 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         registry.addEndpoint("/ws-analytics")
-                .setAllowedOriginPatterns("*");
+                .addInterceptors(headerHandshakeInterceptor, new HttpSessionHandshakeInterceptor())
+                .setHandshakeHandler(customHandshakeHandler)
+                .setAllowedOriginPatterns("*")
+                .withSockJS();
     }
+
 }
