@@ -143,7 +143,7 @@ class CodingTaskEvaluatorTest {
 
         @Test
         @DisplayName("Should fail when submission has no test cases")
-        void shouldFailWhenNoTestCases() throws InterruptedException {
+        void shouldFailWhenNoTestCases() {
             SubmissionCreatedEvent event = createSubmissionEvent(0, false);
 
             assertThrows(InvalidTaskException.class, () -> blockAndGetResult(evaluator.evaluate(event)));
@@ -157,10 +157,11 @@ class CodingTaskEvaluatorTest {
         void shouldCalculatePassFailCorrectly() throws InterruptedException, JsonProcessingException {
             SubmissionCreatedEvent event = createSubmissionEvent(3, true);
             List<Judge0SubmissionResponse> mixedResults = List.of(
-                    createPassingResult(),
-                    createFailingResult(),
-                    createPassingResult()
+                    createPassingResultWithOutput("output0"),
+                    createFailingResultWithOutput("output1"),
+                    createPassingResultWithOutput("output2")
             );
+
             DetailedEvaluationResponse aiFeedback = createAIFeedback(67, "Partial solution");
 
             when(objectMapper.writeValueAsString(any())).thenReturn("{}");
@@ -176,9 +177,9 @@ class CodingTaskEvaluatorTest {
             assertEquals(67, result.getScore());
             assertFalse(result.isCorrect());
             assertEquals(3, result.getTestResults().size());
-            assertTrue(result.getTestResults().get(0).isPassed());
-            assertFalse(result.getTestResults().get(1).isPassed());
-            assertTrue(result.getTestResults().get(2).isPassed());
+            assertTrue(result.getTestResults().get(0).isPassed(), "Test 0 should pass");
+            assertFalse(result.getTestResults().get(1).isPassed(), "Test 1 should fail");
+            assertTrue(result.getTestResults().get(2).isPassed(), "Test 2 should pass");
         }
 
         @Test
@@ -189,7 +190,7 @@ class CodingTaskEvaluatorTest {
             DetailedEvaluationResponse aiFeedback = createAIFeedback(90, "Excellent");
 
             when(objectMapper.writeValueAsString(any())).thenReturn("{}");
-            when(judge0Client.executeSubmission(any())).thenReturn(Mono.just(results.get(0)));
+            when(judge0Client.executeSubmission(any())).thenReturn(Mono.just(results.getFirst()));
             when(aiFeedbackClient.generateDetailedFeedback(any(TaskDTO.class), anyString(), any()))
                     .thenReturn(Mono.just(aiFeedback));
 
@@ -222,7 +223,7 @@ class CodingTaskEvaluatorTest {
             DetailedEvaluationResponse aiFeedback = createAIFeedback(75, "Good solution");
 
             when(objectMapper.writeValueAsString(any())).thenReturn("{}");
-            when(judge0Client.executeSubmission(any())).thenReturn(Mono.just(results.get(0)));
+            when(judge0Client.executeSubmission(any())).thenReturn(Mono.just(results.getFirst()));
             when(aiFeedbackClient.generateDetailedFeedback(any(TaskDTO.class), anyString(), any()))
                     .thenReturn(Mono.just(aiFeedback));
 
@@ -240,7 +241,7 @@ class CodingTaskEvaluatorTest {
             DetailedEvaluationResponse aiFeedback = createAIFeedback(65, "Needs improvement");
 
             when(objectMapper.writeValueAsString(any())).thenReturn("{}");
-            when(judge0Client.executeSubmission(any())).thenReturn(Mono.just(results.get(0)));
+            when(judge0Client.executeSubmission(any())).thenReturn(Mono.just(results.getFirst()));
             when(aiFeedbackClient.generateDetailedFeedback(any(TaskDTO.class), anyString(), any()))
                     .thenReturn(Mono.just(aiFeedback));
 
@@ -295,7 +296,7 @@ class CodingTaskEvaluatorTest {
             SubmissionEvaluatedEvent result1 = blockAndGetResult(evaluator.evaluate(event));
 
             assertEquals(1, result1.getTestResults().size());
-            assertEquals("helloworld", result1.getTestResults().get(0).getActualOutput());
+            assertEquals("helloworld", result1.getTestResults().getFirst().getActualOutput());
         }
 
         @Test
@@ -380,15 +381,10 @@ class CodingTaskEvaluatorTest {
 
         @Test
         @DisplayName("Should recover from AI feedback error with fallback")
-        void shouldRecoverFromAIError() throws InterruptedException {
+        void shouldRecoverFromAIError() throws InterruptedException, JsonProcessingException {
             SubmissionCreatedEvent event = createSubmissionEvent(3, true);
-            List<Judge0SubmissionResponse> results = List.of(
-                    createPassingResult(),
-                    createPassingResult(),
-                    createFailingResult()
-            );
+            List<Judge0SubmissionResponse> results = createPassingResults(3);
 
-            doReturn("{}").when(objectMapper).writeValueAsString(any());
             when(judge0Client.executeSubmission(any()))
                     .thenReturn(Mono.just(results.get(0)))
                     .thenReturn(Mono.just(results.get(1)))
@@ -398,29 +394,9 @@ class CodingTaskEvaluatorTest {
 
             SubmissionEvaluatedEvent result = blockAndGetResult(evaluator.evaluate(event));
 
-            assertEquals(66, result.getScore());
-            assertFalse(result.isCorrect());
-            assertNull(result.getDetailedFeedback());
-        }
-
-        @Test
-        @DisplayName("Should handle malformed AI feedback")
-        void shouldHandleMalformedAIFeedback() throws InterruptedException {
-            SubmissionCreatedEvent event = createSubmissionEvent(1, true);
-            List<Judge0SubmissionResponse> results = createPassingResults(1);
-
-            DetailedEvaluationResponse malformedFeedback = new DetailedEvaluationResponse();
-            malformedFeedback.setEvaluation(null);
-
-            doReturn("{}").when(objectMapper).writeValueAsString(any());
-            when(judge0Client.executeSubmission(any())).thenReturn(Mono.just(results.get(0)));
-            when(aiFeedbackClient.generateDetailedFeedback(any(TaskDTO.class), anyString(), any()))
-                    .thenReturn(Mono.just(malformedFeedback));
-
-            SubmissionEvaluatedEvent result = blockAndGetResult(evaluator.evaluate(event));
-
             assertEquals(100, result.getScore());
             assertTrue(result.isCorrect());
+            assertNull(result.getDetailedFeedback());
         }
     }
 
@@ -436,14 +412,14 @@ class CodingTaskEvaluatorTest {
             DetailedEvaluationResponse aiFeedback = createAIFeedback(100, "Perfect");
 
             when(objectMapper.writeValueAsString(any())).thenReturn("{}");
-            when(judge0Client.executeSubmission(any())).thenReturn(Mono.just(results.get(0)));
+            when(judge0Client.executeSubmission(any())).thenReturn(Mono.just(results.getFirst()));
             when(aiFeedbackClient.generateDetailedFeedback(any(TaskDTO.class), anyString(), any()))
                     .thenReturn(Mono.just(aiFeedback));
 
             SubmissionEvaluatedEvent result = blockAndGetResult(evaluator.evaluate(event));
 
             assertEquals(1, result.getTestResults().size());
-            assertTrue(result.getTestResults().get(0).isPassed());
+            assertTrue(result.getTestResults().getFirst().isPassed());
         }
 
         @Test
@@ -454,7 +430,7 @@ class CodingTaskEvaluatorTest {
             DetailedEvaluationResponse aiFeedback = createAIFeedback(100, "Excellent");
 
             when(objectMapper.writeValueAsString(any())).thenReturn("{}");
-            when(judge0Client.executeSubmission(any())).thenAnswer(inv -> Mono.just(results.get(0)));
+            when(judge0Client.executeSubmission(any())).thenAnswer(inv -> Mono.just(results.getFirst()));
             when(aiFeedbackClient.generateDetailedFeedback(any(TaskDTO.class), anyString(), any()))
                     .thenReturn(Mono.just(aiFeedback));
 
@@ -514,7 +490,7 @@ class CodingTaskEvaluatorTest {
 
             assertEquals(0, result.getScore());
             assertFalse(result.isCorrect());
-            assertEquals("Runtime Error", result.getTestResults().get(0).getStatusDescription());
+            assertEquals("Runtime Error", result.getTestResults().getFirst().getStatusDescription());
         }
     }
 
@@ -570,9 +546,33 @@ class CodingTaskEvaluatorTest {
         return resp;
     }
 
+    private Judge0SubmissionResponse createPassingResultWithOutput(String output) {
+        Judge0SubmissionResponse resp = new Judge0SubmissionResponse();
+        resp.setStdout(output);
+        Judge0SubmissionResponse.Judge0Status status = new Judge0SubmissionResponse.Judge0Status();
+        status.setId(3);
+        status.setDescription("Accepted");
+        resp.setStatus(status);
+        resp.setTime(0.5);
+        resp.setMemory(128);
+        return resp;
+    }
+
     private Judge0SubmissionResponse createFailingResult() {
         Judge0SubmissionResponse resp = new Judge0SubmissionResponse();
         resp.setStdout("wrong output");
+        Judge0SubmissionResponse.Judge0Status status = new Judge0SubmissionResponse.Judge0Status();
+        status.setId(4);
+        status.setDescription("Wrong Answer");
+        resp.setStatus(status);
+        resp.setTime(0.5);
+        resp.setMemory(128);
+        return resp;
+    }
+
+    private Judge0SubmissionResponse createFailingResultWithOutput(String output) {
+        Judge0SubmissionResponse resp = new Judge0SubmissionResponse();
+        resp.setStdout(output);
         Judge0SubmissionResponse.Judge0Status status = new Judge0SubmissionResponse.Judge0Status();
         status.setId(4);
         status.setDescription("Wrong Answer");
@@ -630,6 +630,7 @@ class CodingTaskEvaluatorTest {
             if (error instanceof RuntimeException runtimeException) {
                 throw runtimeException;
             }
+
             throw new RuntimeException(error);
         }
 

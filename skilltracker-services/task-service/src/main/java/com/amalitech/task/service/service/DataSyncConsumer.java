@@ -26,8 +26,6 @@ public class DataSyncConsumer {
 
     private final SkillViewRepository skillViewRepository;
 
-
-
     /**
      * Listens for skill-related events (SKILL_CREATED, SKILL_UPDATED, SKILL_DELETED) and updates the
      * local {@link SkillView} data store accordingly.

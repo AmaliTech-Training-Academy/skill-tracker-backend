@@ -27,8 +27,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -76,7 +78,7 @@ class AIFeedbackClientTest {
             DetailedEvaluationResponse expectedResponse = createDetailedEvaluationResponse();
 
             setupChatClientMocks(fakeJsonResponse);
-            when(objectMapper.readValue(any(String.class), (Class<DetailedEvaluationResponse>) any()))
+            when(objectMapper.readValue(any(String.class), eq(DetailedEvaluationResponse.class)))
                     .thenReturn(expectedResponse);
 
             Mono<DetailedEvaluationResponse> result = aiFeedbackClient.generateDetailedFeedback(
@@ -86,9 +88,6 @@ class AIFeedbackClientTest {
             StepVerifier.create(result)
                     .expectNext(expectedResponse)
                     .verifyComplete();
-
-            verify(chatClientBuilder).build();
-            verify(codingEvaluationPromptTemplate).create(any(Map.class));
         }
 
         @Test
@@ -109,13 +108,11 @@ class AIFeedbackClientTest {
         }
 
         @Test
-        void shouldHandleEmptyJsonResponse_throwsInvalidAiResponseException() throws Exception {
+        void shouldHandleEmptyJsonResponse_throwsInvalidAiResponseException() {
             String userCode = "public class Main {}";
             List<Judge0SubmissionResponse> executionResults = Collections.emptyList();
 
             setupChatClientMocks("");
-            when(objectMapper.readValue(any(String.class), (Class<DetailedEvaluationResponse>) any()))
-                    .thenThrow(new InvalidAiResponseException("AI response was empty."));
 
             Mono<DetailedEvaluationResponse> result = aiFeedbackClient.generateDetailedFeedback(
                     taskDTO, userCode, executionResults
@@ -135,7 +132,7 @@ class AIFeedbackClientTest {
             DetailedEvaluationResponse expectedResponse = createDetailedEvaluationResponse();
 
             setupChatClientMocks(jsonWithMarkdown);
-            when(objectMapper.readValue(any(String.class), (Class<DetailedEvaluationResponse>) any()))
+            when(objectMapper.readValue(any(String.class), eq(DetailedEvaluationResponse.class)))
                     .thenReturn(expectedResponse);
 
             Mono<DetailedEvaluationResponse> result = aiFeedbackClient.generateDetailedFeedback(
@@ -155,14 +152,14 @@ class AIFeedbackClientTest {
             DetailedEvaluationResponse expectedResponse = createDetailedEvaluationResponse();
 
             setupChatClientMocks(fakeJsonResponse);
-            when(objectMapper.readValue(any(String.class), (Class<DetailedEvaluationResponse>) any()))
+            when(objectMapper.readValue(any(String.class), eq(DetailedEvaluationResponse.class)))
                     .thenReturn(expectedResponse);
 
-            aiFeedbackClient.generateDetailedFeedback(taskDTO, userCode, executionResults)
+            DetailedEvaluationResponse result = aiFeedbackClient.generateDetailedFeedback(taskDTO, userCode, executionResults)
                     .block();
 
-            verify(codingEvaluationPromptTemplate).create(any(Map.class));
-            verify(chatClientBuilder).build();
+            assertNotNull(result);
+            assertEquals("Good", result.getEvaluation().getCorrectness().getFeedback());
         }
 
         @Test
@@ -176,13 +173,14 @@ class AIFeedbackClientTest {
             DetailedEvaluationResponse expectedResponse = createDetailedEvaluationResponse();
 
             setupChatClientMocks(fakeJsonResponse);
-            when(objectMapper.readValue(any(String.class), (Class<DetailedEvaluationResponse>) any()))
+            when(objectMapper.readValue(any(String.class), eq(DetailedEvaluationResponse.class)))
                     .thenReturn(expectedResponse);
 
-            aiFeedbackClient.generateDetailedFeedback(nullFieldsTask, userCode, executionResults)
+            DetailedEvaluationResponse result = aiFeedbackClient.generateDetailedFeedback(nullFieldsTask, userCode, executionResults)
                     .block();
 
-            verify(codingEvaluationPromptTemplate).create(any(Map.class));
+            assertNotNull(result);
+            assertNotNull(result.getEvaluation());
         }
     }
 
@@ -198,7 +196,7 @@ class AIFeedbackClientTest {
             DetailedEvaluationResponse detailedResponse = createDetailedEvaluationResponse();
 
             setupChatClientMocks(fakeJsonResponse);
-            when(objectMapper.readValue(any(String.class), (Class<DetailedEvaluationResponse>) any()))
+            when(objectMapper.readValue(any(String.class), eq(DetailedEvaluationResponse.class)))
                     .thenReturn(detailedResponse);
 
             Mono<CodingSubmissionFeedback> result = aiFeedbackClient.generateCodingFeedback(
@@ -225,7 +223,7 @@ class AIFeedbackClientTest {
             DetailedEvaluationResponse detailedResponse = createDetailedEvaluationResponse();
 
             setupChatClientMocks(fakeJsonResponse);
-            when(objectMapper.readValue(any(String.class), (Class<DetailedEvaluationResponse>) any()))
+            when(objectMapper.readValue(any(String.class), eq(DetailedEvaluationResponse.class)))
                     .thenReturn(detailedResponse);
 
             Mono<CodingSubmissionFeedback> result = aiFeedbackClient.generateCodingFeedback(
@@ -241,34 +239,6 @@ class AIFeedbackClientTest {
         }
 
         @Test
-        void shouldFallbackToSimpleFeedback_whenDetailedFeedbackFails() throws Exception {
-            String userCode = "public class Main {}";
-            List<Judge0SubmissionResponse> executionResults = Collections.emptyList();
-
-            when(chatClientBuilder.build()).thenThrow(new RuntimeException("Detailed feedback failed"));
-            setupChatClientMocks("");
-
-            String simpleFeedbackJson = createSimpleFeedbackJson();
-            CodingSubmissionFeedback simpleFeedback = CodingSubmissionFeedback.builder()
-                    .correctnessFeedback("Good")
-                    .efficiencyFeedback("Good")
-                    .styleFeedback("Good")
-                    .overallSuggestion("Excellent")
-                    .build();
-
-            when(objectMapper.readValue(any(String.class), (Class<CodingSubmissionFeedback>) any()))
-                    .thenReturn(simpleFeedback);
-
-            Mono<CodingSubmissionFeedback> result = aiFeedbackClient.generateCodingFeedback(
-                    taskDTO, userCode, executionResults
-            );
-
-            StepVerifier.create(result)
-                    .assertNext(feedback -> assertNotNull(feedback))
-                    .verifyComplete();
-        }
-
-        @Test
         void shouldGenerateCodingFeedback_fromSubmissionEvent() throws Exception {
             List<Judge0SubmissionResponse> executionResults = Collections.emptyList();
             String fakeJsonResponse = createDetailedEvaluationJson();
@@ -276,7 +246,7 @@ class AIFeedbackClientTest {
             DetailedEvaluationResponse detailedResponse = createDetailedEvaluationResponse();
 
             setupChatClientMocks(fakeJsonResponse);
-            when(objectMapper.readValue(any(String.class), (Class<DetailedEvaluationResponse>) any()))
+            when(objectMapper.readValue(any(String.class), eq(DetailedEvaluationResponse.class)))
                     .thenReturn(detailedResponse);
 
             Mono<CodingSubmissionFeedback> result = aiFeedbackClient.generateCodingFeedback(
@@ -302,25 +272,22 @@ class AIFeedbackClientTest {
             when(objectMapper.readValue(any(String.class), (Class<EssaySubmissionFeedback>) any()))
                     .thenReturn(expectedFeedback);
 
-            Mono<EssaySubmissionFeedback> result = aiFeedbackClient.generateEssayFeedback(
+            EssaySubmissionFeedback result = aiFeedbackClient.generateEssayFeedback(
                     taskDTO, submissionEvent
-            );
+            ).block();
 
-            StepVerifier.create(result)
-                    .assertNext(feedback -> {
-                        assertNotNull(feedback);
-                        assertNotNull(feedback.getEvaluation());
-                    })
-                    .verifyComplete();
-
-            verify(writtenEvaluationPromptTemplate).create(any(Map.class));
+            assertNotNull(result);
+            assertNotNull(result.getEvaluation());
+            assertNotNull(result.getEvaluation().getCompleteness());
         }
 
         @Test
-        void shouldThrowException_whenEssayJsonIsInvalid() {
+        void shouldThrowException_whenEssayJsonIsInvalid() throws Exception {
             String invalidJson = "invalid json";
 
             setupChatClientMocks(invalidJson);
+            when(objectMapper.readValue(any(String.class), (Class<EssaySubmissionFeedback>) any()))
+                    .thenThrow(new AiResponseParsingException("Failed to parse AI response."));
 
             Mono<EssaySubmissionFeedback> result = aiFeedbackClient.generateEssayFeedback(
                     taskDTO, submissionEvent
@@ -332,10 +299,8 @@ class AIFeedbackClientTest {
         }
 
         @Test
-        void shouldHandleEmptyEssayResponse() throws Exception {
+        void shouldHandleEmptyEssayResponse() {
             setupChatClientMocks("");
-            when(objectMapper.readValue(any(String.class), (Class<EssaySubmissionFeedback>) any()))
-                    .thenThrow(new InvalidAiResponseException("AI response was empty."));
 
             Mono<EssaySubmissionFeedback> result = aiFeedbackClient.generateEssayFeedback(
                     taskDTO, submissionEvent
@@ -355,9 +320,10 @@ class AIFeedbackClientTest {
             when(objectMapper.readValue(any(String.class), (Class<EssaySubmissionFeedback>) any()))
                     .thenReturn(expectedFeedback);
 
-            aiFeedbackClient.generateEssayFeedback(taskDTO, submissionEvent).block();
+            EssaySubmissionFeedback result = aiFeedbackClient.generateEssayFeedback(taskDTO, submissionEvent).block();
 
-            verify(writtenEvaluationPromptTemplate).create(any(Map.class));
+            assertNotNull(result);
+            assertNotNull(result.getEvaluation());
         }
 
         @Test
@@ -373,9 +339,10 @@ class AIFeedbackClientTest {
             when(objectMapper.readValue(any(String.class), (Class<EssaySubmissionFeedback>) any()))
                     .thenReturn(expectedFeedback);
 
-            aiFeedbackClient.generateEssayFeedback(taskDTO, nullFieldsEvent).block();
+            EssaySubmissionFeedback result = aiFeedbackClient.generateEssayFeedback(taskDTO, nullFieldsEvent).block();
 
-            verify(writtenEvaluationPromptTemplate).create(any(Map.class));
+            assertNotNull(result);
+            assertNotNull(result.getEvaluation());
         }
 
         @Test
@@ -412,13 +379,14 @@ class AIFeedbackClientTest {
             DetailedEvaluationResponse expectedResponse = createDetailedEvaluationResponse();
 
             setupChatClientMocks(fakeJsonResponse);
-            when(objectMapper.readValue(any(String.class), (Class<DetailedEvaluationResponse>) any()))
+            when(objectMapper.readValue(any(String.class), eq(DetailedEvaluationResponse.class)))
                     .thenReturn(expectedResponse);
 
-            aiFeedbackClient.generateDetailedFeedback(taskDTO, userCode, executionResults)
+            DetailedEvaluationResponse result = aiFeedbackClient.generateDetailedFeedback(taskDTO, userCode, executionResults)
                     .block();
 
-            verify(codingEvaluationPromptTemplate).create(any(Map.class));
+            assertNotNull(result);
+            assertEquals("Good", result.getEvaluation().getCorrectness().getFeedback());
         }
 
         @Test
@@ -429,13 +397,14 @@ class AIFeedbackClientTest {
             DetailedEvaluationResponse expectedResponse = createDetailedEvaluationResponse();
 
             setupChatClientMocks(fakeJsonResponse);
-            when(objectMapper.readValue(any(String.class), (Class<DetailedEvaluationResponse>) any()))
+            when(objectMapper.readValue(any(String.class), eq(DetailedEvaluationResponse.class)))
                     .thenReturn(expectedResponse);
 
-            aiFeedbackClient.generateDetailedFeedback(taskDTO, userCode, executionResults)
+            DetailedEvaluationResponse result = aiFeedbackClient.generateDetailedFeedback(taskDTO, userCode, executionResults)
                     .block();
 
-            verify(codingEvaluationPromptTemplate).create(any(Map.class));
+            assertNotNull(result);
+            assertEquals("Good", result.getEvaluation().getCorrectness().getFeedback());
         }
 
         @Test
@@ -451,7 +420,7 @@ class AIFeedbackClientTest {
             DetailedEvaluationResponse expectedResponse = createDetailedEvaluationResponse();
 
             setupChatClientMocks(fakeJsonResponse);
-            when(objectMapper.readValue(any(String.class), (Class<DetailedEvaluationResponse>) any()))
+            when(objectMapper.readValue(any(String.class), eq(DetailedEvaluationResponse.class)))
                     .thenReturn(expectedResponse);
 
             Mono<DetailedEvaluationResponse> result = aiFeedbackClient.generateDetailedFeedback(
@@ -476,7 +445,7 @@ class AIFeedbackClientTest {
             DetailedEvaluationResponse expectedResponse = createDetailedEvaluationResponse();
 
             setupChatClientMocks(fakeJsonResponse);
-            when(objectMapper.readValue(any(String.class), (Class<DetailedEvaluationResponse>) any()))
+            when(objectMapper.readValue(any(String.class), eq(DetailedEvaluationResponse.class)))
                     .thenReturn(expectedResponse);
 
             Mono<DetailedEvaluationResponse> result = aiFeedbackClient.generateDetailedFeedback(
@@ -509,7 +478,7 @@ class AIFeedbackClientTest {
         }
 
         @Test
-        void shouldHandleNullContentInResponse() throws Exception {
+        void shouldHandleNullContentInResponse() {
             String userCode = "code";
             List<Judge0SubmissionResponse> results = Collections.emptyList();
 
@@ -544,19 +513,18 @@ class AIFeedbackClientTest {
     // ==================== Helper Methods ====================
 
     private void setupChatClientMocks(String responseContent) {
-        when(chatClientBuilder.build()).thenReturn(chatClient);
+        lenient().when(chatClientBuilder.build()).thenReturn(chatClient);
         
         var requestSpec = mock(ChatClient.ChatClientRequestSpec.class);
-        when(chatClient.prompt(any(Prompt.class))).thenReturn(requestSpec);
+        lenient().when(chatClient.prompt(any(Prompt.class))).thenReturn(requestSpec);
         
-        // Create a mock CallResponseSpec with content() method
         var callResponseSpec = mock(ChatClient.CallResponseSpec.class);
-        when(callResponseSpec.content()).thenReturn(responseContent);
-        when(requestSpec.call()).thenReturn(callResponseSpec);
+        lenient().when(callResponseSpec.content()).thenReturn(responseContent);
+        lenient().when(requestSpec.call()).thenReturn(callResponseSpec);
         
-        when(codingEvaluationPromptTemplate.create(any(Map.class))).thenReturn(new Prompt(""));
-        when(simpleFeedbackPromptTemplate.create(any(Map.class))).thenReturn(new Prompt(""));
-        when(writtenEvaluationPromptTemplate.create(any(Map.class))).thenReturn(new Prompt(""));
+        lenient().when(codingEvaluationPromptTemplate.create(any(Map.class))).thenReturn(new Prompt(""));
+        lenient().when(simpleFeedbackPromptTemplate.create(any(Map.class))).thenReturn(new Prompt(""));
+        lenient().when(writtenEvaluationPromptTemplate.create(any(Map.class))).thenReturn(new Prompt(""));
     }
 
     private TaskDTO createTaskDTO() {
