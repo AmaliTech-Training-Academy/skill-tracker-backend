@@ -30,7 +30,8 @@ public interface TaskService {
 
     /**
      * Get personalized tasks for a user based on their skill and difficulty.
-     * Triggers asynchronous generation if no cached tasks are available.
+     * When taskType is null, retrieves tasks across all types. When specified, filters to that specific type.
+     * Triggers asynchronous generation if fewer than the requested number of cached tasks are available.
      *
      * @param userId The ID of the user
      * @param skillName The name of the skill
@@ -42,7 +43,8 @@ public interface TaskService {
 
     /**
      * Get tasks for a specific skill and difficulty combination.
-     * Triggers asynchronous generation if no cached tasks are available.
+     * When taskType is null, retrieves tasks across all types. When specified, filters to that specific type.
+     * Returns cached tasks without triggering generation (generation is only triggered for authenticated users via getPersonalizedTasks).
      *
      * @param skillName The name of the skill
      * @param difficulty The requested task difficulty
