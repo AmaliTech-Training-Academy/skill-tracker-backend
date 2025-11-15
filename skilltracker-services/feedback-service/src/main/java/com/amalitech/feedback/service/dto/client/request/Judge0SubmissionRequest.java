@@ -44,6 +44,5 @@ public class Judge0SubmissionRequest {
      * Can be empty, but cannot be null.
      */
     @JsonProperty("expected_output")
-    @NotNull(message = "Expected output must not be null (use empty string if no expected output)")
     private String expectedOutput;
 }
