@@ -188,7 +188,7 @@ public class CodingTaskEvaluator implements TaskEvaluator {
         }
 
         DetailedEvaluationResponse.Evaluation eval = aiFeedback.getEvaluation();
-        if (eval.getOverall() != null) {
+        if (eval.getOverall() != null && eval.getOverall().getPercentage() != null) {
             return eval.getOverall().getPercentage();
         }
 
