@@ -141,6 +141,7 @@ public class AnalyticsController {
     @PostMapping("/submit-task")
     public  ResponseEntity<ApiResponse<Void>> submitTaskDirectly(
             @Valid @RequestBody TaskSubmissionRequestDTO request) {
+        analyticsService.submitTaskDirectly(request);
         ApiResponse<Void> response = ApiResponse.success("Task submission accepted for processing.", null, API_TRACE_ID);
         return new ResponseEntity<>(response, HttpStatus.ACCEPTED);
     }
