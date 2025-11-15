@@ -53,7 +53,7 @@ public class AIFeedbackClient {
 
                     Map<String, Object> variables = new HashMap<>();
                     variables.put("skill", task.getSkillName() != null ? task.getSkillName() : "General Programming");
-                    variables.put("difficulty", task.getDifficulty() != null ? task.getDifficulty().toString() : "INTERMEDIATE");
+                    variables.put("difficulty", task.getDifficulty() != null ? task.getDifficulty().toString() : "MEDIUM");
                     variables.put("userCode", userCode);
                     variables.put("requirements", task.getDescription() != null ? task.getDescription() : "No requirements provided");
                     variables.put("testCases", formatTestCases(executionResults));
