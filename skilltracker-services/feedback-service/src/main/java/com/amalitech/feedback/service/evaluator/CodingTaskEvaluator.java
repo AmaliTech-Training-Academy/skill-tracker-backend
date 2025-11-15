@@ -48,6 +48,8 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class CodingTaskEvaluator implements TaskEvaluator {
 
+    private static final int PASSING_SCORE_THRESHOLD = 70;
+
     private final Judge0Client judge0Client;
     private final AIFeedbackClient aiFeedbackClient;
     private final RabbitTemplate rabbitTemplate;
@@ -154,14 +156,14 @@ public class CodingTaskEvaluator implements TaskEvaluator {
                 .filter(CommonTestResult::passed)
                 .count();
         int fallbackScore = totalTests > 0 ? (int) (((double) passedTests / totalTests) * 100) : 0;
-        boolean fallbackIsCorrect = fallbackScore >= 70;
+        boolean fallbackIsCorrect = fallbackScore >= PASSING_SCORE_THRESHOLD;
 
         TaskDTO task = buildTaskDTO(event);
 
         return aiFeedbackClient.generateDetailedFeedback(task, event.getContentToEvaluate(), results)
                 .map(aiFeedback -> {
                     int aiScore = extractScoreFromAIFeedback(aiFeedback);
-                    boolean aiIsCorrect = aiScore >= 70;
+                    boolean aiIsCorrect = aiScore >= PASSING_SCORE_THRESHOLD;
 
                     return buildSuccessEvent(event, aiIsCorrect, aiScore, results, aiFeedback);
                 })
