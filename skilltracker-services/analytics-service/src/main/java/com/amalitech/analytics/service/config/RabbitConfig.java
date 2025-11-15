@@ -65,6 +65,7 @@ public class RabbitConfig {
                 .with(RabbitMQConstants.SKILL_ROUTING_KEY);
     }
 
+    @Bean
     public Queue taskCompletedQueue() {
         return new Queue(RabbitMQConstants.TASK_COMPLETION_QUEUE, true);
     }
