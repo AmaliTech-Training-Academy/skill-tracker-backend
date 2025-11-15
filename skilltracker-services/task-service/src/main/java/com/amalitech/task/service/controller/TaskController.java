@@ -106,7 +106,7 @@ public class TaskController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<List<TaskDTO>>> getPersonalizedTasks(
             @RequestParam String skillName,
-            @RequestParam TaskType taskType,
+            @RequestParam(required = false) TaskType taskType,
             @RequestParam(defaultValue = "5") int limit,
             Authentication authentication
     ) {

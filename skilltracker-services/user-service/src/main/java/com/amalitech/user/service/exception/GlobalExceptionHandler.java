@@ -200,7 +200,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(DataAccessException.class)
     @ResponseStatus(HttpStatus.SERVICE_UNAVAILABLE)
-    public ResponseEntity<ApiError> handleDatabaseException(DataAccessException ex, HttpServletRequest request) { // Add request
+    public ResponseEntity<ApiError> handleDatabaseException(DataAccessException ex, HttpServletRequest request) {
 
         ApiError error = ApiError.of(
                 HttpStatus.SERVICE_UNAVAILABLE.value(),

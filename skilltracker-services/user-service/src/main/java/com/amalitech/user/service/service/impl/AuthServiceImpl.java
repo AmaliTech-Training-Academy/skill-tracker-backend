@@ -12,6 +12,7 @@ import com.amalitech.user.service.model.User;
 import com.amalitech.user.service.model.UserProfile;
 import com.amalitech.user.service.model.VerificationObject;
 import com.amalitech.user.service.model.enums.GuidedTourStatus;
+import com.amalitech.user.service.model.enums.PremiumTier;
 import com.amalitech.user.service.model.enums.UserState;
 import com.amalitech.user.service.repository.UserRepository;
 import com.amalitech.user.service.security.CustomUserDetails;
@@ -154,7 +155,6 @@ public class AuthServiceImpl implements AuthService {
      * Generate accessToken and RefreshTokens for the given user.
      *
      * @param user the user to generate tokens for
-     * @return AuthTokens  access and rotated refresh tokens
      */
     public void generateTokens(User user, HttpServletResponse response) {
         String accessToken = jwtUtil.generateAccessToken(user.getEmail(), user.getRole(), user.getId());
@@ -376,7 +376,7 @@ public class AuthServiceImpl implements AuthService {
         user.setRole(request.role());
         user.setIsVerified(true);
         user.setState(UserState.REGISTERED);
-        user.setPremiumTier(com.amalitech.user.service.model.enums.PremiumTier.FREE);
+        user.setPremiumTier(PremiumTier.FREE);
         user.setLanguage("en");
         user.setTimezone("UTC");
         user.setTourStatus(GuidedTourStatus.NOT_STARTED);

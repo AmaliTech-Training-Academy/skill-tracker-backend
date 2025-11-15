@@ -50,5 +50,4 @@ public class PromptTemplateConfig {
     ) {
         return new PromptTemplate(essayPromptResource);
     }
-
 }

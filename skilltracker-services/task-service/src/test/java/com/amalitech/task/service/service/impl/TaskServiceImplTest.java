@@ -154,12 +154,12 @@ class TaskServiceImplTest {
     @Test
     void testGetPersonalizedTasks_Success() {
         List<Task> tasks = List.of(testTask);
+        Page<Task> taskPage = new PageImpl<>(tasks, PageRequest.of(0, 5), 1);
 
         when(userSkillProfileRepository.findByIdUserIdAndSkillName(userId, "PYTHON"))
                 .thenReturn(Optional.of(userSkillProfile));
-        when(taskRepository.findBySkillIdAndDifficultyAndType(
-                any(), any(TaskDifficulty.class), any(TaskType.class), anyBoolean(), any(Pageable.class)))
-                .thenReturn(tasks);
+        when(taskRepository.findAll(any(Specification.class), any(Pageable.class)))
+                .thenReturn(taskPage);
         when(redisOps.setIfAbsent(anyString(), anyString(), any())).thenReturn(true);
         when(taskMapper.toDTO(any(Task.class))).thenReturn(testTaskDTO);
 
@@ -186,11 +186,11 @@ class TaskServiceImplTest {
     void testGetTasksForSkillAndDifficulty_Success() {
         List<Task> tasks = List.of(testTask);
         List<TaskDTO> taskDTOs = List.of(testTaskDTO);
+        Page<Task> taskPage = new PageImpl<>(tasks, PageRequest.of(0, 5), 1);
 
         when(skillService.getSkillByName("PYTHON")).thenReturn(testSkill);
-        when(taskRepository.findBySkillIdAndDifficultyAndType(
-                skillId, TaskDifficulty.BEGINNER, TaskType.CODING, true, PageRequest.of(0, 5)))
-                .thenReturn(tasks);
+        when(taskRepository.findAll(any(Specification.class), any(Pageable.class)))
+                .thenReturn(taskPage);
         when(redisOps.setIfAbsent(anyString(), anyString(), any())).thenReturn(true);
         when(taskMapper.toDTO(testTask)).thenReturn(testTaskDTO);
 
@@ -232,11 +232,11 @@ class TaskServiceImplTest {
     @Test
     void testGetTasksForSkillAndDifficulty_CacheMiss_AnonymousUser() {
         List<Task> cachedTasks = new ArrayList<>();
+        Page<Task> emptyPage = new PageImpl<>(cachedTasks, PageRequest.of(0, 5), 0);
 
         when(skillService.getSkillByName("PYTHON")).thenReturn(testSkill);
-        when(taskRepository.findBySkillIdAndDifficultyAndType(
-                skillId, TaskDifficulty.BEGINNER, TaskType.CODING, true, PageRequest.of(0, 5)))
-                .thenReturn(cachedTasks);
+        when(taskRepository.findAll(any(Specification.class), any(Pageable.class)))
+                .thenReturn(emptyPage);
         when(redisOps.setIfAbsent(anyString(), anyString(), any())).thenReturn(true);
 
         List<TaskDTO> result = taskService.getTasksForSkillAndDifficulty("PYTHON", TaskDifficulty.BEGINNER, TaskType.CODING, 5);
@@ -249,12 +249,12 @@ class TaskServiceImplTest {
     @Test
     void testGetPersonalizedTasks_CacheMiss_GenerationTriggered() {
         List<Task> cachedTasks = new ArrayList<>();
+        Page<Task> emptyPage = new PageImpl<>(cachedTasks, PageRequest.of(0, 5), 0);
 
         when(userSkillProfileRepository.findByIdUserIdAndSkillName(userId, "PYTHON"))
                 .thenReturn(Optional.of(userSkillProfile));
-        when(taskRepository.findBySkillIdAndDifficultyAndType(
-                skillId, TaskDifficulty.BEGINNER, TaskType.CODING, true, PageRequest.of(0, 5)))
-                .thenReturn(cachedTasks);
+        when(taskRepository.findAll(any(Specification.class), any(Pageable.class)))
+                .thenReturn(emptyPage);
         when(redisOps.setIfAbsent(anyString(), anyString(), any())).thenReturn(true);
 
         List<TaskDTO> result = taskService.getPersonalizedTasks(userId, "PYTHON", TaskType.CODING, 5);
@@ -266,12 +266,12 @@ class TaskServiceImplTest {
     @Test
     void testGetPersonalizedTasks_LockAlreadyAcquired() {
         List<Task> cachedTasks = new ArrayList<>();
+        Page<Task> emptyPage = new PageImpl<>(cachedTasks, PageRequest.of(0, 5), 0);
 
         when(userSkillProfileRepository.findByIdUserIdAndSkillName(userId, "PYTHON"))
                 .thenReturn(Optional.of(userSkillProfile));
-        when(taskRepository.findBySkillIdAndDifficultyAndType(
-                skillId, TaskDifficulty.BEGINNER, TaskType.CODING, true, PageRequest.of(0, 5)))
-                .thenReturn(cachedTasks);
+        when(taskRepository.findAll(any(Specification.class), any(Pageable.class)))
+                .thenReturn(emptyPage);
         when(redisOps.setIfAbsent(anyString(), anyString(), any())).thenReturn(false);
 
         List<TaskDTO> result = taskService.getPersonalizedTasks(userId, "PYTHON", TaskType.CODING, 5);
@@ -565,11 +565,11 @@ class TaskServiceImplTest {
     @Test
     void testGetOrGenerateTasks_ExceptionDuringPublishing() {
         List<Task> cachedTasks = new ArrayList<>();
+        Page<Task> emptyPage = new PageImpl<>(cachedTasks, PageRequest.of(0, 5), 0);
         when(userSkillProfileRepository.findByIdUserIdAndSkillName(userId, "PYTHON"))
                 .thenReturn(Optional.of(userSkillProfile));
-        when(taskRepository.findBySkillIdAndDifficultyAndType(
-                skillId, TaskDifficulty.BEGINNER, TaskType.CODING, true, PageRequest.of(0, 5)))
-                .thenReturn(cachedTasks);
+        when(taskRepository.findAll(any(Specification.class), any(Pageable.class)))
+                .thenReturn(emptyPage);
         when(redisOps.setIfAbsent(anyString(), anyString(), any())).thenReturn(true);
         doThrow(new RuntimeException("Test Exception")).when(taskEventProducer).requestBatchTaskGeneration(any());
 

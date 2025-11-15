@@ -47,6 +47,7 @@ REQUIRED JSON STRUCTURE:
   "evaluation": \{
     "correctness": \{
       "score": 50.0,
+      "maxScore": 50,
       "percentage": 100,
       "feedback": "Detailed assessment of correctness",
       "testResults": [
@@ -70,6 +71,7 @@ REQUIRED JSON STRUCTURE:
     \},
     "efficiency": \{
       "score": 30.0,
+      "maxScore": 30,
       "percentage": 100,
       "feedback": "Detailed assessment of efficiency",
       "timeComplexity": "O(n)",
@@ -85,6 +87,7 @@ REQUIRED JSON STRUCTURE:
     \},
     "style": \{
       "score": 20.0,
+      "maxScore": 20,
       "percentage": 100,
       "feedback": "Detailed assessment of code style",
       "strengths": [
@@ -105,6 +108,7 @@ REQUIRED JSON STRUCTURE:
     \},
     "overall": \{
       "totalScore": 100.0,
+      "maxScore": 100,
       "percentage": 100.0,
       "xpEarned": 50.0,
       "maxXP": 50.0,
@@ -131,16 +135,16 @@ STEP 1: Evaluate correctness first
 
 STEP 2: Apply the correctness gate
 IF correctness.percentage = 0 (zero tests passed):
-  → Set efficiency.score = 0.0, efficiency.percentage = 0
-  → Set style.score = 0.0, style.percentage = 0
-  → Set overall.totalScore = 0.0, overall.percentage = 0.0
-  → Set overall.xpEarned = 0.0, overall.passed = false, overall.grade = "F"
-  → Set efficiency.feedback = "Efficiency cannot be evaluated because the code fails all test cases. Focus on correctness first."
-  → Set style.feedback = "Style cannot be evaluated because the code fails all test cases. Focus on correctness first."
-  → Set efficiency.timeComplexity = "N/A", efficiency.spaceComplexity = "N/A"
-  → Set efficiency.criteriaMet = [], style.strengths = [], style.improvements = [], style.criteriaMet = []
-  → Provide feedback focused ONLY on fixing correctness issues
-  → DO NOT analyze efficiency or style
+   → Set efficiency.score = 0.0, efficiency.maxScore = 30, efficiency.percentage = 0
+   → Set style.score = 0.0, style.maxScore = 20, style.percentage = 0
+   → Set overall.totalScore = 0.0, overall.maxScore = 100, overall.percentage = 0.0
+   → Set overall.xpEarned = 0.0, overall.passed = false, overall.grade = "F"
+   → Set efficiency.feedback = "Efficiency cannot be evaluated because the code fails all test cases. Focus on correctness first."
+   → Set style.feedback = "Style cannot be evaluated because the code fails all test cases. Focus on correctness first."
+   → Set efficiency.timeComplexity = "N/A", efficiency.spaceComplexity = "N/A"
+   → Set efficiency.criteriaMet = [], style.strengths = [], style.improvements = [], style.criteriaMet = []
+   → Provide feedback focused ONLY on fixing correctness issues
+   → DO NOT analyze efficiency or style
 
 ELSE IF correctness.percentage > 0 (at least one test passed):
   → Evaluate efficiency normally (0-100%)

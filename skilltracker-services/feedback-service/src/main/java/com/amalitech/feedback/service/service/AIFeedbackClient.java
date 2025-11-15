@@ -49,25 +49,25 @@ public class AIFeedbackClient {
         log.info("Generating detailed AI feedback for task: {}", task.getId());
 
         return Mono.fromCallable(() -> {
-            ChatClient chatClient = chatClientBuilder.build();
+                    ChatClient chatClient = chatClientBuilder.build();
 
-            Map<String, Object> variables = new HashMap<>();
-            variables.put("skill", task.getSkillName() != null ? task.getSkillName() : "General Programming");
-            variables.put("difficulty", task.getDifficulty() != null ? task.getDifficulty().toString() : "MEDIUM");
-            variables.put("userCode", userCode);
-            variables.put("requirements", task.getDescription() != null ? task.getDescription() : "No requirements provided");
-            variables.put("testCases", formatTestCases(executionResults));
-            variables.put("criteria", "Standard evaluation criteria: correctness, efficiency, and code style");
+                    Map<String, Object> variables = new HashMap<>();
+                    variables.put("skill", task.getSkillName() != null ? task.getSkillName() : "General Programming");
+                    variables.put("difficulty", task.getDifficulty() != null ? task.getDifficulty().toString() : "MEDIUM");
+                    variables.put("userCode", userCode);
+                    variables.put("requirements", task.getDescription() != null ? task.getDescription() : "No requirements provided");
+                    variables.put("testCases", formatTestCases(executionResults));
+                    variables.put("criteria", "Standard evaluation criteria: correctness, efficiency, and code style");
 
-            Prompt prompt = codingEvaluationPromptTemplate.create(variables);
+                    Prompt prompt = codingEvaluationPromptTemplate.create(variables);
 
-            String response = chatClient.prompt(prompt)
-                    .call()
-                    .content();
+                    String response = chatClient.prompt(prompt)
+                            .call()
+                            .content();
 
-            return parseDetailedResponse(response);
-        })
-        .doOnError(e -> log.error("Failed to generate AI feedback: {}", e.getMessage()));
+                    return parseDetailedResponse(response);
+                })
+                .doOnError(e -> log.error("Failed to generate AI feedback: {}", e.getMessage()));
     }
 
     /**
@@ -116,30 +116,30 @@ public class AIFeedbackClient {
         log.info("Generating AI essay feedback for task: {}", task.getId());
 
         return Mono.fromCallable(() -> {
-            ChatClient chatClient = chatClientBuilder.build();
+                    ChatClient chatClient = chatClientBuilder.build();
 
-            Map<String, Object> variables = new HashMap<>();
-            variables.put("skill", event.getSkillName() != null ? event.getSkillName() : "General Writing");
-            variables.put("difficulty", event.getDifficulty() != null ? event.getDifficulty() : "INTERMEDIATE");
-            variables.put("title", event.getTaskTitle() != null ? event.getTaskTitle() : "Essay Task");
-            variables.put("prompt", event.getTaskDescription() != null ? event.getTaskDescription() : "Write an essay response");
-            variables.put("userResponse", event.getContentToEvaluate());
-            variables.put("detailedInstructions", event.getDetailedInstructions() != null ?
-                    event.getDetailedInstructions() : "Please provide a well-structured essay response addressing the topic.");
-            variables.put("evaluationCriteria", event.getEvaluationCriteria() != null ?
-                    event.getEvaluationCriteria() : "Standard essay evaluation criteria focusing on completeness, accuracy, clarity, and depth");
-            variables.put("rubric", event.getRubric() != null ?
-                    event.getRubric() : "Comprehensive rubric covering all evaluation dimensions");
+                    Map<String, Object> variables = new HashMap<>();
+                    variables.put("skill", event.getSkillName() != null ? event.getSkillName() : "General Writing");
+                    variables.put("difficulty", event.getDifficulty() != null ? event.getDifficulty() : "INTERMEDIATE");
+                    variables.put("title", event.getTaskTitle() != null ? event.getTaskTitle() : "Essay Task");
+                    variables.put("prompt", event.getTaskDescription() != null ? event.getTaskDescription() : "Write an essay response");
+                    variables.put("userResponse", event.getContentToEvaluate());
+                    variables.put("detailedInstructions", event.getDetailedInstructions() != null ?
+                            event.getDetailedInstructions() : "Please provide a well-structured essay response addressing the topic.");
+                    variables.put("evaluationCriteria", event.getEvaluationCriteria() != null ?
+                            event.getEvaluationCriteria() : "Standard essay evaluation criteria focusing on completeness, accuracy, clarity, and depth");
+                    variables.put("rubric", event.getRubric() != null ?
+                            event.getRubric() : "Comprehensive rubric covering all evaluation dimensions");
 
-            Prompt prompt = writtenEvaluationPromptTemplate.create(variables);
+                    Prompt prompt = writtenEvaluationPromptTemplate.create(variables);
 
-            String response = chatClient.prompt(prompt)
-                    .call()
-                    .content();
+                    String response = chatClient.prompt(prompt)
+                            .call()
+                            .content();
 
-            return parseEssayEvaluationResponse(response);
-        })
-        .doOnError(e -> log.error("Failed to generate essay AI feedback: {}", e.getMessage()));
+                    return parseEssayEvaluationResponse(response);
+                })
+                .doOnError(e -> log.error("Failed to generate essay AI feedback: {}", e.getMessage()));
     }
 
     /**
@@ -172,43 +172,43 @@ public class AIFeedbackClient {
      * Parses the detailed JSON response from AI.
      */
     private DetailedEvaluationResponse parseDetailedResponse(String jsonContent) {
-    try {
-    if (jsonContent == null || jsonContent.isBlank()) {
-    throw new InvalidAiResponseException("AI response was empty.");
-    }
+        try {
+            if (jsonContent == null || jsonContent.isBlank()) {
+                throw new InvalidAiResponseException("AI response was empty.");
+            }
 
-    // Clean up markdown and whitespace
-    jsonContent = jsonContent.replace("```json", "")
-    .replace("```", "")
-    .trim();
+            // Clean up markdown and whitespace
+            jsonContent = jsonContent.replace("```json", "")
+                    .replace("```", "")
+                    .trim();
 
-    DetailedEvaluationResponse response = objectMapper.readValue(
-    jsonContent, DetailedEvaluationResponse.class
-    );
+            DetailedEvaluationResponse response = objectMapper.readValue(
+                    jsonContent, DetailedEvaluationResponse.class
+            );
 
-    validateEvaluationResponse(response);
+            validateEvaluationResponse(response);
 
-    return response;
+            return response;
 
-    } catch (InvalidAiResponseException e) {
-    throw e;
-    } catch (Exception e) {
-        log.error("Failed to parse detailed AI JSON response: {}", e.getMessage());
+        } catch (InvalidAiResponseException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("Failed to parse detailed AI JSON response: {}", e.getMessage());
             throw new AiResponseParsingException("Failed to parse AI response.", e);
-         }
-     }
+        }
+    }
 
     private void validateEvaluationResponse(DetailedEvaluationResponse response) {
-    if (response.getEvaluation() == null) {
-    throw new InvalidAiResponseException("Missing evaluation object");
-    }
+        if (response.getEvaluation() == null) {
+            throw new InvalidAiResponseException("Missing evaluation object");
+        }
 
-    var eval = response.getEvaluation();
+        var eval = response.getEvaluation();
 
-    if (eval.getCorrectness() == null || eval.getEfficiency() == null ||
-    eval.getStyle() == null || eval.getOverall() == null) {
-    throw new InvalidAiResponseException("Missing evaluation categories");
-    }
+        if (eval.getCorrectness() == null || eval.getEfficiency() == null ||
+                eval.getStyle() == null || eval.getOverall() == null) {
+            throw new InvalidAiResponseException("Missing evaluation categories");
+        }
 
         double calculatedTotal = eval.getCorrectness().getScore() +
                 eval.getEfficiency().getScore() +
@@ -224,29 +224,29 @@ public class AIFeedbackClient {
      * Parses the simple JSON response from AI (fallback).
      */
     private CodingSubmissionFeedback parseSimpleAiResponse(String jsonContent) {
-    try {
-    if (jsonContent == null || jsonContent.isBlank()) {
-    throw new InvalidAiResponseException("AI response was empty.");
-    }
+        try {
+            if (jsonContent == null || jsonContent.isBlank()) {
+                throw new InvalidAiResponseException("AI response was empty.");
+            }
 
-    jsonContent = jsonContent.replace("```json", "").replace("```", "").trim();
+            jsonContent = jsonContent.replace("```json", "").replace("```", "").trim();
 
-        return objectMapper.readValue(jsonContent, CodingSubmissionFeedback.class);
+            return objectMapper.readValue(jsonContent, CodingSubmissionFeedback.class);
 
-    } catch (InvalidAiResponseException e) {
-    throw e;
-    } catch (Exception e) {
-        log.error("Failed to parse AI JSON response: {}", e.getMessage());
+        } catch (InvalidAiResponseException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("Failed to parse AI JSON response: {}", e.getMessage());
             throw new AiResponseParsingException("Failed to parse AI response.", e);
-         }
-     }
+        }
+    }
 
     /**
      * Converts detailed evaluation response to simple feedback format.
      */
     private CodingSubmissionFeedback convertToSimpleFeedback(DetailedEvaluationResponse detailed) {
         DetailedEvaluationResponse.Evaluation eval = detailed.getEvaluation();
-        
+
         return CodingSubmissionFeedback.builder()
                 .correctnessFeedback(eval.getCorrectness().getFeedback())
                 .efficiencyFeedback(eval.getEfficiency().getFeedback())
@@ -306,7 +306,7 @@ public class AIFeedbackClient {
                 .orElse(null);
 
         StringBuilder sb = new StringBuilder();
-        
+
         if (firstFailed != null) {
             sb.append("FAILED TEST CASE:\n");
             sb.append("Status: ").append(firstFailed.getStatus().getDescription()).append("\n");
@@ -333,24 +333,24 @@ public class AIFeedbackClient {
      * Parses the essay evaluation JSON response from AI.
      */
     private EssaySubmissionFeedback parseEssayEvaluationResponse(String jsonContent) {
-    try {
-    if (jsonContent == null || jsonContent.isBlank()) {
-    throw new InvalidAiResponseException("AI response was empty.");
-    }
+        try {
+            if (jsonContent == null || jsonContent.isBlank()) {
+                throw new InvalidAiResponseException("AI response was empty.");
+            }
 
-    jsonContent = jsonContent.replace("```json", "")
-    .replace("```", "")
-    .trim();
+            jsonContent = jsonContent.replace("```json", "")
+                    .replace("```", "")
+                    .trim();
 
-    return objectMapper.readValue(
-    jsonContent, EssaySubmissionFeedback.class
-    );
+            return objectMapper.readValue(
+                    jsonContent, EssaySubmissionFeedback.class
+            );
 
-    } catch (InvalidAiResponseException e) {
-    throw e;
-    } catch (Exception e) {
-        log.error("Failed to parse essay AI JSON response: {}", e.getMessage());
+        } catch (InvalidAiResponseException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("Failed to parse essay AI JSON response: {}", e.getMessage());
             throw new AiResponseParsingException("Failed to parse AI essay response.", e);
-         }
-     }
+        }
+    }
 }
