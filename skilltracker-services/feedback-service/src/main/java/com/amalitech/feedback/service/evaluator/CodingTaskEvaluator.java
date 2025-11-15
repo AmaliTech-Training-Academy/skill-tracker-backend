@@ -190,7 +190,8 @@ public class CodingTaskEvaluator implements TaskEvaluator {
         }
 
         DetailedEvaluationResponse.Evaluation eval = aiFeedback.getEvaluation();
-        if (eval.getOverall() != null && eval.getOverall().getPercentage() != null) {
+
+        if (eval.getOverall() != null) {
             return eval.getOverall().getPercentage();
         }
 
@@ -243,7 +244,7 @@ public class CodingTaskEvaluator implements TaskEvaluator {
      * Serializes AI feedback to JSON string for storage and transmission.
      * 
      * @param feedback the DetailedEvaluationResponse to serialize
-     * @return JSON string representation, or null if serialization fails
+     * @return JSON string representation or null if serialization fails
      */
     private String serializeDetailedFeedback(DetailedEvaluationResponse feedback) {
         try {
