@@ -150,7 +150,7 @@ class AdminUserCreationTest {
 
         verify(userRepository).existsByEmail(NEW_USER_EMAIL);
         verify(passwordEncoder).encode(anyString());
-        verify(userRepository, times(2)).save(any(User.class));
+        verify(userRepository, times(1)).save(any(User.class));
         verify(emailService).sendAdminCreatedUserEmail(eq(NEW_USER_EMAIL), anyString(), eq(ADMIN_EMAIL), eq("null/login"));
         }
 
@@ -181,7 +181,7 @@ class AdminUserCreationTest {
         assertTrue(result.is_verified());
 
         verify(userRepository).existsByEmail(NEW_USER_EMAIL);
-        verify(userRepository, times(2)).save(any(User.class));
+        verify(userRepository, times(1)).save(any(User.class));
     }
 
     @Test
@@ -224,7 +224,7 @@ class AdminUserCreationTest {
         authService.createUserByAdmin(request, ADMIN_EMAIL);
 
         ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
-        verify(userRepository, times(2)).save(userCaptor.capture());
+        verify(userRepository, times(1)).save(userCaptor.capture());
 
         User savedUser = userCaptor.getValue();
         assertEquals(NEW_USER_EMAIL, savedUser.getEmail());
@@ -260,7 +260,7 @@ class AdminUserCreationTest {
         authService.createUserByAdmin(request, ADMIN_EMAIL);
 
         ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
-        verify(userRepository, times(2)).save(userCaptor.capture());
+        verify(userRepository, times(1)).save(userCaptor.capture());
 
         User savedUser = userCaptor.getValue();
         assertNotNull(savedUser.getUserProfile());
@@ -322,6 +322,8 @@ class AdminUserCreationTest {
         verify(passwordEncoder).encode(passwordCaptor.capture());
         String generatedPassword = passwordCaptor.getValue();
         assertEquals(12, generatedPassword.length());
+        
+        verify(userRepository, times(1)).save(any(User.class));
     }
 
     @Test
@@ -349,6 +351,8 @@ class AdminUserCreationTest {
         verify(passwordEncoder).encode(passwordCaptor.capture());
         String generatedPassword = passwordCaptor.getValue();
         assertTrue(generatedPassword.matches(".*[A-Z].*"), "Password must contain uppercase letter");
+        
+        verify(userRepository, times(1)).save(any(User.class));
     }
 
     @Test
@@ -376,6 +380,8 @@ class AdminUserCreationTest {
         verify(passwordEncoder).encode(passwordCaptor.capture());
         String generatedPassword = passwordCaptor.getValue();
         assertTrue(generatedPassword.matches(".*[a-z].*"), "Password must contain lowercase letter");
+        
+        verify(userRepository, times(1)).save(any(User.class));
     }
 
     @Test
@@ -403,6 +409,8 @@ class AdminUserCreationTest {
         verify(passwordEncoder).encode(passwordCaptor.capture());
         String generatedPassword = passwordCaptor.getValue();
         assertTrue(generatedPassword.matches(".*\\d.*"), "Password must contain digit");
+        
+        verify(userRepository, times(1)).save(any(User.class));
     }
 
     @Test
@@ -430,6 +438,8 @@ class AdminUserCreationTest {
         verify(passwordEncoder).encode(passwordCaptor.capture());
         String generatedPassword = passwordCaptor.getValue();
         assertTrue(generatedPassword.matches(".*[@$!%*?&].*"), "Password must contain special character");
+        
+        verify(userRepository, times(1)).save(any(User.class));
     }
 
     // ==================== Edge Cases & Error Handling ====================
@@ -490,7 +500,7 @@ class AdminUserCreationTest {
         authService.createUserByAdmin(request, ADMIN_EMAIL);
 
         ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
-        verify(userRepository, times(2)).save(userCaptor.capture());
+        verify(userRepository, times(1)).save(userCaptor.capture());
 
         User savedUser = userCaptor.getValue();
         assertEquals("$2a$12$encoded", savedUser.getPasswordHash());

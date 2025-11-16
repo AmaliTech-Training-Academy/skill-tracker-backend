@@ -1,5 +1,7 @@
 package com.amalitech.notification.service.config;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
 import org.springframework.messaging.simp.stomp.StompCommand;
@@ -19,6 +21,8 @@ import java.security.Principal;
 @Component
 public class WebSocketAuthInterceptor implements ChannelInterceptor {
 
+    private static final Logger log = LoggerFactory.getLogger(WebSocketAuthInterceptor.class);
+
     /**
      * Intercepts messages before they are sent to a channel.
      * If the message is a STOMP CONNECT command, it retrieves the authenticated user
@@ -33,7 +37,7 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
 
         if (accessor != null && StompCommand.CONNECT.equals(accessor.getCommand())) {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            
+
             if (authentication != null && authentication.isAuthenticated()) {
                 String userId = authentication.getName();
                 accessor.setUser(new Principal() {
@@ -42,6 +46,9 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
                         return userId;
                     }
                 });
+
+                log.debug("WebSocket Principal set to userId: {}", userId);
+
             }
         }
 
