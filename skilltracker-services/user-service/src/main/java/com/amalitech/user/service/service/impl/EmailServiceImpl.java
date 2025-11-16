@@ -16,6 +16,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StreamUtils;
 
@@ -89,6 +90,7 @@ public class EmailServiceImpl implements EmailService {
      * {@inheritDoc}
      */
     @Override
+    @Async
     public void sendEmail(String toEmail, String subject, String body, String from) {
         this.send(toEmail, subject, body, "text/plain");
     }
@@ -97,6 +99,7 @@ public class EmailServiceImpl implements EmailService {
      * {@inheritDoc}
      */
     @Override
+    @Async
     public void sendResetEmail(String to, String resetLink) {
         String subject = "Your SkillBoost Password Reset";
 
@@ -109,6 +112,7 @@ public class EmailServiceImpl implements EmailService {
      * {@inheritDoc}
      */
     @Override
+    @Async
     public void sendAdminCreatedUserEmail(String toEmail, String temporaryPassword, String adminEmail, String loginUrl) {
         String subject = "Your SkillBoost Account Created";
 
