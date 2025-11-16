@@ -193,7 +193,7 @@ class AdminUserCreationIntegrationTest {
         
         // Verify repository calls
         verify(userRepository).existsByEmail(NEW_USER_EMAIL);
-        verify(userRepository, times(2)).save(any(User.class));
+        verify(userRepository, times(1)).save(any(User.class));
         
         // Verify email service called
         verify(emailService).sendAdminCreatedUserEmail(
@@ -225,8 +225,8 @@ class AdminUserCreationIntegrationTest {
     // ==================== Service-Repository Interaction Tests ====================
 
     @Test
-    @DisplayName("Service calls repository twice to save user and update profile")
-    void service_SavesUserTwice() {
+    @DisplayName("Service calls repository once to save user with embedded profile")
+    void service_SavesUserOnce() {
         CreateUserByAdminRequest request = CreateUserByAdminRequest.builder()
                 .email(NEW_USER_EMAIL)
                 .role(Role.USER)
@@ -245,7 +245,7 @@ class AdminUserCreationIntegrationTest {
 
         authService.createUserByAdmin(request, ADMIN_EMAIL);
 
-        verify(userRepository, times(2)).save(any(User.class));
+        verify(userRepository, times(1)).save(any(User.class));
     }
 
     @Test
@@ -291,7 +291,7 @@ class AdminUserCreationIntegrationTest {
         authService.createUserByAdmin(request, ADMIN_EMAIL);
 
         verify(passwordEncoder).encode(anyString());
-        verify(userRepository, times(2)).save(userCaptor.capture());
+        verify(userRepository, times(1)).save(userCaptor.capture());
 
         User savedUser = userCaptor.getValue();
         assertTrue(savedUser.getPasswordHash().startsWith("bcrypt:"));
@@ -306,7 +306,6 @@ class AdminUserCreationIntegrationTest {
                 .build();
 
         UUID newUserId = UUID.randomUUID();
-        ArgumentCaptor<String> passwordCaptor = ArgumentCaptor.forClass(String.class);
 
         when(userRepository.existsByEmail(NEW_USER_EMAIL)).thenReturn(false);
         when(passwordEncoder.encode(anyString())).thenReturn("encoded");
@@ -351,7 +350,7 @@ class AdminUserCreationIntegrationTest {
 
         authService.createUserByAdmin(request, ADMIN_EMAIL);
 
-        verify(userRepository, times(2)).save(userCaptor.capture());
+        verify(userRepository, times(1)).save(userCaptor.capture());
         User savedUser = userCaptor.getValue();
         assertEquals(UserState.REGISTERED, savedUser.getState());
     }
@@ -378,7 +377,7 @@ class AdminUserCreationIntegrationTest {
 
         authService.createUserByAdmin(request, ADMIN_EMAIL);
 
-        verify(userRepository, times(2)).save(userCaptor.capture());
+        verify(userRepository, times(1)).save(userCaptor.capture());
         User savedUser = userCaptor.getValue();
         assertTrue(savedUser.getIsVerified());
     }
@@ -405,10 +404,11 @@ class AdminUserCreationIntegrationTest {
 
         authService.createUserByAdmin(request, ADMIN_EMAIL);
 
-        verify(userRepository, times(2)).save(userCaptor.capture());
-        User savedUser = userCaptor.getAllValues().get(1); // Second save has profile
-        // The user has userProfile set through setProfile method
+        verify(userRepository, times(1)).save(userCaptor.capture());
+        User savedUser = userCaptor.getValue();
+        // The user has userProfile set through builder
         assertNotNull(savedUser);
+        assertNotNull(savedUser.getUserProfile());
     }
 
     // ==================== Edge Cases & Null Safety Tests ====================
@@ -525,7 +525,7 @@ class AdminUserCreationIntegrationTest {
         authService.createUserByAdmin(request2, ADMIN_EMAIL);
 
         ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
-        verify(userRepository, times(4)).save(userCaptor.capture());
+        verify(userRepository, times(2)).save(userCaptor.capture());
 
         for (User user : userCaptor.getAllValues()) {
             assertEquals("en", user.getLanguage());
