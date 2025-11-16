@@ -75,8 +75,8 @@ public class Task {
     @Column(nullable = false)
     private Integer xpReward = 0;
 
-    @Column(name = "is_published", nullable = false)
-    private Boolean isPublished = false;
+    @Column(name = "is_published", nullable = true)
+    private Boolean isPublished = true;
 
     @CreationTimestamp
     @Column(nullable = false)
