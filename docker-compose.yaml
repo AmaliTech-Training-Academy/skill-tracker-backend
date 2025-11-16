@@ -107,7 +107,6 @@ services:
       - "61613:61613"
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
-      - ./rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf
     networks:
       - skilltracker-network
     command: >

@@ -58,8 +58,8 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                 .setSystemLogin(clientLogin)
                 .setSystemPasscode(clientPasscode)
 
-                .setSystemHeartbeatSendInterval(10000)
-                .setSystemHeartbeatReceiveInterval(10000);
+                .setSystemHeartbeatSendInterval(20000)
+                .setSystemHeartbeatReceiveInterval(20000);
     }
 
     /**
