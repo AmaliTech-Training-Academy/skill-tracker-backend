@@ -10,7 +10,7 @@
     "question_number": "Integer(eg: 1, 2, 3, 4, ..., n)",
     "question_title": "String(Very short title of question)",
     "question_description": "String(Brief description of the objective of this question)",
-    "type": "MCQ",
+    "type": "MULTIPLE_CHOICE",
     "question_text": "String(The actual question)",
     "question_duration": "Integer(Generous expected time allocated to answer question.)",
     "question_difficulty": "String(e.g: EASY | MEDIUM | HARD)",
