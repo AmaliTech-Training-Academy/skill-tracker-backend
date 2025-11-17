@@ -213,6 +213,50 @@ services:
       retries: 5
       start_period: 40s
 
+  # Task Service
+  task-service:
+    build:
+      context: .
+      dockerfile: ./skilltracker-services/task-service/Dockerfile
+    image: skilltracker/task-service:latest
+    container_name: task-service
+    env_file: .env
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8082/eureka/
+      SPRING_CLOUD_CONFIG_URI: http://config-server:8081
+      SPRING_CONFIG_IMPORT: optional:configserver:http://config-server:8081
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_TASK_USER}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_TASK_PASSWORD}
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_USERNAME: ${RABBITMQ_USER}
+      SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SERVER_PORT: 8085
+    ports:
+      - "8085:8085"
+    depends_on:
+      discovery-server:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - skilltracker-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8085/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
   # ===============================
   # Ngrok Tunnel
   # ===============================
