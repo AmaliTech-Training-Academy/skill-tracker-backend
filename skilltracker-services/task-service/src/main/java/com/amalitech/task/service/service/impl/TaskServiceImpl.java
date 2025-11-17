@@ -355,7 +355,6 @@ public class TaskServiceImpl implements TaskService {
                         "no_of_questions", String.valueOf(mcqRequestDTO.getNo_of_questions()))
                 );
 
-
         GenerateContentResponse response =
                 client.models.generateContent(
                         model,
@@ -374,7 +373,7 @@ public class TaskServiceImpl implements TaskService {
 
     @Override
     public McqResponseDTO getMCQByUserId(String userId) {
-        List<Task> tasks = taskRepository.findByUserIdAndType(userId, TaskType.MCQ);
+        List<Task> tasks = taskRepository.findByUserIdAndType(userId, TaskType.MULTIPLE_CHOICE);
         return parseTasksToMcqResponseDTO(tasks);
     }
 
@@ -488,7 +487,7 @@ public class TaskServiceImpl implements TaskService {
         }
 
         List<MCQquestionDTO> mcqQuestions = tasks.stream()
-                .filter(task -> task.getType() == TaskType.MCQ)
+                .filter(task -> task.getType() == TaskType.MULTIPLE_CHOICE)
                 .filter(task -> task.getContent() instanceof McqTaskContent)
                 .map(task -> {
 
