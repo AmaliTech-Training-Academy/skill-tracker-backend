@@ -19,6 +19,7 @@ import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.*;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
@@ -41,6 +42,7 @@ import static org.mockito.Mockito.*;
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class AdminUserCreationIntegrationTest {
 
+    @Mock private ApplicationEventPublisher eventPublisher;
     @Mock private UserRepository userRepository;
     @Mock private PasswordConfig passwordConfig;
     @Mock private JwtUtil jwtUtil;
@@ -76,8 +78,10 @@ class AdminUserCreationIntegrationTest {
         lenient().when(passwordConfig.getLength()).thenReturn(12);
         lenient().when(passwordConfig.getAllCharacters()).thenReturn(uppercase + lowercase + numbers + special);
         lenient().doNothing().when(emailService).sendAdminCreatedUserEmail(anyString(), anyString(), anyString(), anyString());
+        lenient().doNothing().when(eventPublisher).publishEvent(isA(Object.class));
 
         authService = new AuthServiceImpl(
+                eventPublisher,
                 userRepository,
                 passwordConfig,
                 jwtUtil,
@@ -92,6 +96,10 @@ class AdminUserCreationIntegrationTest {
                 authenticationManager,
                 cookieUtil
         );
+        
+        // Set frontendUrl for login URL generation
+        ReflectionTestUtils.setField(authService, "frontendUrl", "http://localhost:3000");
+        
         authController = new AuthController(authService);
     }
 
@@ -195,13 +203,8 @@ class AdminUserCreationIntegrationTest {
         verify(userRepository).existsByEmail(NEW_USER_EMAIL);
         verify(userRepository, times(1)).save(any(User.class));
         
-        // Verify email service called
-        verify(emailService).sendAdminCreatedUserEmail(
-                eq(NEW_USER_EMAIL),
-                anyString(),
-                eq(ADMIN_EMAIL),
-                eq("null/login")
-        );
+        // Verify event published
+        verify(eventPublisher).publishEvent(isA(Object.class));
         }
 
         @Test
@@ -219,10 +222,10 @@ class AdminUserCreationIntegrationTest {
 
         verify(userRepository).existsByEmail(NEW_USER_EMAIL);
         verify(userRepository, never()).save(any(User.class));
-        verify(emailService, never()).sendAdminCreatedUserEmail(anyString(), anyString(), anyString(), anyString());
-    }
+        verify(eventPublisher, never()).publishEvent(isA(Object.class));
+        }
 
-    // ==================== Service-Repository Interaction Tests ====================
+        // ==================== Service-Repository Interaction Tests ====================
 
     @Test
     @DisplayName("Service calls repository once to save user with embedded profile")
@@ -318,17 +321,12 @@ class AdminUserCreationIntegrationTest {
 
         authService.createUserByAdmin(request, ADMIN_EMAIL);
 
-        verify(emailService).sendAdminCreatedUserEmail(
-                eq(NEW_USER_EMAIL),
-                anyString(),
-                eq(ADMIN_EMAIL),
-                eq("null/login")
-        );
+        verify(eventPublisher).publishEvent(isA(Object.class));
         }
 
         // ==================== User State & Profile Tests ====================
 
-    @Test
+        @Test
     @DisplayName("Service creates user with REGISTERED state")
     void service_CreatesUserWithRegisteredState() {
         CreateUserByAdminRequest request = CreateUserByAdminRequest.builder()
@@ -454,10 +452,9 @@ class AdminUserCreationIntegrationTest {
         assertEquals("user1@example.com", result1.email());
         assertEquals("user2@example.com", result2.email());
         
-        // Verify both admin emails were passed to email service
-        verify(emailService).sendAdminCreatedUserEmail(eq("user1@example.com"), anyString(), eq(admin1Email), eq("null/login"));
-        verify(emailService).sendAdminCreatedUserEmail(eq("user2@example.com"), anyString(), eq(admin2Email), eq("null/login"));
-    }
+        // Verify events were published
+        verify(eventPublisher, times(2)).publishEvent(isA(Object.class));
+        }
 
     @Test
     @DisplayName("Service creates user for both USER and ADMIN roles")

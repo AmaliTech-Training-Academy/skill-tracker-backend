@@ -22,6 +22,7 @@ import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.*;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -40,6 +41,7 @@ import static org.mockito.Mockito.*;
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class AuthServiceImplTest {
 
+    @Mock private ApplicationEventPublisher eventPublisher;
     @Mock private UserRepository userRepository;
     @Mock private PasswordConfig passwordConfig;
     @Mock private JwtUtil jwtUtil;
@@ -79,6 +81,7 @@ class AuthServiceImplTest {
         lenient().when(passwordConfig.getLength()).thenReturn(12);
 
         authService = new AuthServiceImpl(
+                eventPublisher,
                 userRepository,
                 passwordConfig,
                 jwtUtil,

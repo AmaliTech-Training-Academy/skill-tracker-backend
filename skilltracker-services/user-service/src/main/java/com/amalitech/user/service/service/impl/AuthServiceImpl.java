@@ -6,6 +6,7 @@ import com.amalitech.user.service.dto.UserResponseDTO;
 import com.amalitech.user.service.dto.request.CreateUserByAdminRequest;
 import com.amalitech.user.service.dto.request.LoginRequest;
 import com.amalitech.user.service.dto.response.AuthResponse;
+import com.amalitech.user.service.events.AdminCreatedUserEvent;
 import com.amalitech.user.service.exception.*;
 import com.amalitech.user.service.mapper.UserMapper;
 import com.amalitech.user.service.model.User;
@@ -26,6 +27,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -68,6 +70,8 @@ import java.util.stream.Collectors;
 public class AuthServiceImpl implements AuthService {
     private static final Logger log = LoggerFactory.getLogger(AuthServiceImpl.class);
 
+    private final ApplicationEventPublisher eventPublisher;
+
     private final UserRepository userRepository;
     private final BCryptPasswordEncoder passwordEncoder;
     private final PasswordConfig passwordConfig;
@@ -100,7 +104,7 @@ public class AuthServiceImpl implements AuthService {
 
 
     public AuthServiceImpl(
-            UserRepository userRepository, PasswordConfig passwordConfig,
+            ApplicationEventPublisher eventPublisher, UserRepository userRepository, PasswordConfig passwordConfig,
             JwtUtil jwtUtil,
             BCryptPasswordEncoder passwordEncoder,
             EmailService emailService,
@@ -113,6 +117,7 @@ public class AuthServiceImpl implements AuthService {
             AuthenticationManager authenticationManager,
             CookieUtil cookieUtil
     ) {
+        this.eventPublisher = eventPublisher;
         this.userRepository = userRepository;
         this.passwordConfig = passwordConfig;
         this.passwordEncoder = passwordEncoder;
@@ -143,6 +148,12 @@ public class AuthServiceImpl implements AuthService {
         }
 
         User user = UserMapper.toEntity(userdto);
+        
+        UserProfile profile = new UserProfile();
+        profile.setEmailNotifications(true);
+        profile.setPushNotifications(true);
+        user.setProfile(profile);
+        
         User savedUser = userRepository.save(user);
 
         int verificationCode = generateCode();
@@ -152,11 +163,6 @@ public class AuthServiceImpl implements AuthService {
                 savedUser.getEmail(),
                 "Account created successfully!",
                 "Enter this verification code to verify your identity: " + verificationCode);
-
-        UserProfile profile = new UserProfile();
-        profile.setEmailNotifications(true);
-        profile.setPushNotifications(true);
-        savedUser.setProfile(profile);
 
         return UserMapper.toDto(savedUser);
 
@@ -431,12 +437,20 @@ public class AuthServiceImpl implements AuthService {
                 .language("en")
                 .timezone("UTC")
                 .tourStatus(GuidedTourStatus.NOT_STARTED)
-                .userProfile(new UserProfile())
                 .build();
+
+        UserProfile userProfile = new UserProfile();
+        user.setProfile(userProfile);
 
         User savedUser = userRepository.save(user);
 
-        emailService.sendAdminCreatedUserEmail(request.email(), tempPassword, adminEmail , loginUrl );
+        eventPublisher.publishEvent(new AdminCreatedUserEvent(
+                savedUser.getId(),
+                savedUser.getEmail(),
+                tempPassword,
+                adminEmail,
+                loginUrl
+        ));
 
         log.info("Admin {} created new {} user: {}", adminEmail, request.role(), request.email());
         return UserMapper.toDto(savedUser);
