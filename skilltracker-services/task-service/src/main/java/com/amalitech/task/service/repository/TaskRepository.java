@@ -1,5 +1,6 @@
 package com.amalitech.task.service.repository;
 
+import com.amalitech.task.service.dto.response.McqResponseDTO;
 import com.amalitech.task.service.model.Task;
 import com.amalitech.task.service.model.enums.TaskDifficulty;
 import com.amalitech.task.service.model.enums.TaskType;
@@ -18,6 +19,8 @@ import java.util.UUID;
 @Repository
 public interface TaskRepository extends JpaRepository<Task, UUID>,
         JpaSpecificationExecutor<Task> {
+
+    List<Task> findByUserIdAndType(String userId, TaskType type);
     /**
      * Finds tasks by joining through TaskDefinition to get the skill.
      * This is the correct, normalized query.
