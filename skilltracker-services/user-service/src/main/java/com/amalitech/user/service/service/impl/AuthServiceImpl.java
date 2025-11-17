@@ -346,8 +346,11 @@ public class AuthServiceImpl implements AuthService {
     }
 
     public void createVerification(UUID userId, int code) {
+        activeVerifications.entrySet().removeIf(entry ->
+                entry.getValue().getUserId().equals(userId)
+        );
+
         activeVerifications.put(code, new VerificationObject(userId, code));
-        System.out.println("Verification Map: " + activeVerifications.toString() );
 
         if(activeVerifications.get(code) == null){
             throw new RuntimeException("Verification object does not exist");
