@@ -5,6 +5,7 @@ import com.amalitech.common.event.events.SubmissionExecutedEvent;
 import com.amalitech.common.event.events.TaskGenerationFailedEvent;
 import com.amalitech.common.event.events.TaskGenerationSucceededEvent;
 import com.amalitech.notification.service.config.RabbitMQConfig;
+import com.amalitech.notification.service.service.NotificationPersistenceService;
 import com.amalitech.notification.service.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,6 +21,7 @@ import org.springframework.stereotype.Component;
 public class SubmissionEventListener {
 
     private final NotificationService notificationService;
+    private final NotificationPersistenceService notificationPersistenceService;
 
     /**
      * Handles the SubmissionExecutedEvent.
@@ -33,6 +35,7 @@ public class SubmissionEventListener {
         
         try {
             notificationService.sendExecutionResults(event);
+            notificationPersistenceService.persistExecutionResults(event);
             log.info("Successfully processed SubmissionExecutedEvent for submission: {}", 
                     event.getSubmissionId());
         } catch (Exception e) {
@@ -53,6 +56,7 @@ public class SubmissionEventListener {
         
         try {
             notificationService.sendEvaluationFeedback(event);
+            notificationPersistenceService.persistEvaluationFeedback(event);
             log.info("Successfully processed SubmissionEvaluatedEvent for submission: {}", 
                     event.getSubmissionId());
         } catch (Exception e) {
@@ -73,6 +77,7 @@ public class SubmissionEventListener {
 
         try {
             notificationService.sendTaskGenerationSuccessNotification(event);
+            notificationPersistenceService.persistTaskGenerationSuccess(event);
             log.info("Successfully processed TaskGenerationSucceededEvent for user: {}",
                     event.getUserId());
         } catch (Exception e) {
@@ -94,6 +99,7 @@ public class SubmissionEventListener {
 
         try {
             notificationService.sendTaskGenerationFailedNotification(event);
+            notificationPersistenceService.persistTaskGenerationFailure(event);
             log.info("Successfully processed TaskGenerationFailedEvent for user: {}",
                     event.getUserId());
         } catch (Exception e) {
