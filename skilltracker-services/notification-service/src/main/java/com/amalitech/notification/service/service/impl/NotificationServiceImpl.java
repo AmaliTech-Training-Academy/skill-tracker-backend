@@ -15,6 +15,14 @@ import org.springframework.stereotype.Service;
 
 import java.util.stream.Collectors;
 
+/**
+ * Implementation of {@link NotificationService} for real-time WebSocket notifications.
+ * 
+ * Sends real-time updates to connected users via WebSocket using Spring's
+ * STOMP (Simple Text Oriented Messaging Protocol) messaging infrastructure.
+ * Each user receives notifications on their personal subscription queues
+ * based on their WebSocket connection.
+ */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -22,6 +30,15 @@ public class NotificationServiceImpl implements NotificationService {
 
     private final SimpMessagingTemplate messagingTemplate;
 
+    /**
+     * Sends code execution results to a user via WebSocket.
+     * 
+     * Transforms the event data into an {@link ExecutionResultMessage} and sends it
+     * to the user's "/queue/execution" topic. Converts test results and performance
+     * metrics into a format suitable for frontend display.
+     *
+     * @param event The SubmissionExecutedEvent containing execution results
+     */
     @Override
     public void sendExecutionResults(SubmissionExecutedEvent event) {
         log.info("Sending execution results to user: {} for submission: {}", 
@@ -59,6 +76,15 @@ public class NotificationServiceImpl implements NotificationService {
         log.info("Execution results sent successfully to user: {}", event.getUserId());
     }
 
+    /**
+     * Sends evaluation feedback to a user via WebSocket.
+     * 
+     * Transforms the event data into a {@link FeedbackMessage} and sends it to the
+     * user's "/queue/feedback" topic. Includes scoring, feedback content, and test
+     * result details for the submission.
+     *
+     * @param event The SubmissionEvaluatedEvent containing evaluation feedback
+     */
     @Override
     public void sendEvaluationFeedback(SubmissionEvaluatedEvent event) {
         log.info("Sending evaluation feedback to user: {} for submission: {}", 
@@ -98,6 +124,15 @@ public class NotificationServiceImpl implements NotificationService {
         log.info("Evaluation feedback sent successfully to user: {}", event.getUserId());
     }
 
+    /**
+     * Sends a task generation success notification to a user via WebSocket.
+     * 
+     * Transforms the event data into a {@link TaskGenerationMessage} with "COMPLETED"
+     * status and sends it to the user's "/queue/tasks" topic. Notifies the user
+     * that new tasks are available for completion.
+     *
+     * @param event The TaskGenerationSucceededEvent containing generation completion data
+     */
     @Override
     public void sendTaskGenerationSuccessNotification(TaskGenerationSucceededEvent event) {
         log.info("Sending task generation completion notification to user: {}", event.getUserId());
@@ -118,6 +153,15 @@ public class NotificationServiceImpl implements NotificationService {
         log.info("Task generation notification sent successfully to user: {}", event.getUserId());
     }
 
+    /**
+     * Sends a task generation failure notification to a user via WebSocket.
+     * 
+     * Transforms the event data into a {@link TaskGenerationMessage} with "FAILED"
+     * status and sends it to the user's "/queue/tasks" topic. Notifies the user
+     * of the failure and suggests retry options.
+     *
+     * @param event The TaskGenerationFailedEvent containing failure details
+     */
     @Override
     public void sendTaskGenerationFailedNotification(TaskGenerationFailedEvent event) {
         log.info("Sending task generation failure notification to user: {}", event.getUserId());
