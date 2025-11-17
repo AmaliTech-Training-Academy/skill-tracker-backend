@@ -75,6 +75,7 @@ public class TaskServiceImpl implements TaskService {
     private final StringRedisTemplate redisTemplate;
     private static final String model = System.getenv("model");
     private final UserLearningPathRepository userLPrepo;
+    private final Client client = new Client();
 
     /**
      * Minimum number of tasks required per difficulty level before triggering generation.
@@ -343,7 +344,6 @@ public class TaskServiceImpl implements TaskService {
 
     @Override
     public McqResponseDTO generateMCQ(McqRequestDTO mcqRequestDTO) throws IOException {
-        Client client = new Client();
         ClassPathResource prompt = new ClassPathResource("prompts/mcq/mcq_prompt.json");
 
         String updatedFields = updateFields(
@@ -399,7 +399,6 @@ public class TaskServiceImpl implements TaskService {
     @Override
     public LearningPathResponseDTO generateLearningPath(UserProfileRequestDTO userProfileRequestDTO) throws IOException {
         String skill = userProfileRequestDTO.getCurrent_progress().getSkill();
-        Client client = new Client();
         Gson gson = new GsonBuilder().setPrettyPrinting().create();
         ClassPathResource prompt = new ClassPathResource("prompts/learningPath/learningPath_prompt.json");
         String StringPrompt = Files.readString(prompt.getFile().toPath(), StandardCharsets.UTF_8);
@@ -520,7 +519,7 @@ public class TaskServiceImpl implements TaskService {
 
         for(MCQquestionDTO question : questions) {
             Task task = new Task().builder()
-                    .userId(question.getUserId().toString())
+                    .userId(question.getUserId())
                     .title(question.getQuestion_title())
                     .description(question.getQuestion_description())
                     .type(TaskType.valueOf(question.getQuestion_type()))
