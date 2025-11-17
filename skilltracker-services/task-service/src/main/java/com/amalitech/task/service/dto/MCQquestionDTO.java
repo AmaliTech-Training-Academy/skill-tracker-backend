@@ -13,7 +13,7 @@ import java.util.UUID;
 @AllArgsConstructor
 @Builder
 public class MCQquestionDTO {
-    private UUID userId;
+    private String userId;
     private String question_number;
     private String question_title;
     private String question_description;
