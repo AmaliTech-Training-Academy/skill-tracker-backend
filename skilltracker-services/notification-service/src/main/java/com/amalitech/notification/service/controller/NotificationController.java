@@ -1,7 +1,8 @@
 package com.amalitech.notification.service.controller;
 
 import com.amalitech.notification.service.document.NotificationDocument;
-import com.amalitech.notification.service.repository.NotificationRepository;
+import com.amalitech.notification.service.service.NotificationPersistenceService;
+import com.amalitech.notification.service.util.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -12,41 +13,45 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
+/**
+ * Controller for handling REST API requests for *historical* notifications.
+ * Real-time notifications are pushed via WebSocket.
+ */
 @RestController
-@RequestMapping("/api/notifications")
+@RequestMapping("/api/v1/notifications")
 @RequiredArgsConstructor
 @Slf4j
 public class NotificationController {
 
-    private final NotificationRepository notificationRepository;
+    private final NotificationPersistenceService notificationPersistenceService;
+    private final SecurityUtils securityUtils;
 
     @GetMapping
     public ResponseEntity<Page<NotificationDocument>> getAllNotifications(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
             Authentication authentication) {
-        
-        UUID userId = extractUserIdFromAuth(authentication);
+
+        UUID userId = securityUtils.extractUserIdFromAuth(authentication);
         Pageable pageable = PageRequest.of(page, size);
-        Page<NotificationDocument> notifications = 
-                notificationRepository.findByUserIdOrderByCreatedAtDesc(userId, pageable);
-        
+        Page<NotificationDocument> notifications =
+                notificationPersistenceService.getNotificationsForUser(userId, pageable);
+
         return ResponseEntity.ok(notifications);
     }
 
+    /**
+     * @deprecated This endpoint is dangerous as it can load unlimited documents.
+     * It will be removed in v2. Use /unread/paginated.
+     */
+    @Deprecated
     @GetMapping("/unread")
-    public ResponseEntity<List<NotificationDocument>> getUnreadNotifications(
-            Authentication authentication) {
-        
-        UUID userId = extractUserIdFromAuth(authentication);
-        List<NotificationDocument> unreadNotifications = 
-                notificationRepository.findByUserIdAndReadFalseOrderByCreatedAtDesc(userId);
-        
-        return ResponseEntity.ok(unreadNotifications);
+    public ResponseEntity<?> getUnreadNotifications() {
+        log.warn("/unread endpoint was called. This is deprecated.");
+        return ResponseEntity.status(HttpStatus.GONE)
+                .body("This endpoint is deprecated. Please use /api/v1/notifications/unread/paginated");
     }
 
     @GetMapping("/unread/paginated")
@@ -54,55 +59,44 @@ public class NotificationController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
             Authentication authentication) {
-        
-        UUID userId = extractUserIdFromAuth(authentication);
+
+        UUID userId = securityUtils.extractUserIdFromAuth(authentication);
         Pageable pageable = PageRequest.of(page, size);
-        Page<NotificationDocument> unreadNotifications = 
-                notificationRepository.findByUserIdAndReadFalseOrderByCreatedAtDesc(userId, pageable);
-        
+        Page<NotificationDocument> unreadNotifications =
+                notificationPersistenceService.getUnreadNotificationsForUser(userId, pageable);
+
         return ResponseEntity.ok(unreadNotifications);
+    }
+
+    /**
+     * Provides a lightweight count of unread notifications for a UI badge.
+     */
+    @GetMapping("/unread/count")
+    public ResponseEntity<Long> getUnreadNotificationCount(Authentication authentication) {
+        UUID userId = securityUtils.extractUserIdFromAuth(authentication);
+        long count = notificationPersistenceService.getUnreadNotificationCountForUser(userId);
+        return ResponseEntity.ok(count);
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<NotificationDocument> getNotification(
             @PathVariable String id,
             Authentication authentication) {
-        
-        Optional<NotificationDocument> notification = notificationRepository.findById(id);
-        
-        if (notification.isEmpty()) {
-            return ResponseEntity.notFound().build();
-        }
-        
-        UUID userId = extractUserIdFromAuth(authentication);
-        if (!notification.get().getUserId().equals(userId)) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-        }
-        
-        return ResponseEntity.ok(notification.get());
+
+        UUID userId = securityUtils.extractUserIdFromAuth(authentication);
+        NotificationDocument notification = notificationPersistenceService.getNotification(id, userId);
+
+        return ResponseEntity.ok(notification);
     }
 
     @PatchMapping("/{id}/read")
     public ResponseEntity<NotificationDocument> markAsRead(
             @PathVariable String id,
             Authentication authentication) {
-        
-        Optional<NotificationDocument> notification = notificationRepository.findById(id);
-        
-        if (notification.isEmpty()) {
-            return ResponseEntity.notFound().build();
-        }
-        
-        UUID userId = extractUserIdFromAuth(authentication);
-        if (!notification.get().getUserId().equals(userId)) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-        }
-        
-        NotificationDocument doc = notification.get();
-        doc.setRead(true);
-        NotificationDocument updated = notificationRepository.save(doc);
-        
-        log.info("Marked notification {} as read for user: {}", id, userId);
+
+        UUID userId = securityUtils.extractUserIdFromAuth(authentication);
+        NotificationDocument updated = notificationPersistenceService.markNotificationAsRead(id, userId);
+
         return ResponseEntity.ok(updated);
     }
 
@@ -110,25 +104,20 @@ public class NotificationController {
     public ResponseEntity<Void> deleteNotification(
             @PathVariable String id,
             Authentication authentication) {
-        
-        Optional<NotificationDocument> notification = notificationRepository.findById(id);
-        
-        if (notification.isEmpty()) {
-            return ResponseEntity.notFound().build();
-        }
-        
-        UUID userId = extractUserIdFromAuth(authentication);
-        if (!notification.get().getUserId().equals(userId)) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-        }
-        
-        notificationRepository.deleteById(id);
-        log.info("Deleted notification {} for user: {}", id, userId);
+
+        UUID userId = securityUtils.extractUserIdFromAuth(authentication);
+        notificationPersistenceService.deleteNotification(id, userId);
+
         return ResponseEntity.noContent().build();
     }
 
-    private UUID extractUserIdFromAuth(Authentication authentication) {
-        String userIdStr = (String) authentication.getPrincipal();
-        return UUID.fromString(userIdStr);
+    /**
+     * Marks all unread notifications for the authenticated user as read.
+     */
+    @PatchMapping("/read-all")
+    public ResponseEntity<Long> markAllAsRead(Authentication authentication) {
+        UUID userId = securityUtils.extractUserIdFromAuth(authentication);
+        long count = notificationPersistenceService.markAllNotificationsAsRead(userId);
+        return ResponseEntity.ok(count);
     }
 }

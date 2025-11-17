@@ -9,11 +9,13 @@ import com.amalitech.notification.service.service.NotificationPersistenceService
 import com.amalitech.notification.service.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.amqp.AmqpRejectAndDontRequeueException;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;
 
 /**
- * Listens for submission-related events from RabbitMQ and triggers notifications.
+ * Listens for events from RabbitMQ and orchestrates persistence and real-time pushing.
+ * Implements a "Save First, Then Push" pattern for data consistency.
  */
 @Component
 @RequiredArgsConstructor
@@ -23,88 +25,91 @@ public class SubmissionEventListener {
     private final NotificationService notificationService;
     private final NotificationPersistenceService notificationPersistenceService;
 
-    /**
-     * Handles the SubmissionExecutedEvent.
-     * This method is triggered when a submission has been executed against test cases.
-     * It delegates the event to the NotificationService to send real-time results to the user.
-     * @param event The event containing the execution results.
-     */
     @RabbitListener(queues = RabbitMQConfig.EXECUTED_QUEUE)
     public void handleSubmissionExecuted(SubmissionExecutedEvent event) {
         log.info("Received SubmissionExecutedEvent for submission: {}", event.getSubmissionId());
-        
+
+        if (event.getUserId() == null || event.getSubmissionId() == null) {
+            log.error("Invalid SubmissionExecutedEvent received: {}. Rejecting message.", event);
+            throw new AmqpRejectAndDontRequeueException("Invalid event payload");
+        }
+
         try {
-            notificationService.sendExecutionResults(event);
             notificationPersistenceService.persistExecutionResults(event);
-            log.info("Successfully processed SubmissionExecutedEvent for submission: {}", 
+
+            notificationService.sendExecutionResults(event);
+
+            log.info("Successfully processed SubmissionExecutedEvent for submission: {}",
                     event.getSubmissionId());
         } catch (Exception e) {
-            log.error("Error processing SubmissionExecutedEvent for submission: {}", 
-                    event.getSubmissionId(), e);
+            log.error("Error processing SubmissionExecutedEvent for submission: {}. " +
+                    "Event will be retried.", event.getSubmissionId(), e);
+            throw new AmqpRejectAndDontRequeueException("Persistence failed, will retry", e);
         }
     }
 
-    /**
-     * Handles the SubmissionEvaluatedEvent.
-     * This method is triggered when a submission has been fully evaluated and graded.
-     * It delegates the event to the NotificationService to send the final feedback to the user.
-     * @param event The event containing the evaluation feedback.
-     */
     @RabbitListener(queues = RabbitMQConfig.EVALUATED_QUEUE)
     public void handleSubmissionEvaluated(SubmissionEvaluatedEvent event) {
         log.info("Received SubmissionEvaluatedEvent for submission: {}", event.getSubmissionId());
-        
+
+        if (!isValid(event)) {
+            log.error("Invalid SubmissionEvaluatedEvent received: {}. Rejecting message.", event);
+            throw new AmqpRejectAndDontRequeueException("Invalid event payload");
+        }
+
         try {
-            notificationService.sendEvaluationFeedback(event);
             notificationPersistenceService.persistEvaluationFeedback(event);
-            log.info("Successfully processed SubmissionEvaluatedEvent for submission: {}", 
+
+            notificationService.sendEvaluationFeedback(event);
+
+            log.info("Successfully processed SubmissionEvaluatedEvent for submission: {}",
                     event.getSubmissionId());
         } catch (Exception e) {
-            log.error("Error processing SubmissionEvaluatedEvent for submission: {}",
-                    event.getSubmissionId(), e);
+            log.error("Error processing SubmissionEvaluatedEvent for submission: {}. " +
+                    "Event will be retried.", event.getSubmissionId(), e);
+            throw new AmqpRejectAndDontRequeueException("Persistence failed, will retry", e);
         }
     }
 
-    /**
-     * Handles the TaskGenerationSucceededEvent.
-     * This method is triggered when task generation completes for a user.
-     * It notifies the user that new tasks are now available.
-     * @param event The event containing task generation completion details.
-     */
     @RabbitListener(queues = RabbitMQConfig.TASK_GENERATION_QUEUE)
     public void handleTaskGenerationSucceeded(TaskGenerationSucceededEvent event) {
         log.info("Received TaskGenerationSucceededEvent for user: {}", event.getUserId());
 
         try {
-            notificationService.sendTaskGenerationSuccessNotification(event);
             notificationPersistenceService.persistTaskGenerationSuccess(event);
+
+            notificationService.sendTaskGenerationSuccessNotification(event);
+
             log.info("Successfully processed TaskGenerationSucceededEvent for user: {}",
                     event.getUserId());
         } catch (Exception e) {
-            log.error("Error processing TaskGenerationSucceededEvent for user: {}",
-                    event.getUserId(), e);
+            log.error("Error processing TaskGenerationSucceededEvent for user: {}. " +
+                    "Event will be retried.", event.getUserId(), e);
+            throw new AmqpRejectAndDontRequeueException("Persistence failed, will retry", e);
         }
     }
 
-
-    /**
-     * Handles the TaskGenerationFailedEvent.
-     * This method is triggered when task generation fails for a user.
-     * It notifies the user that an error occurred.
-     * @param event The event containing task generation failure details.
-     */
     @RabbitListener(queues = RabbitMQConfig.TASK_GENERATION_FAILED_QUEUE)
     public void handleTaskGenerationFailed(TaskGenerationFailedEvent event) {
         log.info("Received TaskGenerationFailedEvent for user: {}", event.getUserId());
 
         try {
-            notificationService.sendTaskGenerationFailedNotification(event);
             notificationPersistenceService.persistTaskGenerationFailure(event);
+
+            notificationService.sendTaskGenerationFailedNotification(event);
+
             log.info("Successfully processed TaskGenerationFailedEvent for user: {}",
                     event.getUserId());
         } catch (Exception e) {
-            log.error("Error processing TaskGenerationFailedEvent for user: {}",
-                    event.getUserId(), e);
+            log.error("Error processing TaskGenerationFailedEvent for user: {}. " +
+                    "Event will be retried.", event.getUserId(), e);
+            throw new AmqpRejectAndDontRequeueException("Persistence failed, will retry", e);
         }
+    }
+
+    private boolean isValid(SubmissionEvaluatedEvent event) {
+        return event != null &&
+                event.getUserId() != null &&
+                event.getSubmissionId() != null;
     }
 }
