@@ -373,7 +373,13 @@ public class TaskServiceImpl implements TaskService {
     }
 
     @Override
-    public LearningPathResponseDTO getTaskByUserIdAndCurrentSkill(String userId, String currentSkill) {
+    public McqResponseDTO getMCQByUserId(String userId) {
+        List<Task> tasks = taskRepository.findByUserIdAndType(userId, TaskType.MCQ);
+        return parseTasksToMcqResponseDTO(tasks);
+    }
+
+    @Override
+    public LearningPathResponseDTO getLPByUserIdAndCurrentSkill(String userId, String currentSkill) {
         UserLearningPath learningPath =  userLPrepo.findByUserIdAndCurrentSkill(userId, currentSkill);
 
         return LearningPathResponseDTO.builder()
@@ -477,10 +483,44 @@ public class TaskServiceImpl implements TaskService {
         return gson.fromJson(jsonArrayString, listType);
     }
 
+    public static McqResponseDTO parseTasksToMcqResponseDTO(List<Task> tasks) {
+        if (tasks == null || tasks.isEmpty()) {
+            return new McqResponseDTO(List.of());
+        }
+
+        List<MCQquestionDTO> mcqQuestions = tasks.stream()
+                .filter(task -> task.getType() == TaskType.MCQ)
+                .filter(task -> task.getContent() instanceof McqTaskContent)
+                .map(task -> {
+
+                    McqTaskContent content = (McqTaskContent) task.getContent();
+                    return MCQquestionDTO.builder()
+                            .userId(task.getUserId())
+                            .question_title(task.getTitle())
+                            .question_description(task.getDescription())
+                            .question_type(task.getType().toString())
+                            .question_difficulty(task.getDifficulty().toString())
+                            .xpReward(task.getXpReward())
+
+                            .question_number(content.getQuestion_number())
+                            .question_text(content.getQuestion_text())
+                            .question_duration(content.getQuestion_duration())
+                            .options(content.getOptions())
+                            .hint(content.getHint())
+                            .correct_answer(content.getCorrect_answer())
+                            .explanation(content.getExplanation())
+                            .build();
+                })
+                .collect(Collectors.toList());
+
+        return new McqResponseDTO(mcqQuestions);
+    }
+
     public void saveQuestions(List<MCQquestionDTO> questions) {
 
         for(MCQquestionDTO question : questions) {
             Task task = new Task().builder()
+                    .userId(question.getUserId().toString())
                     .title(question.getQuestion_title())
                     .description(question.getQuestion_description())
                     .type(TaskType.valueOf(question.getQuestion_type()))
