@@ -7,6 +7,12 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Builder;
 
+/**
+ * Request object for creating a new user by an administrator.
+ *
+ * @param email the email address of the new user (must be unique)
+ * @param role the role to assign to the new user
+ */
 @Builder
 public record CreateUserByAdminRequest(
         @NotBlank
