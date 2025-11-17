@@ -75,6 +75,11 @@ public class SubmissionEventListener {
     public void handleTaskGenerationSucceeded(TaskGenerationSucceededEvent event) {
         log.info("Received TaskGenerationSucceededEvent for user: {}", event.getUserId());
 
+        if (!isValidTaskGenerationSuccess(event)) {
+            log.error("Invalid TaskGenerationSucceededEvent received: {}. Rejecting message.", event);
+            throw new AmqpRejectAndDontRequeueException("Invalid event payload: missing skillIds or generatedTaskIds");
+        }
+
         try {
             notificationPersistenceService.persistTaskGenerationSuccess(event);
 
@@ -92,6 +97,11 @@ public class SubmissionEventListener {
     @RabbitListener(queues = RabbitMQConfig.TASK_GENERATION_FAILED_QUEUE)
     public void handleTaskGenerationFailed(TaskGenerationFailedEvent event) {
         log.info("Received TaskGenerationFailedEvent for user: {}", event.getUserId());
+
+        if (!isValidTaskGenerationFailure(event)) {
+            log.error("Invalid TaskGenerationFailedEvent received: {}. Rejecting message.", event);
+            throw new AmqpRejectAndDontRequeueException("Invalid event payload: missing skillIds or errorMessage");
+        }
 
         try {
             notificationPersistenceService.persistTaskGenerationFailure(event);
@@ -111,5 +121,21 @@ public class SubmissionEventListener {
         return event != null &&
                 event.getUserId() != null &&
                 event.getSubmissionId() != null;
+    }
+
+    private boolean isValidTaskGenerationSuccess(TaskGenerationSucceededEvent event) {
+        return event != null &&
+                event.getUserId() != null &&
+                event.getSkillIds() != null &&
+                !event.getSkillIds().isEmpty() &&
+                event.getGeneratedTaskIds() != null;
+    }
+
+    private boolean isValidTaskGenerationFailure(TaskGenerationFailedEvent event) {
+        return event != null &&
+                event.getUserId() != null &&
+                event.getSkillIds() != null &&
+                event.getErrorMessage() != null &&
+                !event.getErrorMessage().isBlank();
     }
 }

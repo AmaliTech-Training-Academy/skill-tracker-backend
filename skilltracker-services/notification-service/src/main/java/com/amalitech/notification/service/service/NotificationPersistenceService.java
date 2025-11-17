@@ -120,6 +120,11 @@ public class NotificationPersistenceService {
 
     public void persistTaskGenerationSuccess(TaskGenerationSucceededEvent event) {
         try {
+            Map<String, Object> context = new HashMap<>();
+            context.put("skillIds", event.getSkillIds());
+            context.put("taskCount", event.getGeneratedTaskIds() != null ? event.getGeneratedTaskIds().size() : 0);
+            context.put("generatedTaskIds", event.getGeneratedTaskIds());
+
             NotificationDocument notification = NotificationDocument.builder()
                     .userId(event.getUserId())
                     .type("TASK_GENERATION_SUCCESS")
@@ -127,6 +132,7 @@ public class NotificationPersistenceService {
                     .message("New tasks have been generated and are now available for you.")
                     .createdAt(LocalDateTime.now())
                     .read(false)
+                    .context(context)
                     .build();
 
             notificationRepository.save(notification);
@@ -142,6 +148,7 @@ public class NotificationPersistenceService {
     public void persistTaskGenerationFailure(TaskGenerationFailedEvent event) {
         try {
             Map<String, Object> context = new HashMap<>();
+            context.put("skillIds", event.getSkillIds());
             context.put("errorMessage", event.getErrorMessage());
 
             NotificationDocument notification = NotificationDocument.builder()

@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 
 import java.io.Serial;
 import java.io.Serializable;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -29,6 +30,12 @@ public class TaskGenerationFailedEvent implements Serializable {
      * task generation failed.
      */
     private UUID userId;
+
+    /**
+     * The list of skill IDs for which task generation was attempted.
+     * Must be non-null; can be empty if the error occurred before skill lookup.
+     */
+    private List<UUID> skillIds;
 
     /**
      * The error message or reason for the failure.
