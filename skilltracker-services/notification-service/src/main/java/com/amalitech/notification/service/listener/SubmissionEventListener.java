@@ -5,8 +5,8 @@ import com.amalitech.common.event.events.SubmissionExecutedEvent;
 import com.amalitech.common.event.events.TaskGenerationFailedEvent;
 import com.amalitech.common.event.events.TaskGenerationSucceededEvent;
 import com.amalitech.notification.service.config.RabbitMQConfig;
-import com.amalitech.notification.service.service.NotificationPersistenceService;
-import com.amalitech.notification.service.service.NotificationService;
+import com.amalitech.notification.service.service.NotificationPersistencePort;
+import com.amalitech.notification.service.service.INotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.AmqpRejectAndDontRequeueException;
@@ -22,8 +22,8 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class SubmissionEventListener {
 
-    private final NotificationService notificationService;
-    private final NotificationPersistenceService notificationPersistenceService;
+    private final INotificationService notificationService;
+    private final NotificationPersistencePort notificationPersistenceService;
 
     @RabbitListener(queues = RabbitMQConfig.EXECUTED_QUEUE)
     public void handleSubmissionExecuted(SubmissionExecutedEvent event) {

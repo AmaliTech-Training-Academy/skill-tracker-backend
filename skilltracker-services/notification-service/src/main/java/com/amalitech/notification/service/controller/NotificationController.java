@@ -1,7 +1,7 @@
 package com.amalitech.notification.service.controller;
 
 import com.amalitech.notification.service.document.NotificationDocument;
-import com.amalitech.notification.service.service.NotificationPersistenceService;
+import com.amalitech.notification.service.service.NotificationPersistencePort;
 import com.amalitech.notification.service.util.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,7 +25,7 @@ import java.util.UUID;
 @Slf4j
 public class NotificationController {
 
-    private final NotificationPersistenceService notificationPersistenceService;
+    private final NotificationPersistencePort notificationPersistenceService;
     private final SecurityUtils securityUtils;
 
     @GetMapping
