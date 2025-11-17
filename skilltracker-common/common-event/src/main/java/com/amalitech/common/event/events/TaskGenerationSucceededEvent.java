@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 
 import java.io.Serial;
 import java.io.Serializable;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -28,4 +29,17 @@ public class TaskGenerationSucceededEvent implements Serializable {
      * tasks were successfully generated.
      */
     private UUID userId;
+
+    /**
+     * The list of skill IDs for which tasks were generated.
+     * Must be non-null and populated with the actual skill IDs.
+     */
+    private List<UUID> skillIds;
+
+    /**
+     * The list of generated task IDs.
+     * Used for tracking and notification purposes.
+     * Must be non-null and populated with the IDs of all generated tasks.
+     */
+    private List<UUID> generatedTaskIds;
 }

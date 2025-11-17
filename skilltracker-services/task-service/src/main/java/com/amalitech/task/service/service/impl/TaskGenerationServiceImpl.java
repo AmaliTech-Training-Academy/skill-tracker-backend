@@ -7,6 +7,7 @@ import com.amalitech.task.service.dto.request.BatchGenerationRequest;
 import com.amalitech.task.service.dto.request.GenerateTaskRequest;
 import com.amalitech.task.service.events.TaskReplyEventProducer;
 import com.amalitech.task.service.exception.TaskGenerationException;
+import com.amalitech.task.service.model.Task;
 import com.amalitech.task.service.model.UserSkillProfile;
 import com.amalitech.task.service.model.enums.TaskDifficulty;
 import com.amalitech.task.service.model.enums.TaskType;
@@ -24,6 +25,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -90,6 +93,7 @@ public class TaskGenerationServiceImpl implements TaskGenerationService {
 
             TaskGenerationFailedEvent failEvent = new TaskGenerationFailedEvent(
                     requesterUserId,
+                    List.of(),
                     "Batch job for this skill/type is already in progress."
             );
             replyEventProducer.publishTaskGenerationFailed(failEvent);
@@ -101,12 +105,16 @@ public class TaskGenerationServiceImpl implements TaskGenerationService {
             SkillView skill = skillViewRepository.findByName(request.skillName())
                     .orElseThrow(() -> new TaskGenerationException("Skill not found: " + request.skillName()));
 
+            List<UUID> generatedTaskIds = new ArrayList<>();
+
             switch (request.taskType()) {
                 case CODING:
-                    contentGeneratorService.generateCodingTask(skill, request.difficulty(), request.requiredCount());
+                    var codingTasks = contentGeneratorService.generateCodingTask(skill, request.difficulty(), request.requiredCount());
+                    generatedTaskIds.addAll(codingTasks.stream().map(Task::getId).toList());
                     break;
                 case ESSAY:
-                    contentGeneratorService.generateEssayTask(skill, request.difficulty(), request.requiredCount());
+                    var essayTasks = contentGeneratorService.generateEssayTask(skill, request.difficulty(), request.requiredCount());
+                    generatedTaskIds.addAll(essayTasks.stream().map(Task::getId).toList());
                     break;
                 case MULTIPLE_CHOICE:
                 default:
@@ -115,13 +123,19 @@ public class TaskGenerationServiceImpl implements TaskGenerationService {
             }
 
             log.info("Batch generation complete for {}", lockKey);
-            TaskGenerationSucceededEvent successEvent = new TaskGenerationSucceededEvent(requesterUserId);
+            TaskGenerationSucceededEvent successEvent = new TaskGenerationSucceededEvent(
+                    requesterUserId,
+                    List.of(skill.getId()),
+                    generatedTaskIds
+            );
             replyEventProducer.publishTaskGenerationSucceeded(successEvent);
 
         } catch (Exception e) {
             log.error("Failed to generate BATCH tasks for {}: {}", lockKey, e.getMessage(), e);
+            SkillView skill = skillViewRepository.findByName(request.skillName()).orElse(null);
             TaskGenerationFailedEvent failEvent = new TaskGenerationFailedEvent(
                     requesterUserId,
+                    skill != null ? List.of(skill.getId()) : List.of(),
                     "Batch generation failed: " + e.getMessage()
             );
             replyEventProducer.publishTaskGenerationFailed(failEvent);
@@ -147,13 +161,16 @@ public class TaskGenerationServiceImpl implements TaskGenerationService {
 
             log.info("Generating ADMIN {} task (1) for topic '{}'...", request.taskType(), request.topic());
 
+            List<UUID> generatedTaskIds = new ArrayList<>();
+
             switch (request.taskType()) {
                 case CODING:
-                    contentGeneratorService.generateCodingTask(skill, request.difficulty(), 1);
+                    var codingTasks = contentGeneratorService.generateCodingTask(skill, request.difficulty(), 1);
+                    generatedTaskIds.addAll(codingTasks.stream().map(Task::getId).toList());
                     break;
                 case ESSAY:
-                    contentGeneratorService.generateEssayTask(skill, request.difficulty(), 1
-                    );
+                    var essayTasks = contentGeneratorService.generateEssayTask(skill, request.difficulty(), 1);
+                    generatedTaskIds.addAll(essayTasks.stream().map(Task::getId).toList());
                     break;
                 case MULTIPLE_CHOICE:
                 default:
@@ -162,13 +179,19 @@ public class TaskGenerationServiceImpl implements TaskGenerationService {
             }
 
             log.info("Admin {} task generation complete for {}", request.taskType(), request.topic());
-            TaskGenerationSucceededEvent successEvent = new TaskGenerationSucceededEvent(requesterUserId);
+            TaskGenerationSucceededEvent successEvent = new TaskGenerationSucceededEvent(
+                    requesterUserId,
+                    List.of(skill.getId()),
+                    generatedTaskIds
+            );
             replyEventProducer.publishTaskGenerationSucceeded(successEvent);
 
         } catch (Exception e) {
             log.error("Failed to generate ADMIN task...", e);
+            SkillView skill = skillViewRepository.findByName(request.skillName()).orElse(null);
             TaskGenerationFailedEvent failEvent = new TaskGenerationFailedEvent(
                     requesterUserId,
+                    skill != null ? List.of(skill.getId()) : List.of(),
                     "Admin generation failed: " + e.getMessage()
             );
             replyEventProducer.publishTaskGenerationFailed(failEvent);
@@ -188,6 +211,11 @@ public class TaskGenerationServiceImpl implements TaskGenerationService {
         UUID userId = event.getUserId();
         log.info("Generating tasks for user onboarding: {}", userId);
 
+        List<UUID> skillIds = event.getSelectedSkills().stream()
+                .map(UserOnboardingCompletedEvent.SkillSelectionData::getSkillId)
+                .toList();
+        List<UUID> generatedTaskIds = new java.util.ArrayList<>();
+
         try {
             for (UserOnboardingCompletedEvent.SkillSelectionData skillData : event.getSelectedSkills()) {
 
@@ -201,7 +229,8 @@ public class TaskGenerationServiceImpl implements TaskGenerationService {
                         log.info("Generating {} {} tasks for skill: {}",
                                 quantity, taskType, skillData.getSkillName());
 
-                        generateTasksOfType(skillData, taskType, quantity);
+                        List<UUID> taskIds = generateTasksOfType(skillData, taskType, quantity);
+                        generatedTaskIds.addAll(taskIds);
                     }
                 } catch (Exception e) {
                     log.error("Failed to generate tasks for skill {}: {}",
@@ -210,15 +239,15 @@ public class TaskGenerationServiceImpl implements TaskGenerationService {
                 }
             }
 
-            log.info("Successfully completed ALL task generation for user: {}", userId);
-            TaskGenerationSucceededEvent successEvent = new TaskGenerationSucceededEvent(userId);
+            log.info("Successfully completed ALL task generation for user: {}. Generated {} tasks", userId, generatedTaskIds.size());
+            TaskGenerationSucceededEvent successEvent = new TaskGenerationSucceededEvent(userId, skillIds, generatedTaskIds);
             replyEventProducer.publishTaskGenerationSucceeded(successEvent);
 
         } catch (Exception e) {
             log.error("CRITICAL: Task generation saga FAILED for user {}: {}",
                     userId, e.getMessage(), e);
 
-            TaskGenerationFailedEvent failEvent = new TaskGenerationFailedEvent(userId, e.getMessage());
+            TaskGenerationFailedEvent failEvent = new TaskGenerationFailedEvent(userId, skillIds, e.getMessage());
             replyEventProducer.publishTaskGenerationFailed(failEvent);
         }
     }
@@ -232,8 +261,8 @@ public class TaskGenerationServiceImpl implements TaskGenerationService {
         };
     }
 
-    private void generateTasksOfType(UserOnboardingCompletedEvent.SkillSelectionData skillData,
-                                     TaskType taskType, int quantity) {
+    private List<UUID> generateTasksOfType(UserOnboardingCompletedEvent.SkillSelectionData skillData,
+                                           TaskType taskType, int quantity) {
         SkillView skill = skillViewRepository.findById(skillData.getSkillId())
                 .orElseThrow(() -> new TaskGenerationException("Skill not found: " + skillData.getSkillId()));
 
@@ -245,7 +274,7 @@ public class TaskGenerationServiceImpl implements TaskGenerationService {
         if (existingTaskCount >= quantity) {
             log.info("Sufficient {} {} tasks already exist ({} found, {} requested). Skipping generation.",
                     taskType, difficulty, existingTaskCount, quantity);
-            return;
+            return List.of();
         }
 
         int tasksToGenerate = quantity - (int) existingTaskCount;
@@ -254,14 +283,16 @@ public class TaskGenerationServiceImpl implements TaskGenerationService {
 
         switch (taskType) {
             case CODING:
-                contentGeneratorService.generateCodingTask(skill, difficulty, tasksToGenerate);
-                break;
+                var codingTasks = contentGeneratorService.generateCodingTask(skill, difficulty, tasksToGenerate);
+                return codingTasks.stream().map(Task::getId).toList();
             case ESSAY:
-                contentGeneratorService.generateEssayTask(skill, difficulty, tasksToGenerate);
-                break;
+                var essayTasks = contentGeneratorService.generateEssayTask(skill, difficulty, tasksToGenerate);
+                return essayTasks.stream().map(Task::getId).toList();
             case MULTIPLE_CHOICE:
                 log.warn("MCQ generation not yet implemented for skill: {}", skill.getName());
-                break;
+                return List.of();
+            default:
+                return List.of();
         }
     }
 
