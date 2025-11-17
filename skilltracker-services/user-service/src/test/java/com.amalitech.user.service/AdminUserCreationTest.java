@@ -20,8 +20,10 @@ import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.*;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
@@ -41,6 +43,7 @@ import static org.mockito.Mockito.*;
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class AdminUserCreationTest {
 
+    @Mock private ApplicationEventPublisher eventPublisher;
     @Mock private UserRepository userRepository;
     @Mock private PasswordConfig passwordConfig;
     @Mock private JwtUtil jwtUtil;
@@ -75,8 +78,10 @@ class AdminUserCreationTest {
         lenient().when(passwordConfig.getLength()).thenReturn(12);
         lenient().when(passwordConfig.getAllCharacters()).thenReturn(uppercase + lowercase + numbers + special);
         lenient().doNothing().when(emailService).sendAdminCreatedUserEmail(anyString(), anyString(), anyString(), anyString());
+        lenient().doNothing().when(eventPublisher).publishEvent(isA(Object.class));
 
         authService = new AuthServiceImpl(
+                eventPublisher,
                 userRepository,
                 passwordConfig,
                 jwtUtil,
@@ -91,6 +96,9 @@ class AdminUserCreationTest {
                 authenticationManager,
                 cookieUtil
         );
+        
+        // Set frontendUrl for login URL generation
+        ReflectionTestUtils.setField(authService, "frontendUrl", "http://localhost:3000");
     }
 
     // ==================== DTO Validation Tests ====================
@@ -151,7 +159,7 @@ class AdminUserCreationTest {
         verify(userRepository).existsByEmail(NEW_USER_EMAIL);
         verify(passwordEncoder).encode(anyString());
         verify(userRepository, times(1)).save(any(User.class));
-        verify(emailService).sendAdminCreatedUserEmail(eq(NEW_USER_EMAIL), anyString(), eq(ADMIN_EMAIL), eq("null/login"));
+        verify(eventPublisher).publishEvent(isA(Object.class));
         }
 
         @Test
@@ -287,12 +295,7 @@ class AdminUserCreationTest {
 
         authService.createUserByAdmin(request, ADMIN_EMAIL);
 
-        verify(emailService).sendAdminCreatedUserEmail(
-                eq(NEW_USER_EMAIL),
-                anyString(),
-                eq(ADMIN_EMAIL),
-                eq("null/login")
-        );
+        verify(eventPublisher).publishEvent(isA(Object.class));
     }
 
     // ==================== Password Generation Tests ====================
@@ -528,11 +531,6 @@ class AdminUserCreationTest {
 
         authService.createUserByAdmin(request, specificAdminEmail);
 
-        verify(emailService).sendAdminCreatedUserEmail(
-                eq(NEW_USER_EMAIL),
-                anyString(),
-                eq(specificAdminEmail),
-                eq("null/login")
-        );
-    }
-}
+        verify(eventPublisher).publishEvent(isA(Object.class));
+        }
+        }
