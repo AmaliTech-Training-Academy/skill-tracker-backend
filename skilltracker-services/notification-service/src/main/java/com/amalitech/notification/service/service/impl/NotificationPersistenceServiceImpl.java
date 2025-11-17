@@ -19,6 +19,18 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
+/**
+ * Implementation of {@link NotificationPersistenceService} for MongoDB storage.
+ * 
+ * Manages the complete notification lifecycle in MongoDB, providing:
+ * - CRUD operations for notification documents
+ * - Query operations with filtering and pagination
+ * - Event-driven notification creation from domain events
+ * - User-scoped authorization for all operations
+ * 
+ * Uses MongoDB's flexible document model to store rich context data
+ * alongside standard notification metadata.
+ */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -26,21 +38,33 @@ public class NotificationPersistenceServiceImpl implements NotificationPersisten
 
     private final NotificationRepository notificationRepository;
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public Page<NotificationDocument> getNotificationsForUser(UUID userId, Pageable pageable) {
         return notificationRepository.findByUserIdOrderByCreatedAtDesc(userId, pageable);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public Page<NotificationDocument> getUnreadNotificationsForUser(UUID userId, Pageable pageable) {
         return notificationRepository.findByUserIdAndReadFalseOrderByCreatedAtDesc(userId, pageable);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public long getUnreadNotificationCountForUser(UUID userId) {
         return notificationRepository.countByUserIdAndReadFalse(userId);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public NotificationDocument getNotification(String id, UUID userId) {
         return notificationRepository.findByIdAndUserId(id, userId)
@@ -48,6 +72,9 @@ public class NotificationPersistenceServiceImpl implements NotificationPersisten
                         "Notification " + id + " not found or does not belong to user"));
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public NotificationDocument markNotificationAsRead(String id, UUID userId) {
         NotificationDocument doc = getNotification(id, userId);
@@ -55,12 +82,18 @@ public class NotificationPersistenceServiceImpl implements NotificationPersisten
         return notificationRepository.save(doc);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void deleteNotification(String id, UUID userId) {
         NotificationDocument doc = getNotification(id, userId);
         notificationRepository.delete(doc);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public long markAllNotificationsAsRead(UUID userId) {
         long updateCount = notificationRepository.updateAllUnreadToReadByUserId(userId);
@@ -68,6 +101,9 @@ public class NotificationPersistenceServiceImpl implements NotificationPersisten
         return updateCount;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void persistExecutionResults(SubmissionExecutedEvent event) {
         try {
@@ -98,6 +134,9 @@ public class NotificationPersistenceServiceImpl implements NotificationPersisten
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void persistEvaluationFeedback(SubmissionEvaluatedEvent event) {
         try {
@@ -127,6 +166,9 @@ public class NotificationPersistenceServiceImpl implements NotificationPersisten
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void persistTaskGenerationSuccess(TaskGenerationSucceededEvent event) {
         try {
@@ -155,6 +197,9 @@ public class NotificationPersistenceServiceImpl implements NotificationPersisten
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void persistTaskGenerationFailure(TaskGenerationFailedEvent event) {
         try {

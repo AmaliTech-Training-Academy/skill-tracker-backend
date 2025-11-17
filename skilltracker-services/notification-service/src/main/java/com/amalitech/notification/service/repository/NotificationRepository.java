@@ -30,8 +30,6 @@ public interface NotificationRepository extends MongoRepository<NotificationDocu
 
     List<NotificationDocument> findBySubmissionId(UUID submissionId);
 
-    // This uses a MongoDB $set update to mark all 'read':false documents
-    // for a user as 'read':true, and returns the count of modified documents.
     @Query("{ 'userId': ?0, 'read': false }")
     @Update("{ '$set': { 'read': true } }")
     long updateAllUnreadToReadByUserId(UUID userId);
