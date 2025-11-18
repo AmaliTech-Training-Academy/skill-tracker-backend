@@ -95,16 +95,30 @@ public class CodeExecutionProcessor implements CodeExecutionService {
             return Mono.error(new IllegalArgumentException("Task is not a coding task"));
         }
 
+        // Validate and retrieve submission harness
+        String harness = content.getSubmissionHarness();
+        if (harness == null || harness.isBlank()) {
+            return Mono.error(new IllegalStateException("Task execution harness is missing"));
+        }
+
         List<CodingTaskContent.TestCase> testCases = content.getTestCases();
         if (testCases == null || testCases.isEmpty()) {
             return Mono.error(new IllegalArgumentException("Task has no test cases"));
         }
 
+        // Concatenate user code with submission harness
+        String finalExecutableCode = code + "\n\n" + harness;
+        
+        log.debug("Executing code for task {}. User code lines: {}, Harness lines: {}", 
+            task.getId(),
+            code.split("\n", -1).length,
+            harness.split("\n", -1).length);
+
         return Flux.fromIterable(testCases)
                 .flatMapSequential(testCase -> {
                     Judge0SubmissionRequest request = Judge0SubmissionRequest.builder()
                             .languageId(languageId)
-                            .sourceCode(code)
+                            .sourceCode(finalExecutableCode)
                             .stdin(testCase.getInput())
                             .expectedOutput(null)
                             .build();
