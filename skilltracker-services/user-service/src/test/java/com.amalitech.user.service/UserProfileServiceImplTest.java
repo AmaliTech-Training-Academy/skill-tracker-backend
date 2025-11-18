@@ -7,6 +7,8 @@ import com.amalitech.user.service.mapper.UserProfileMapper;
 import com.amalitech.user.service.model.User;
 import com.amalitech.user.service.model.UserProfile;
 import com.amalitech.user.service.model.enums.GuidedTourStatus;
+import com.amalitech.user.service.model.enums.PremiumTier;
+import com.amalitech.user.service.model.enums.Role;
 import com.amalitech.user.service.model.enums.UserState;
 import com.amalitech.user.service.repository.UserProfileRepository;
 import com.amalitech.user.service.service.impl.UserProfileServiceImpl;
@@ -52,9 +54,12 @@ class UserProfileServiceImplTest {
 
         User testUser = new User();
         testUser.setId(testUserId);
+        testUser.setEmail("patrick@example.com");
         testUser.setState(UserState.ACTIVE);
         testUser.setIsVerified(true);
         testUser.setTourStatus(GuidedTourStatus.COMPLETED);
+        testUser.setRole(Role.USER);
+        testUser.setPremiumTier(PremiumTier.FREE);
 
         testProfile = new UserProfile();
         testProfile.setUserId(testUserId);
@@ -69,14 +74,17 @@ class UserProfileServiceImplTest {
 
         testResponse = new UserProfileResponse(
                 testUserId,
+                "patrick@example.com",
                 "Patrick Appiah",
                 "https://example.com/avatar.jpg",
                 "Software developer",
-                true,
-                true,
                 UserState.ACTIVE,
                 true,
                 GuidedTourStatus.COMPLETED,
+                Role.USER,
+                PremiumTier.FREE,
+                true,
+                true,
                 LocalDateTime.now().minusDays(10),
                 LocalDateTime.now()
         );
@@ -137,9 +145,12 @@ class UserProfileServiceImplTest {
             // Arrange
             User minimalUser = new User();
             minimalUser.setId(testUserId);
+            minimalUser.setEmail("patrick@example.com");
             minimalUser.setState(UserState.REGISTERED);
             minimalUser.setIsVerified(false);
             minimalUser.setTourStatus(GuidedTourStatus.NOT_STARTED);
+            minimalUser.setRole(Role.USER);
+            minimalUser.setPremiumTier(PremiumTier.FREE);
 
             UserProfile minimalProfile = new UserProfile();
             minimalProfile.setUserId(testUserId);
@@ -190,9 +201,12 @@ class UserProfileServiceImplTest {
             // Arrange
             User updatedUser = new User();
             updatedUser.setId(testUserId);
+            updatedUser.setEmail("patrick@example.com");
             updatedUser.setState(UserState.ACTIVE);
             updatedUser.setIsVerified(true);
             updatedUser.setTourStatus(GuidedTourStatus.COMPLETED);
+            updatedUser.setRole(Role.USER);
+            updatedUser.setPremiumTier(PremiumTier.FREE);
 
             UserProfile updatedProfile = new UserProfile();
             updatedProfile.setUserId(testUserId);
