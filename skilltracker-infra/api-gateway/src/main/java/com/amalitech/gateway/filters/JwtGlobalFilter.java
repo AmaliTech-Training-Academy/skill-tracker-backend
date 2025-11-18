@@ -83,9 +83,6 @@ public class JwtGlobalFilter implements GlobalFilter, Ordered {
         ServerHttpRequest request = exchange.getRequest();
         String path = request.getPath().value();
 
-        if (request.getMethod() == HttpMethod.OPTIONS) {
-            return chain.filter(exchange);
-        }
 
         if (path.startsWith("/ws")) {
             return handleWebSocketRequest(exchange, chain, request, path);
