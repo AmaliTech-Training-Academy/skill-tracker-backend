@@ -57,6 +57,7 @@ class CodeExecutionProcessorTest {
                                 .build()
                 ))
                 .constraints("No constraints")
+                .submissionHarness("if __name__ == '__main__':\n    print('hello')")
                 .testCases(List.of(
                         CodingTaskContent.TestCase.builder()
                                 .input("")
@@ -132,6 +133,7 @@ class CodeExecutionProcessorTest {
                 .prompt("Test")
                 .examples(List.of())
                 .constraints("Test")
+                .submissionHarness("if __name__ == '__main__':\n    pass")
                 .testCases(List.of())
                 .build();
 
@@ -242,6 +244,62 @@ class CodeExecutionProcessorTest {
                     assertEquals("warning: unused variable", result.getStderr());
                 })
                 .verifyComplete();
+    }
+
+    @Test
+    void testExecuteCode_MissingHarness() {
+        CodingTaskContent contentNoHarness = CodingTaskContent.builder()
+                .prompt("Test")
+                .examples(List.of())
+                .constraints("Test")
+                .submissionHarness(null)  // Missing harness!
+                .testCases(List.of(
+                        CodingTaskContent.TestCase.builder()
+                                .input("")
+                                .expectedOutput("hello")
+                                .build()
+                ))
+                .build();
+
+        Task taskNoHarness = Task.builder()
+                .id(taskId)
+                .content(contentNoHarness)
+                .build();
+
+        when(taskRepository.findById(taskId)).thenReturn(Optional.of(taskNoHarness));
+
+        StepVerifier.create(codeExecutionProcessor.executeCode(taskId, code, languageId))
+                .expectErrorMatches(e -> e instanceof IllegalStateException 
+                        && e.getMessage().contains("harness is missing"))
+                .verify();
+    }
+
+    @Test
+    void testExecuteCode_BlankHarness() {
+        CodingTaskContent contentBlankHarness = CodingTaskContent.builder()
+                .prompt("Test")
+                .examples(List.of())
+                .constraints("Test")
+                .submissionHarness("   ")  // Blank harness!
+                .testCases(List.of(
+                        CodingTaskContent.TestCase.builder()
+                                .input("")
+                                .expectedOutput("hello")
+                                .build()
+                ))
+                .build();
+
+        Task taskBlankHarness = Task.builder()
+                .id(taskId)
+                .content(contentBlankHarness)
+                .build();
+
+        when(taskRepository.findById(taskId)).thenReturn(Optional.of(taskBlankHarness));
+
+        StepVerifier.create(codeExecutionProcessor.executeCode(taskId, code, languageId))
+                .expectErrorMatches(e -> e instanceof IllegalStateException 
+                        && e.getMessage().contains("harness is missing"))
+                .verify();
     }
 
     private Judge0SubmissionResponse createSuccessResponse(String output) {
