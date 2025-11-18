@@ -505,6 +505,7 @@ class CodingTaskEvaluatorTest {
                 .taskId(taskId)
                 .contentToEvaluate(hasCode ? "def solution():\n    return 42" : "")
                 .languageId(71)
+                .submissionHarness("if __name__ == '__main__':\n    print(solution())")
                 .testCases(testCases)
                 .build();
     }
