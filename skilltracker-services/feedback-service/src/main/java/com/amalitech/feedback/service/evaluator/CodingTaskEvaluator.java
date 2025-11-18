@@ -117,11 +117,25 @@ public class CodingTaskEvaluator implements TaskEvaluator {
             return Mono.error(new InvalidTaskException("Task " + event.getTaskId() + " has no test cases."));
         }
 
+        // Validate and retrieve submission harness
+        String harness = event.getSubmissionHarness();
+        if (harness == null || harness.isBlank()) {
+            return Mono.error(new IllegalStateException("Task execution harness is missing"));
+        }
+
+        // Concatenate user code with submission harness
+        String finalExecutableCode = event.getContentToEvaluate() + "\n\n" + harness;
+        
+        log.debug("Evaluating code for task {}. User code lines: {}, Harness lines: {}", 
+            event.getTaskId(),
+            event.getContentToEvaluate().split("\n", -1).length,
+            harness.split("\n", -1).length);
+
         return Flux.fromIterable(testCases)
                 .concatMap(testCase -> {
                     Judge0SubmissionRequest request = Judge0SubmissionRequest.builder()
                             .languageId(event.getLanguageId())
-                            .sourceCode(event.getContentToEvaluate())
+                            .sourceCode(finalExecutableCode)
                             .stdin(testCase.getInput())
                             .expectedOutput(null)
                             .build();
