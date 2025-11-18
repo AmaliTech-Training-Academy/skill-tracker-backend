@@ -361,7 +361,7 @@ public class TaskServiceImpl implements TaskService {
         ClassPathResource prompt = new ClassPathResource("prompts/mcq/mcq_prompt.json");
 
         String updatedFields = updateFields(
-                Files.readString(prompt.getFile().toPath(), StandardCharsets.UTF_8),
+                new String(prompt.getInputStream().readAllBytes(), StandardCharsets.UTF_8),
                 Map.of(
                         "userId", mcqRequestDTO.getUserId().toString(),
                         "interest", mcqRequestDTO.getInterest(),
@@ -414,7 +414,7 @@ public class TaskServiceImpl implements TaskService {
         String skill = userProfileRequestDTO.getCurrent_progress().getSkill();
         Gson gson = new GsonBuilder().setPrettyPrinting().create();
         ClassPathResource prompt = new ClassPathResource("prompts/learningPath/learningPath_prompt.json");
-        String StringPrompt = Files.readString(prompt.getFile().toPath(), StandardCharsets.UTF_8);
+        String StringPrompt = new String(prompt.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
         String updatedFields = updateBlock(StringPrompt, "input", userProfileRequestDTO);
         String updatedInfoField = updateBlock(updatedFields, "info", "ALWAYS use resources from these specific, high-quality sources, prioritizing links from: " +
                 "[Udemy, Coursera, edX, Pluralsight, Educative, freeCodeCamp, AWS Training and Certification, Google Cloud Skills Boost, Microsoft Learn (Azure), Kaggle," +
