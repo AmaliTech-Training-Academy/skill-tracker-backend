@@ -135,6 +135,26 @@ public class SubmissionCreatedEvent {
     private String rubric;
 
     /**
+     * Hidden harness code that bridges stdin to the user's function and stdout.
+     * 
+     * <p>This is system-generated code (by AI) that:
+     * <ul>
+     *   <li>Imports necessary libraries (sys, json, Scanner, etc.)</li>
+     *   <li>Reads all input from STDIN</li>
+     *   <li>Parses input into correct data types expected by user function</li>
+     *   <li>Calls the user's function</li>
+     *   <li>Prints the result to STDOUT</li>
+     * </ul>
+     * </p>
+     * 
+     * <p>The feedback-service appends this to the user's code before sending to Judge0.
+     * This allows users to write only the solution function without stdin/stdout boilerplate.</p>
+     * 
+     * <p>Only populated for CODING tasks. Null for other types.</p>
+     */
+    private String submissionHarness;
+
+    /**
      * Test case data containing input and expected output for code validation.
      * 
      * <p>Test cases can be visible (shown to user) or hidden (used for grading only).
