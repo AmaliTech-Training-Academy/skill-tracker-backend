@@ -7,7 +7,7 @@ import com.amalitech.task.service.dto.request.SubmitAnswerRequest;
 import com.amalitech.task.service.dto.response.RunCodeResponse;
 import com.amalitech.task.service.dto.response.SubmissionResponse;
 import com.amalitech.task.service.exception.InvalidUserIdException;
-import com.amalitech.task.service.service.CodeExecutionProcessor;
+import com.amalitech.task.service.service.CodeExecutionService;
 import com.amalitech.task.service.service.SubmissionService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -35,7 +35,7 @@ import java.util.UUID;
 public class SubmissionController {
 
     private final SubmissionService submissionService;
-    private final CodeExecutionProcessor codeExecutionProcessor;
+    private final CodeExecutionService codeExecutionService;
 
     /**
      * Accepts a user's answer to a SkillBoost challenge and initiates the AI evaluation process.
@@ -129,11 +129,11 @@ public class SubmissionController {
     ) {
         log.info("Code execution request from user: {} for task: {}", userIdPrincipal, request.taskId());
 
-        RunCodeResponse response = codeExecutionProcessor.executeCode(
+        RunCodeResponse response = codeExecutionService.executeCode(
                 request.taskId(),
                 request.code(),
                 request.languageId()
-        ).block(); // Synchronous execution
+        ).block();
 
         log.info("Code execution completed for user: {}, task: {}", userIdPrincipal, request.taskId());
 
