@@ -52,6 +52,7 @@ class UserProfileServiceImplTest {
 
         User testUser = new User();
         testUser.setId(testUserId);
+        testUser.setEmail("patrick@example.com");
         testUser.setState(UserState.ACTIVE);
         testUser.setIsVerified(true);
         testUser.setTourStatus(GuidedTourStatus.COMPLETED);
@@ -69,14 +70,15 @@ class UserProfileServiceImplTest {
 
         testResponse = new UserProfileResponse(
                 testUserId,
+                "patrick@example.com",
                 "Patrick Appiah",
                 "https://example.com/avatar.jpg",
                 "Software developer",
-                true,
-                true,
                 UserState.ACTIVE,
                 true,
                 GuidedTourStatus.COMPLETED,
+                true,
+                true,
                 LocalDateTime.now().minusDays(10),
                 LocalDateTime.now()
         );
@@ -137,6 +139,7 @@ class UserProfileServiceImplTest {
             // Arrange
             User minimalUser = new User();
             minimalUser.setId(testUserId);
+            minimalUser.setEmail("patrick@example.com");
             minimalUser.setState(UserState.REGISTERED);
             minimalUser.setIsVerified(false);
             minimalUser.setTourStatus(GuidedTourStatus.NOT_STARTED);
@@ -190,6 +193,7 @@ class UserProfileServiceImplTest {
             // Arrange
             User updatedUser = new User();
             updatedUser.setId(testUserId);
+            updatedUser.setEmail("patrick@example.com");
             updatedUser.setState(UserState.ACTIVE);
             updatedUser.setIsVerified(true);
             updatedUser.setTourStatus(GuidedTourStatus.COMPLETED);

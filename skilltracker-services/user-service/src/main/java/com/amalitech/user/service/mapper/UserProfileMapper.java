@@ -23,15 +23,16 @@ public class UserProfileMapper {
         }
 
         return new UserProfileResponse(
-                profile.getUserId(),
+                profile.getUser().getId(),
+                profile.getUser().getEmail(),
                 profile.getFullName(),
                 profile.getAvatarUrl(),
                 profile.getBio(),
-                profile.getEmailNotifications(),
-                profile.getPushNotifications(),
                 profile.getUser().getState(),
                 profile.getUser().getIsVerified(),
                 profile.getUser().getTourStatus(),
+                profile.getEmailNotifications(),
+                profile.getPushNotifications(),
                 profile.getCreatedAt(),
                 profile.getUpdatedAt()
         );
