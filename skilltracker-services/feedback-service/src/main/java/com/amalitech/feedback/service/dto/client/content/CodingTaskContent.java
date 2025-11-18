@@ -20,6 +20,7 @@ public class CodingTaskContent implements TaskContent {
     private String prompt;
     private List<Example> examples;
     private String constraints;
+    private String submissionHarness;
 
     @Data
     @NoArgsConstructor

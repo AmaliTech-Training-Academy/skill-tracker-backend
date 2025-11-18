@@ -76,6 +76,9 @@ skilltracker-services/task-service/src/main/java/com/amalitech/task/service/cont
 
 # AI agent documentation (local only)
 /docs/
+docs/api/
+/docs/api/
+/docs/**
 AGENTS.md
 htmlReport/
 

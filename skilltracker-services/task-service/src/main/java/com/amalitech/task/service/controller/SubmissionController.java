@@ -2,9 +2,12 @@ package com.amalitech.task.service.controller;
 
 import com.amalitech.common.security.dto.response.ApiResponse;
 import com.amalitech.task.service.dto.TaskSubmissionDTO;
+import com.amalitech.task.service.dto.request.RunCodeRequest;
 import com.amalitech.task.service.dto.request.SubmitAnswerRequest;
+import com.amalitech.task.service.dto.response.RunCodeResponse;
 import com.amalitech.task.service.dto.response.SubmissionResponse;
 import com.amalitech.task.service.exception.InvalidUserIdException;
+import com.amalitech.task.service.service.CodeExecutionService;
 import com.amalitech.task.service.service.SubmissionService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +17,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import reactor.core.publisher.Mono;
 
 import java.util.UUID;
 
@@ -32,6 +36,7 @@ import java.util.UUID;
 public class SubmissionController {
 
     private final SubmissionService submissionService;
+    private final CodeExecutionService codeExecutionService;
 
     /**
      * Accepts a user's answer to a SkillBoost challenge and initiates the AI evaluation process.
@@ -104,5 +109,35 @@ public class SubmissionController {
         );
 
         return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Executes user code against test cases and returns immediate results.
+     * <p>
+     * strictly Non-Blocking.
+     * Returns a Mono to allow the server thread to handle other traffic
+     * while Judge0 executes the code in the background.
+     */
+    @PostMapping("/run-code")
+    @PreAuthorize("isAuthenticated()")
+    public Mono<ResponseEntity<ApiResponse<RunCodeResponse>>> runCode(
+            @AuthenticationPrincipal String userIdPrincipal,
+            @Valid @RequestBody RunCodeRequest request
+    ) {
+        log.info("Code execution request from user: {} for task: {}", userIdPrincipal, request.taskId());
+
+        return codeExecutionService.executeCode(
+                        request.taskId(),
+                        request.code(),
+                        request.languageId()
+                )
+                .map(runCodeResponse -> ApiResponse.success(
+                        "Code executed successfully",
+                        runCodeResponse,
+                        null
+                ))
+                .map(ResponseEntity::ok)
+                .doOnSuccess(r -> log.info("Code execution completed for user: {}, task: {}", userIdPrincipal, request.taskId()))
+                .doOnError(e -> log.error("Code execution failed for user: {}", userIdPrincipal, e));
     }
 }

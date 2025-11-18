@@ -90,6 +90,7 @@ public class SubmissionMapper {
                 submission.getTask().getContent() instanceof CodingTaskContent content) {
             builder.contentToEvaluate(answer.getCode());
             builder.languageId(answer.getLanguageId());
+            builder.submissionHarness(content.getSubmissionHarness());
 
             List<SubmissionCreatedEvent.TestCaseData> testCaseData = content.getExamples().stream()
                     .map(ex -> SubmissionCreatedEvent.TestCaseData.builder()

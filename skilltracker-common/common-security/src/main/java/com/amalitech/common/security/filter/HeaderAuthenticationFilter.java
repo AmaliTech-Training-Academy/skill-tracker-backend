@@ -33,6 +33,18 @@ import java.util.stream.Collectors;
 @Component
 public class HeaderAuthenticationFilter extends OncePerRequestFilter {
 
+
+    /**
+     * * By default, OncePerRequestFilter skips "ASYNC" dispatches (which happen when
+     * a Mono/Flux completes and the response is written).
+     * * We return 'false' to ensure this filter runs AGAIN during the dispatch phase,
+     * re-populating the SecurityContext from the headers so the response can be written
+     * without a 403 Access Denied error.
+     */
+    @Override
+    protected boolean shouldNotFilterAsyncDispatch() {
+        return false;
+    }
     /**
      * Performs the internal filtering logic, executed once per request.
      * <p>
