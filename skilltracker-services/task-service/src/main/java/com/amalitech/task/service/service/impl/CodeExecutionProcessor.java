@@ -95,7 +95,6 @@ public class CodeExecutionProcessor implements CodeExecutionService {
             return Mono.error(new IllegalArgumentException("Task is not a coding task"));
         }
 
-        // Validate and retrieve submission harness
         String harness = content.getSubmissionHarness();
         if (harness == null || harness.isBlank()) {
             return Mono.error(new IllegalStateException("Task execution harness is missing"));
@@ -106,7 +105,6 @@ public class CodeExecutionProcessor implements CodeExecutionService {
             return Mono.error(new IllegalArgumentException("Task has no test cases"));
         }
 
-        // Concatenate user code with submission harness
         String finalExecutableCode = code + "\n\n" + harness;
         
         log.debug("Executing code for task {}. User code lines: {}, Harness lines: {}", 
