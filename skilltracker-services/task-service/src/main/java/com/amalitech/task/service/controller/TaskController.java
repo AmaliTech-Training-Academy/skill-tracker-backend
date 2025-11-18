@@ -95,7 +95,7 @@ public class TaskController {
     @GetMapping("/getMCQs/{id}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<McqResponseDTO>> getMCQsByUserId(
-            @RequestParam("id") String id) {
+            @PathVariable("id") String id) {
         McqResponseDTO tasks = taskService.getMCQByUserId(id);
         return ResponseEntity.ok(ApiResponse.success("MCQ Task Generated Successfully", tasks, ""));
     }
