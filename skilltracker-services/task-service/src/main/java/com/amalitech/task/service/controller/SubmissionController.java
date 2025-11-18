@@ -1,6 +1,5 @@
 package com.amalitech.task.service.controller;
 
-import com.amalitech.common.security.dto.response.ApiError;
 import com.amalitech.common.security.dto.response.ApiResponse;
 import com.amalitech.task.service.dto.TaskSubmissionDTO;
 import com.amalitech.task.service.dto.request.RunCodeRequest;
@@ -19,9 +18,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -127,50 +123,26 @@ public class SubmissionController {
      */
     @PostMapping("/run-code")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<?> runCode(
+    public ResponseEntity<ApiResponse<RunCodeResponse>> runCode(
             @AuthenticationPrincipal String userIdPrincipal,
             @Valid @RequestBody RunCodeRequest request
     ) {
         log.info("Code execution request from user: {} for task: {}", userIdPrincipal, request.taskId());
 
-        try {
-            RunCodeResponse response = codeExecutionProcessor.executeCode(
-                    request.taskId(),
-                    request.code(),
-                    request.languageId()
-            ).block(); // Synchronous execution
+        RunCodeResponse response = codeExecutionProcessor.executeCode(
+                request.taskId(),
+                request.code(),
+                request.languageId()
+        ).block(); // Synchronous execution
 
-            log.info("Code execution completed for user: {}, task: {}", userIdPrincipal, request.taskId());
+        log.info("Code execution completed for user: {}, task: {}", userIdPrincipal, request.taskId());
 
-            ApiResponse<RunCodeResponse> apiResponse = ApiResponse.success(
-                    "Code executed successfully",
-                    response,
-                    null
-            );
+        ApiResponse<RunCodeResponse> apiResponse = ApiResponse.success(
+                "Code executed successfully",
+                response,
+                null
+        );
 
-            return ResponseEntity.ok(apiResponse);
-        } catch (IllegalArgumentException e) {
-            log.warn("Invalid request for code execution: {}", e.getMessage());
-            ApiError errorResponse = ApiError.of(
-                    400,
-                    "Invalid request",
-                    e.getMessage(),
-                    "/api/v1/submissions/run-code",
-                    new ArrayList<>(),
-                    null
-            );
-            return ResponseEntity.badRequest().body(errorResponse);
-        } catch (Exception e) {
-            log.error("Code execution failed for user: {}, task: {}", userIdPrincipal, request.taskId(), e);
-            ApiError errorResponse = ApiError.of(
-                    500,
-                    "Code execution failed",
-                    e.getMessage(),
-                    "/api/v1/submissions/run-code",
-                    new ArrayList<>(),
-                    null
-            );
-            return ResponseEntity.status(500).body(errorResponse);
-        }
+        return ResponseEntity.ok(apiResponse);
     }
 }
