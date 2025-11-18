@@ -17,6 +17,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import reactor.core.publisher.Mono;
 
 import java.util.UUID;
 
@@ -113,36 +114,30 @@ public class SubmissionController {
     /**
      * Executes user code against test cases and returns immediate results.
      * <p>
-     * This endpoint allows users to test their code before submitting for formal evaluation.
-     * Results are returned synchronously with execution metrics and test case comparisons.
-     * No submission record is created, and no evaluation score is assigned.
-     *
-     * @param userIdPrincipal The authenticated user's ID string.
-     * @param request The {@link RunCodeRequest} containing task ID, code, and language ID.
-     * @return A {@link ResponseEntity} containing a {@link ApiResponse} with test execution results.
+     * strictly Non-Blocking.
+     * Returns a Mono to allow the server thread to handle other traffic
+     * while Judge0 executes the code in the background.
      */
     @PostMapping("/run-code")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<ApiResponse<RunCodeResponse>> runCode(
+    public Mono<ResponseEntity<ApiResponse<RunCodeResponse>>> runCode(
             @AuthenticationPrincipal String userIdPrincipal,
             @Valid @RequestBody RunCodeRequest request
     ) {
         log.info("Code execution request from user: {} for task: {}", userIdPrincipal, request.taskId());
 
-        RunCodeResponse response = codeExecutionService.executeCode(
-                request.taskId(),
-                request.code(),
-                request.languageId()
-        ).block();
-
-        log.info("Code execution completed for user: {}, task: {}", userIdPrincipal, request.taskId());
-
-        ApiResponse<RunCodeResponse> apiResponse = ApiResponse.success(
-                "Code executed successfully",
-                response,
-                null
-        );
-
-        return ResponseEntity.ok(apiResponse);
+        return codeExecutionService.executeCode(
+                        request.taskId(),
+                        request.code(),
+                        request.languageId()
+                )
+                .map(runCodeResponse -> ApiResponse.success(
+                        "Code executed successfully",
+                        runCodeResponse,
+                        null
+                ))
+                .map(ResponseEntity::ok)
+                .doOnSuccess(r -> log.info("Code execution completed for user: {}, task: {}", userIdPrincipal, request.taskId()))
+                .doOnError(e -> log.error("Code execution failed for user: {}", userIdPrincipal, e));
     }
 }
