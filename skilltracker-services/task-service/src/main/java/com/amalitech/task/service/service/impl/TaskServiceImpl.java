@@ -75,7 +75,7 @@ public class TaskServiceImpl implements TaskService {
     private final StringRedisTemplate redisTemplate;
     private static final String model = System.getenv("model");
     private final UserLearningPathRepository userLPrepo;
-    private final Client client = new Client();
+    private Client client;
 
     /**
      * Minimum number of tasks required per difficulty level before triggering generation.
@@ -103,6 +103,20 @@ public class TaskServiceImpl implements TaskService {
         this.taskMapper = taskMapper;
         this.redisTemplate = redisTemplate;
         this.userLPrepo = userLPrepo;
+    }
+
+    /**
+     * Lazily initializes the Google Gemini API client on first use.
+     * This defers client instantiation until the API key is guaranteed to be available.
+     *
+     * @return the initialized Client instance
+     * @throws IllegalArgumentException if the Google API key is not configured
+     */
+    private Client getClient() {
+        if (client == null) {
+            client = new Client();
+        }
+        return client;
     }
 
     /**
@@ -357,7 +371,7 @@ public class TaskServiceImpl implements TaskService {
 
 
         GenerateContentResponse response =
-                client.models.generateContent(
+                getClient().models.generateContent(
                         model,
                         updatedFields,
                         null);
@@ -410,7 +424,7 @@ public class TaskServiceImpl implements TaskService {
                 "Linux Foundation Training, HashiCorp Learn (Terraform/Vault)].");
 
         GenerateContentResponse response =
-                client.models.generateContent(
+                getClient().models.generateContent(
                         model,
                         updatedInfoField,
                         null);
