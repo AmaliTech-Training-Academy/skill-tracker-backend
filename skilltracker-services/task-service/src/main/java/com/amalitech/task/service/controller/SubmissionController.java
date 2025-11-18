@@ -1,10 +1,14 @@
 package com.amalitech.task.service.controller;
 
+import com.amalitech.common.security.dto.response.ApiError;
 import com.amalitech.common.security.dto.response.ApiResponse;
 import com.amalitech.task.service.dto.TaskSubmissionDTO;
+import com.amalitech.task.service.dto.request.RunCodeRequest;
 import com.amalitech.task.service.dto.request.SubmitAnswerRequest;
+import com.amalitech.task.service.dto.response.RunCodeResponse;
 import com.amalitech.task.service.dto.response.SubmissionResponse;
 import com.amalitech.task.service.exception.InvalidUserIdException;
+import com.amalitech.task.service.service.CodeExecutionProcessor;
 import com.amalitech.task.service.service.SubmissionService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -15,6 +19,9 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -32,6 +39,7 @@ import java.util.UUID;
 public class SubmissionController {
 
     private final SubmissionService submissionService;
+    private final CodeExecutionProcessor codeExecutionProcessor;
 
     /**
      * Accepts a user's answer to a SkillBoost challenge and initiates the AI evaluation process.
@@ -104,5 +112,65 @@ public class SubmissionController {
         );
 
         return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Executes user code against test cases and returns immediate results.
+     * <p>
+     * This endpoint allows users to test their code before submitting for formal evaluation.
+     * Results are returned synchronously with execution metrics and test case comparisons.
+     * No submission record is created, and no evaluation score is assigned.
+     *
+     * @param userIdPrincipal The authenticated user's ID string.
+     * @param request The {@link RunCodeRequest} containing task ID, code, and language ID.
+     * @return A {@link ResponseEntity} containing a {@link ApiResponse} with test execution results.
+     */
+    @PostMapping("/run-code")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<?> runCode(
+            @AuthenticationPrincipal String userIdPrincipal,
+            @Valid @RequestBody RunCodeRequest request
+    ) {
+        log.info("Code execution request from user: {} for task: {}", userIdPrincipal, request.taskId());
+
+        try {
+            RunCodeResponse response = codeExecutionProcessor.executeCode(
+                    request.taskId(),
+                    request.code(),
+                    request.languageId()
+            ).block(); // Synchronous execution
+
+            log.info("Code execution completed for user: {}, task: {}", userIdPrincipal, request.taskId());
+
+            ApiResponse<RunCodeResponse> apiResponse = ApiResponse.success(
+                    "Code executed successfully",
+                    response,
+                    null
+            );
+
+            return ResponseEntity.ok(apiResponse);
+        } catch (IllegalArgumentException e) {
+            log.warn("Invalid request for code execution: {}", e.getMessage());
+            ApiError errorResponse = ApiError.of(
+                    400,
+                    "Invalid request",
+                    e.getMessage(),
+                    "/api/v1/submissions/run-code",
+                    new ArrayList<>(),
+                    null
+            );
+            return ResponseEntity.badRequest().body(errorResponse);
+        } catch (Exception e) {
+            log.error("Code execution failed for user: {}, task: {}", userIdPrincipal, request.taskId(), e);
+            ApiError errorResponse = ApiError.of(
+                    500,
+                    "Code execution failed",
+                    e.getMessage(),
+                    "/api/v1/submissions/run-code",
+                    new ArrayList<>(),
+                    null
+            );
+            return ResponseEntity.status(500).body(errorResponse);
+        }
     }
 }
