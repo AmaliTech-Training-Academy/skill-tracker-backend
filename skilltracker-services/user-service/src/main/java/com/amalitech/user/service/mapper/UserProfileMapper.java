@@ -31,6 +31,8 @@ public class UserProfileMapper {
                 profile.getUser().getState(),
                 profile.getUser().getIsVerified(),
                 profile.getUser().getTourStatus(),
+                profile.getUser().getRole(),
+                profile.getUser().getPremiumTier(),
                 profile.getEmailNotifications(),
                 profile.getPushNotifications(),
                 profile.getCreatedAt(),

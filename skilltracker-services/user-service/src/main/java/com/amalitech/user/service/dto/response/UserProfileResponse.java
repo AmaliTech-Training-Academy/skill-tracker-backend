@@ -2,6 +2,8 @@ package com.amalitech.user.service.dto.response;
 
 import com.amalitech.user.service.model.UserProfile;
 import com.amalitech.user.service.model.enums.GuidedTourStatus;
+import com.amalitech.user.service.model.enums.PremiumTier;
+import com.amalitech.user.service.model.enums.Role;
 import com.amalitech.user.service.model.enums.UserState;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -22,6 +24,8 @@ public record UserProfileResponse(
         @JsonProperty("is_verified")
         Boolean isVerified,
         GuidedTourStatus tourStatus,
+        Role role,
+        PremiumTier premiumTier,
         Boolean emailNotifications,
         Boolean pushNotifications,
         LocalDateTime createdAt,
@@ -43,6 +47,8 @@ public record UserProfileResponse(
                 profile.getUser().getState(),
                 profile.getUser().getIsVerified(),
                 profile.getUser().getTourStatus(),
+                profile.getUser().getRole(),
+                profile.getUser().getPremiumTier(),
                 profile.getEmailNotifications(),
                 profile.getPushNotifications(),
                 profile.getCreatedAt(),
