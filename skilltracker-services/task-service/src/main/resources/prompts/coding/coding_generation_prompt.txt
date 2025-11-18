@@ -26,23 +26,23 @@ XP Calculation Example:
 Total XP available for {quantity} challenges: {quantity} × 50 = Total XP
 
 REQUIRED JSON STRUCTURE:
-{
+\{
   "challenges": [
-    {
+    \{
       "title": "Descriptive challenge title (max 70 chars)",
       "description": "Clear problem statement explaining what needs to be built (2-4 sentences)",
       "detailedRequirements": "Comprehensive requirements with examples and edge cases to consider",
       "starterCode": "Initial code template with function signature and basic structure. Do NOT include solution logic.",
       "submissionHarness": "Hidden driver code that imports libraries, reads stdin, parses input, calls the user function, and prints result to stdout.",
       "testCases": [
-        {
+        \{
           "input": "Test input (string, array, or object as appropriate)",
           "expectedOutput": "Expected result",
           "isHidden": false,
           "description": "What this test case validates"
-        }
+        \}
       ],
-      "evaluationCriteria": {
+      "evaluationCriteria": \{
         "correctness": [
           "Criterion 1: Specific correctness requirement",
           "Criterion 2: Another correctness requirement",
@@ -58,7 +58,7 @@ REQUIRED JSON STRUCTURE:
           "Criterion 2: Naming convention expectation",
           "Criterion 3: Documentation/readability requirement"
         ]
-      },
+      \},
       "hints": [
         "Hint 1: Helpful pointer without giving away the solution",
         "Hint 2: Another strategic hint"
@@ -66,9 +66,9 @@ REQUIRED JSON STRUCTURE:
       "estimatedDuration": 15,
       "maxXP": 50,
       "difficulty": "{difficulty}"
-    }
+    \}
   ]
-}
+\}
 
 CRITICAL REQUIREMENTS - NON-NEGOTIABLE:
 
@@ -144,27 +144,6 @@ Starter Code:
 - Add basic structure (class skeleton if needed)
 - Include TODO comments for guidance
 - Do NOT include solution logic
-
-CRITICAL - LANGUAGE-SPECIFIC STARTER CODE CONSTRAINTS:
-- Python: Provide ONLY function definitions. DO NOT include:
-  * if __name__ == "__main__"
-  * import statements
-  * sys.stdin or print() output code
-- Java: Provide ONLY a static method or instance method. DO NOT include:
-  * public class declarations (use a method skeleton only)
-  * main(String[] args) method
-  * import statements
-- C++: Provide ONLY function implementations. DO NOT include:
-  * #include statements
-  * using namespace std
-  * int main() or other entry points
-- JavaScript: Provide ONLY function definitions. DO NOT include:
-  * console.log() or any output code
-  * require() or import statements
-  * module.exports
-
-The submission harness will handle ALL imports, input/output, and entry points.
-User code that violates these constraints will be rejected at submission time.
 
 SUBMISSION HARNESS STANDARDS (THE GLUE):
 - This code is hidden from the user but runs after their code.
