@@ -6,6 +6,8 @@ import com.amalitech.user.service.exception.ProfileNotFoundException;
 import com.amalitech.user.service.mapper.UserProfileMapper;
 import com.amalitech.user.service.model.User;
 import com.amalitech.user.service.model.UserProfile;
+import com.amalitech.user.service.model.enums.GuidedTourStatus;
+import com.amalitech.user.service.model.enums.UserState;
 import com.amalitech.user.service.repository.UserProfileRepository;
 import com.amalitech.user.service.service.impl.UserProfileServiceImpl;
 
@@ -50,6 +52,9 @@ class UserProfileServiceImplTest {
 
         User testUser = new User();
         testUser.setId(testUserId);
+        testUser.setState(UserState.ACTIVE);
+        testUser.setIsVerified(true);
+        testUser.setTourStatus(GuidedTourStatus.COMPLETED);
 
         testProfile = new UserProfile();
         testProfile.setUserId(testUserId);
@@ -69,6 +74,9 @@ class UserProfileServiceImplTest {
                 "Software developer",
                 true,
                 true,
+                UserState.ACTIVE,
+                true,
+                GuidedTourStatus.COMPLETED,
                 LocalDateTime.now().minusDays(10),
                 LocalDateTime.now()
         );
@@ -127,8 +135,15 @@ class UserProfileServiceImplTest {
         @DisplayName("Should handle profile with minimal data")
         void shouldHandleProfileWithMinimalData() {
             // Arrange
+            User minimalUser = new User();
+            minimalUser.setId(testUserId);
+            minimalUser.setState(UserState.REGISTERED);
+            minimalUser.setIsVerified(false);
+            minimalUser.setTourStatus(GuidedTourStatus.NOT_STARTED);
+
             UserProfile minimalProfile = new UserProfile();
             minimalProfile.setUserId(testUserId);
+            minimalProfile.setUser(minimalUser);
             minimalProfile.setEmailNotifications(true);
             minimalProfile.setPushNotifications(true);
 
@@ -173,8 +188,15 @@ class UserProfileServiceImplTest {
         @DisplayName("Should successfully update all profile fields")
         void shouldUpdateAllProfileFieldsSuccessfully() {
             // Arrange
+            User updatedUser = new User();
+            updatedUser.setId(testUserId);
+            updatedUser.setState(UserState.ACTIVE);
+            updatedUser.setIsVerified(true);
+            updatedUser.setTourStatus(GuidedTourStatus.COMPLETED);
+
             UserProfile updatedProfile = new UserProfile();
             updatedProfile.setUserId(testUserId);
+            updatedProfile.setUser(updatedUser);
             updatedProfile.setFullName("Kwadwo Appiah");
             updatedProfile.setAvatarUrl("https://example.com/new-avatar.jpg");
             updatedProfile.setBio("Senior Software Engineer");
