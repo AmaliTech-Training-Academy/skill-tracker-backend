@@ -29,6 +29,9 @@ public class UserProfileMapper {
                 profile.getBio(),
                 profile.getEmailNotifications(),
                 profile.getPushNotifications(),
+                profile.getUser().getState(),
+                profile.getUser().getIsVerified(),
+                profile.getUser().getTourStatus(),
                 profile.getCreatedAt(),
                 profile.getUpdatedAt()
         );
