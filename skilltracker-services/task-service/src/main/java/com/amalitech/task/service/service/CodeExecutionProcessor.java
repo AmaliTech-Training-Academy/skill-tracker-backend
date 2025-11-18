@@ -17,14 +17,14 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Service for executing code against task test cases.
+ * Implementation of CodeExecutionService.
  * Orchestrates the code execution flow by fetching task details,
  * executing code via Judge0, normalizing outputs, and building structured responses.
  */
 @Service
 @Slf4j
 @RequiredArgsConstructor
-public class CodeExecutionProcessor {
+public class CodeExecutionProcessor implements CodeExecutionService {
 
     private final Judge0Client judge0Client;
     private final TaskRepository taskRepository;
@@ -40,10 +40,7 @@ public class CodeExecutionProcessor {
     public Mono<RunCodeResponse> executeCode(UUID taskId, String code, Integer languageId) {
         return Mono.fromCallable(() -> taskRepository.findById(taskId))
                 .flatMap(taskOptional -> {
-                    if (taskOptional.isEmpty()) {
-                        return Mono.error(new IllegalArgumentException("Task not found: " + taskId));
-                    }
-                    return Mono.just(taskOptional.get());
+                    return taskOptional.<Mono<? extends Task>>map(Mono::just).orElseGet(() -> Mono.error(new IllegalArgumentException("Task not found: " + taskId)));
                 })
                 .flatMap(task -> executeTestCases(task, code, languageId));
     }
@@ -57,7 +54,6 @@ public class CodeExecutionProcessor {
      * @return Mono containing the structured execution results
      */
     private Mono<RunCodeResponse> executeTestCases(Task task, String code, Integer languageId) {
-        // Extract test cases from task content
         if (!(task.getContent() instanceof CodingTaskContent)) {
             return Mono.error(new IllegalArgumentException("Task is not a coding task"));
         }
@@ -105,35 +101,29 @@ public class CodeExecutionProcessor {
         String stdout = null;
         String stderr = null;
 
-        // Build test result data and aggregate metrics
         for (int i = 0; i < results.size(); i++) {
             TestExecutionResult result = results.get(i);
             Judge0SubmissionResponse judge0Response = result.judge0Response;
             CodingTaskContent.TestCase testCase = result.testCase;
 
-            // Normalize outputs for comparison
             String expectedOutput = normalize(testCase.getExpectedOutput());
             String actualOutput = judge0Response.getStdout() != null ? 
                     normalize(judge0Response.getStdout()) : "";
 
-            // Determine pass/fail
             boolean isExecuted = judge0Response.getStatus() != null && 
                     judge0Response.getStatus().getId() == 3; // Status 3 = Accepted
             boolean passed = isExecuted && expectedOutput.equals(actualOutput);
 
-            // Determine status description
             String statusDescription = judge0Response.getStatus() != null ? 
                     judge0Response.getStatus().getDescription() : "Unknown";
             if (isExecuted && !passed) {
                 statusDescription = "Wrong Answer";
             }
 
-            // Extract metrics
             Long executionTimeMs = judge0Response.getTime() != null ? 
                     (long)(judge0Response.getTime() * 1000) : null;
             Integer memoryUsedKb = judge0Response.getMemory();
 
-            // Build test result
             RunCodeResponse.TestResultData testResult = RunCodeResponse.TestResultData.builder()
                     .passed(passed)
                     .input(testCase.getInput())
