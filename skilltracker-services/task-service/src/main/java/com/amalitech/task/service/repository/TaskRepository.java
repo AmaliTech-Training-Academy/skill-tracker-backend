@@ -1,6 +1,5 @@
 package com.amalitech.task.service.repository;
 
-import com.amalitech.task.service.dto.response.McqResponseDTO;
 import com.amalitech.task.service.model.Task;
 import com.amalitech.task.service.model.enums.TaskDifficulty;
 import com.amalitech.task.service.model.enums.TaskType;
