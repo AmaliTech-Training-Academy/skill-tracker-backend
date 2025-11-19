@@ -202,6 +202,7 @@ public class AuthServiceImpl implements AuthService {
                 jwtUtil.getExpirationSeconds(accessToken));
         cookieUtil.setSecureCookie(response, "refreshToken", refreshToken,
                 refreshExpiration / 1000);
+        log.info("tokens successfully generated for user: {}", user.getEmail());
     }
 
     /**
@@ -228,15 +229,8 @@ public class AuthServiceImpl implements AuthService {
             redisUtil.delete(key);
             throw new RefreshTokenException("User is suspended");
         }
-
         redisUtil.delete(key);
-        String newRefreshToken = UUID.randomUUID().toString();
-        redisUtil.set(refreshPrefix + newRefreshToken, email, refreshExpiration / 1000);
-        String newAccessToken = jwtUtil.generateAccessToken(email, user.getRole(), user.getId());
-        cookieUtil.setSecureCookie(response, "accessToken", newAccessToken,
-                jwtUtil.getExpirationSeconds(newAccessToken));
-        cookieUtil.setSecureCookie(response, "refreshToken", newRefreshToken,
-                refreshExpiration / 1000);
+        generateTokens(user, response);
         log.info("Access and refresh tokens rotated successfully for user: {}", email);
         return new AuthResponse("tokens refreshed successfully");
     }
@@ -252,6 +246,12 @@ public class AuthServiceImpl implements AuthService {
     @Transactional
     public void forgotPassword(String email) {
         userRepository.findByEmail(email).ifPresent(user -> {
+            if (user.getIsVerified() == false) {
+                throw new UnverifiedUserException("User not verified");
+            }
+            if (user.getState() == UserState.SUSPENDED) {
+                throw new UserSuspendedException("User is suspended");
+            }
             String resetToken = UUID.randomUUID().toString();;
             String key = resetPrefix + resetToken;
             redisUtil.set(key, email, resetExpiration / 1000);
@@ -278,9 +278,11 @@ public class AuthServiceImpl implements AuthService {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RefreshTokenException("User not found"));
 
+        if (user.getState() == UserState.SUSPENDED) {
+            throw new UserSuspendedException("User is suspended");
+        }
         updatePassword(user, newPassword);
         redisUtil.delete(key);
-
     }
 
     /**
@@ -332,7 +334,6 @@ public class AuthServiceImpl implements AuthService {
             long ttl = jwtUtil.getExpirationSeconds(accessToken); // remaining lifetime
             redisUtil.set("blacklist:" + accessToken, "revoked", ttl);
         }
-
         cookieUtil.clearCookie(response, "accessToken");
         cookieUtil.clearCookie(response, "refreshToken");
     }
