@@ -159,6 +159,7 @@ public class ContentGeneratorServiceImpl implements ContentGeneratorService {
         content.setExamples(examples);
 
         content.setStarterCode(challengeNode.path("starterCode").asText(null));
+        content.setSubmissionHarness(challengeNode.path("submissionHarness").asText(null));
 
         List<CodingTaskContent.TestCase> testCases = StreamSupport
                 .stream(challengeNode.path("testCases").spliterator(), false)

@@ -69,7 +69,7 @@ public class TaskController {
     ) {
         log.info("Fetching Learning path by user ID: {}", userId);
 
-        LearningPathResponseDTO learningPath = taskService.getTaskByUserIdAndCurrentSkill(userId, skill);
+        LearningPathResponseDTO learningPath = taskService.getLPByUserIdAndCurrentSkill(userId, skill);
 
         ApiResponse<LearningPathResponseDTO> response = ApiResponse.success(
                 "Learning path retrieved successfully.",
@@ -90,6 +90,14 @@ public class TaskController {
     ) throws Exception {
         McqResponseDTO mcqTask = taskService.generateMCQ(taskDTO);
         return ResponseEntity.ok(ApiResponse.success("MCQ Task Generated Successfully", mcqTask, ""));
+    }
+
+    @GetMapping("/getMCQs/{id}")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ApiResponse<McqResponseDTO>> getMCQsByUserId(
+            @PathVariable("id") String id) {
+        McqResponseDTO tasks = taskService.getMCQByUserId(id);
+        return ResponseEntity.ok(ApiResponse.success("MCQ Task Generated Successfully", tasks, ""));
     }
 
     @PostMapping("/generate/learning-path")

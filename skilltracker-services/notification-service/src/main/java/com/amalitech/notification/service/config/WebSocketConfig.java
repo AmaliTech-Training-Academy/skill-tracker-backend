@@ -1,5 +1,6 @@
 package com.amalitech.notification.service.config;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.simp.config.ChannelRegistration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
@@ -9,8 +10,9 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
 
 /**
  * Configures WebSocket and STOMP messaging for the notification service.
- * This class sets up the message broker, application destination prefixes,
- * and the WebSocket endpoint.
+ *
+ * This configuration uses a STOMP Broker Relay (RabbitMQ) to enable a stateless,
+ * scalable, horizontally distributable messaging system.
  */
 @Configuration
 @EnableWebSocketMessageBroker
@@ -18,22 +20,46 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     private final WebSocketAuthInterceptor webSocketAuthInterceptor;
 
+    @Value("${stomp.relay.host}")
+    private String relayHost;
+
+    @Value("${stomp.relay.port:61613}")
+    private int relayPort;
+
+    @Value("${stomp.relay.system-username}")
+    private String clientLogin;
+
+    @Value("${stomp.relay.system-password}")
+    private String clientPasscode;
+
     public WebSocketConfig(WebSocketAuthInterceptor webSocketAuthInterceptor) {
         this.webSocketAuthInterceptor = webSocketAuthInterceptor;
     }
 
     /**
      * Configures the message broker.
-     * It enables a simple in-memory broker for destinations prefixed with "/queue"
-     * and sets the application destination prefix to "/app".
-     * It also configures the prefix for user-specific destinations.
+     *
+     * With 'enableStompBrokerRelay'.
+     * This points our WebSocket connections to RabbitMQ, which acts as the
+     * central, scalable broker.
+     *
      * @param config The registry for message broker configuration.
      */
     @Override
     public void configureMessageBroker(MessageBrokerRegistry config) {
-        config.enableSimpleBroker("/queue");
         config.setApplicationDestinationPrefixes("/app");
         config.setUserDestinationPrefix("/user");
+
+        config.enableStompBrokerRelay("/queue", "/topic")
+                .setRelayHost(relayHost)
+                .setRelayPort(relayPort)
+                .setClientLogin(clientLogin)
+                .setClientPasscode(clientPasscode)
+                .setSystemLogin(clientLogin)
+                .setSystemPasscode(clientPasscode)
+
+                .setSystemHeartbeatSendInterval(20000)
+                .setSystemHeartbeatReceiveInterval(20000);
     }
 
     /**

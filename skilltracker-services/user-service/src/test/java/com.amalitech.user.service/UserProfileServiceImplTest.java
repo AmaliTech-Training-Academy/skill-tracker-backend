@@ -6,6 +6,10 @@ import com.amalitech.user.service.exception.ProfileNotFoundException;
 import com.amalitech.user.service.mapper.UserProfileMapper;
 import com.amalitech.user.service.model.User;
 import com.amalitech.user.service.model.UserProfile;
+import com.amalitech.user.service.model.enums.GuidedTourStatus;
+import com.amalitech.user.service.model.enums.PremiumTier;
+import com.amalitech.user.service.model.enums.Role;
+import com.amalitech.user.service.model.enums.UserState;
 import com.amalitech.user.service.repository.UserProfileRepository;
 import com.amalitech.user.service.service.impl.UserProfileServiceImpl;
 
@@ -50,6 +54,12 @@ class UserProfileServiceImplTest {
 
         User testUser = new User();
         testUser.setId(testUserId);
+        testUser.setEmail("patrick@example.com");
+        testUser.setState(UserState.ACTIVE);
+        testUser.setIsVerified(true);
+        testUser.setTourStatus(GuidedTourStatus.COMPLETED);
+        testUser.setRole(Role.USER);
+        testUser.setPremiumTier(PremiumTier.FREE);
 
         testProfile = new UserProfile();
         testProfile.setUserId(testUserId);
@@ -64,9 +74,15 @@ class UserProfileServiceImplTest {
 
         testResponse = new UserProfileResponse(
                 testUserId,
+                "patrick@example.com",
                 "Patrick Appiah",
                 "https://example.com/avatar.jpg",
                 "Software developer",
+                UserState.ACTIVE,
+                true,
+                GuidedTourStatus.COMPLETED,
+                Role.USER,
+                PremiumTier.FREE,
                 true,
                 true,
                 LocalDateTime.now().minusDays(10),
@@ -127,8 +143,18 @@ class UserProfileServiceImplTest {
         @DisplayName("Should handle profile with minimal data")
         void shouldHandleProfileWithMinimalData() {
             // Arrange
+            User minimalUser = new User();
+            minimalUser.setId(testUserId);
+            minimalUser.setEmail("patrick@example.com");
+            minimalUser.setState(UserState.REGISTERED);
+            minimalUser.setIsVerified(false);
+            minimalUser.setTourStatus(GuidedTourStatus.NOT_STARTED);
+            minimalUser.setRole(Role.USER);
+            minimalUser.setPremiumTier(PremiumTier.FREE);
+
             UserProfile minimalProfile = new UserProfile();
             minimalProfile.setUserId(testUserId);
+            minimalProfile.setUser(minimalUser);
             minimalProfile.setEmailNotifications(true);
             minimalProfile.setPushNotifications(true);
 
@@ -173,8 +199,18 @@ class UserProfileServiceImplTest {
         @DisplayName("Should successfully update all profile fields")
         void shouldUpdateAllProfileFieldsSuccessfully() {
             // Arrange
+            User updatedUser = new User();
+            updatedUser.setId(testUserId);
+            updatedUser.setEmail("patrick@example.com");
+            updatedUser.setState(UserState.ACTIVE);
+            updatedUser.setIsVerified(true);
+            updatedUser.setTourStatus(GuidedTourStatus.COMPLETED);
+            updatedUser.setRole(Role.USER);
+            updatedUser.setPremiumTier(PremiumTier.FREE);
+
             UserProfile updatedProfile = new UserProfile();
             updatedProfile.setUserId(testUserId);
+            updatedProfile.setUser(updatedUser);
             updatedProfile.setFullName("Kwadwo Appiah");
             updatedProfile.setAvatarUrl("https://example.com/new-avatar.jpg");
             updatedProfile.setBio("Senior Software Engineer");

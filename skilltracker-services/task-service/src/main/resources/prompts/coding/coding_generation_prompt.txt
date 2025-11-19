@@ -32,7 +32,8 @@ REQUIRED JSON STRUCTURE:
       "title": "Descriptive challenge title (max 70 chars)",
       "description": "Clear problem statement explaining what needs to be built (2-4 sentences)",
       "detailedRequirements": "Comprehensive requirements with examples and edge cases to consider",
-      "starterCode": "Initial code template with function signature and basic structure",
+      "starterCode": "Initial code template with function signature and basic structure. Do NOT include solution logic.",
+      "submissionHarness": "Hidden driver code that imports libraries, reads stdin, parses input, calls the user function, and prints result to stdout.",
       "testCases": [
         \{
           "input": "Test input (string, array, or object as appropriate)",
@@ -95,6 +96,12 @@ CRITICAL REQUIREMENTS - NON-NEGOTIABLE:
 
 10. Each challenge must have 3+ criteria for EACH evaluation category
 
+11. submissionHarness MUST be fully functional code that bridges STDIN to the user's function.
+
+12. submissionHarness MUST handle input parsing (e.g., stripping quotes from string inputs, parsing JSON arrays) matching the function signature.
+
+13. submissionHarness MUST print ONLY the function result to STDOUT (no debug text).
+
 DIFFICULTY LEVEL DEFINITIONS:
 
 BEGINNER:
@@ -138,6 +145,24 @@ Starter Code:
 - Include TODO comments for guidance
 - Do NOT include solution logic
 
+SUBMISSION HARNESS STANDARDS (THE GLUE):
+- This code is hidden from the user but runs after their code.
+- It allows the backend to inject inputs via STDIN.
+- It MUST import necessary libraries (e.g., sys, json, Scanner).
+- It MUST read all input from STDIN.
+- It MUST parse the raw input string into the correct data types expected by the user's function (handling quotes/arrays).
+- It MUST call the exact function name defined in 'starterCode'.
+- It MUST print the result to STDOUT.
+- **Python Example:**
+  if __name__ == "__main__":
+      import sys
+      # Read all stdin
+      raw = sys.stdin.read().strip()
+      # Parse input logic (strip quotes if string, json.loads if array)
+      parsed_input = raw.strip('"')
+      # Call user function
+      print(user_function(parsed_input))
+
 Test Cases:
 - Cover happy path (normal expected inputs)
 - Cover edge cases (empty, null, boundary values)
@@ -146,6 +171,7 @@ Test Cases:
 - Visible tests (2-3): Help user understand requirements
 - Hidden tests (2-3): Validate comprehensive solution
 - Each test must have clear description of what it validates
+- Inputs should be raw strings ready for stdin (e.g. "\"hello\"" or "[1,2]").
 
 Evaluation Criteria:
 
@@ -214,6 +240,7 @@ FINAL VALIDATION CHECKLIST:
 ☐ All {quantity} challenges match the specified difficulty level: {difficulty}
 ☐ All {quantity} challenges test different concepts
 ☐ Starter code is functional (no syntax errors)
+☐ submissionHarness is present and functional
 ☐ Test cases are well-designed and comprehensive
 ☐ difficulty field in each challenge matches {difficulty} exactly
 ☐ JSON is valid with no syntax errors

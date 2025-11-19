@@ -22,4 +22,4 @@ public interface TaskMapper {
      * Maps a Task entity to a full-detail admin DTO.
      */
     AdminTaskDetailResponse toAdminDetailDTO(Task task);
-}
+    }

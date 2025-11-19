@@ -103,7 +103,7 @@ public class ApiSecurityConfig {
                                 "/health",
                                 "/actuator/health"
                         ).permitAll()
-                        .requestMatchers("/api/v1/users/**").hasAuthority("USER")
+                        .requestMatchers("/api/v1/users/**").hasAnyAuthority("USER", "ADMIN")
                         .anyRequest().authenticated()
                 )
                 .httpBasic(AbstractHttpConfigurer::disable)

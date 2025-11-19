@@ -104,10 +104,16 @@ services:
     ports:
       - "5672:5672"
       - "15672:15672"
+      - "61613:61613"
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
     networks:
       - skilltracker-network
+    command: >
+      sh -c "
+      rabbitmq-plugins enable rabbitmq_stomp &&
+      rabbitmq-server
+      "
     healthcheck:
       test: ["CMD", "rabbitmqctl", "status"]
       interval: 10s
@@ -132,6 +138,29 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+
+  # MongoDB - Notif and Audit Log
+  mongodb:
+    container_name: mongo-db
+    image: mongo:7
+    env_file: .env
+    environment:
+      MONGO_INITDB_DATABASE: ${SPRING_DATA_MONGODB_DATABASE}
+      MONGO_INITDB_ROOT_USERNAME: ${SPRING_DATA_MONGODB_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${SPRING_DATA_MONGODB_PASSWORD}
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    command: --auth
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - skilltracker-network
 
   # ===============================
   # User Service
@@ -184,6 +213,50 @@ services:
       retries: 5
       start_period: 40s
 
+  # Task Service
+  task-service:
+    build:
+      context: .
+      dockerfile: ./skilltracker-services/task-service/Dockerfile
+    image: skilltracker/task-service:latest
+    container_name: task-service
+    env_file: .env
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8082/eureka/
+      SPRING_CLOUD_CONFIG_URI: http://config-server:8081
+      SPRING_CONFIG_IMPORT: optional:configserver:http://config-server:8081
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_TASK_USER}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_TASK_PASSWORD}
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_USERNAME: ${RABBITMQ_USER}
+      SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SERVER_PORT: 8085
+    ports:
+      - "8085:8085"
+    depends_on:
+      discovery-server:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - skilltracker-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8085/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
   # ===============================
   # Ngrok Tunnel
   # ===============================
@@ -214,3 +287,4 @@ volumes:
   redis_data:
   rabbitmq_data:
   postgres_data:
+  mongo_data:

@@ -73,8 +73,9 @@ public class TaskServiceImpl implements TaskService {
     private final RabbitMQEventProducer taskEventProducer;
     private final TaskMapper taskMapper;
     private final StringRedisTemplate redisTemplate;
-    private static final String model = "gemini-2.5-flash";
+    private static final String model = System.getenv("model");
     private final UserLearningPathRepository userLPrepo;
+    private Client client;
 
     /**
      * Minimum number of tasks required per difficulty level before triggering generation.
@@ -102,6 +103,20 @@ public class TaskServiceImpl implements TaskService {
         this.taskMapper = taskMapper;
         this.redisTemplate = redisTemplate;
         this.userLPrepo = userLPrepo;
+    }
+
+    /**
+     * Lazily initializes the Google Gemini API client on first use.
+     * This defers client instantiation until the API key is guaranteed to be available.
+     *
+     * @return the initialized Client instance
+     * @throws IllegalArgumentException if the Google API key is not configured
+     */
+    private Client getClient() {
+        if (client == null) {
+            client = new Client();
+        }
+        return client;
     }
 
     /**
@@ -343,11 +358,10 @@ public class TaskServiceImpl implements TaskService {
 
     @Override
     public McqResponseDTO generateMCQ(McqRequestDTO mcqRequestDTO) throws IOException {
-        Client client = new Client();
         ClassPathResource prompt = new ClassPathResource("prompts/mcq/mcq_prompt.json");
 
         String updatedFields = updateFields(
-                Files.readString(prompt.getFile().toPath(), StandardCharsets.UTF_8),
+                new String(prompt.getInputStream().readAllBytes(), StandardCharsets.UTF_8),
                 Map.of(
                         "userId", mcqRequestDTO.getUserId().toString(),
                         "interest", mcqRequestDTO.getInterest(),
@@ -355,9 +369,8 @@ public class TaskServiceImpl implements TaskService {
                         "no_of_questions", String.valueOf(mcqRequestDTO.getNo_of_questions()))
                 );
 
-
         GenerateContentResponse response =
-                client.models.generateContent(
+                getClient().models.generateContent(
                         model,
                         updatedFields,
                         null);
@@ -373,7 +386,13 @@ public class TaskServiceImpl implements TaskService {
     }
 
     @Override
-    public LearningPathResponseDTO getTaskByUserIdAndCurrentSkill(String userId, String currentSkill) {
+    public McqResponseDTO getMCQByUserId(String userId) {
+        List<Task> tasks = taskRepository.findByUserIdAndType(userId, TaskType.MULTIPLE_CHOICE);
+        return parseTasksToMcqResponseDTO(tasks);
+    }
+
+    @Override
+    public LearningPathResponseDTO getLPByUserIdAndCurrentSkill(String userId, String currentSkill) {
         UserLearningPath learningPath =  userLPrepo.findByUserIdAndCurrentSkill(userId, currentSkill);
 
         return LearningPathResponseDTO.builder()
@@ -393,10 +412,9 @@ public class TaskServiceImpl implements TaskService {
     @Override
     public LearningPathResponseDTO generateLearningPath(UserProfileRequestDTO userProfileRequestDTO) throws IOException {
         String skill = userProfileRequestDTO.getCurrent_progress().getSkill();
-        Client client = new Client();
         Gson gson = new GsonBuilder().setPrettyPrinting().create();
         ClassPathResource prompt = new ClassPathResource("prompts/learningPath/learningPath_prompt.json");
-        String StringPrompt = Files.readString(prompt.getFile().toPath(), StandardCharsets.UTF_8);
+        String StringPrompt = new String(prompt.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
         String updatedFields = updateBlock(StringPrompt, "input", userProfileRequestDTO);
         String updatedInfoField = updateBlock(updatedFields, "info", "ALWAYS use resources from these specific, high-quality sources, prioritizing links from: " +
                 "[Udemy, Coursera, edX, Pluralsight, Educative, freeCodeCamp, AWS Training and Certification, Google Cloud Skills Boost, Microsoft Learn (Azure), Kaggle," +
@@ -405,7 +423,7 @@ public class TaskServiceImpl implements TaskService {
                 "Linux Foundation Training, HashiCorp Learn (Terraform/Vault)].");
 
         GenerateContentResponse response =
-                client.models.generateContent(
+                getClient().models.generateContent(
                         model,
                         updatedInfoField,
                         null);
@@ -477,10 +495,44 @@ public class TaskServiceImpl implements TaskService {
         return gson.fromJson(jsonArrayString, listType);
     }
 
+    public static McqResponseDTO parseTasksToMcqResponseDTO(List<Task> tasks) {
+        if (tasks == null || tasks.isEmpty()) {
+            return new McqResponseDTO(List.of());
+        }
+
+        List<MCQquestionDTO> mcqQuestions = tasks.stream()
+                .filter(task -> task.getType() == TaskType.MULTIPLE_CHOICE)
+                .filter(task -> task.getContent() instanceof McqTaskContent)
+                .map(task -> {
+
+                    McqTaskContent content = (McqTaskContent) task.getContent();
+                    return MCQquestionDTO.builder()
+                            .userId(task.getUserId())
+                            .question_title(task.getTitle())
+                            .question_description(task.getDescription())
+                            .question_type(task.getType().toString())
+                            .question_difficulty(task.getDifficulty().toString())
+                            .xpReward(task.getXpReward())
+
+                            .question_number(content.getQuestion_number())
+                            .question_text(content.getQuestion_text())
+                            .question_duration(content.getQuestion_duration())
+                            .options(content.getOptions())
+                            .hint(content.getHint())
+                            .correct_answer(content.getCorrect_answer())
+                            .explanation(content.getExplanation())
+                            .build();
+                })
+                .collect(Collectors.toList());
+
+        return new McqResponseDTO(mcqQuestions);
+    }
+
     public void saveQuestions(List<MCQquestionDTO> questions) {
 
         for(MCQquestionDTO question : questions) {
             Task task = new Task().builder()
+                    .userId(question.getUserId())
                     .title(question.getQuestion_title())
                     .description(question.getQuestion_description())
                     .type(TaskType.valueOf(question.getQuestion_type()))

@@ -140,7 +140,6 @@
                 <scope>import</scope>
             </dependency>
 
-
             <!-- SpringDoc OpenAPI -->
             <dependency>
                 <groupId>org.springdoc</groupId>

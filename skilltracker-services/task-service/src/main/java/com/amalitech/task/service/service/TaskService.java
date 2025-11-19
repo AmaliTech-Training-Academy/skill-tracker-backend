@@ -24,9 +24,11 @@ public interface TaskService {
 
     McqResponseDTO generateMCQ(McqRequestDTO taskDTO) throws Exception;
 
+    McqResponseDTO getMCQByUserId(String userId);
+
     LearningPathResponseDTO generateLearningPath(UserProfileRequestDTO userProfileRequestDTO) throws IOException;
 
-    LearningPathResponseDTO getTaskByUserIdAndCurrentSkill(String userId, String currentSkill);
+    LearningPathResponseDTO getLPByUserIdAndCurrentSkill(String userId, String currentSkill);
 
     /**
      * Get personalized tasks for a user based on their skill and difficulty.

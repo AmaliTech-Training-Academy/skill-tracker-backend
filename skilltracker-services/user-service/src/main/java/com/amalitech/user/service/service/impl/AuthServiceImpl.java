@@ -6,6 +6,7 @@ import com.amalitech.user.service.dto.UserResponseDTO;
 import com.amalitech.user.service.dto.request.CreateUserByAdminRequest;
 import com.amalitech.user.service.dto.request.LoginRequest;
 import com.amalitech.user.service.dto.response.AuthResponse;
+import com.amalitech.user.service.events.AdminCreatedUserEvent;
 import com.amalitech.user.service.exception.*;
 import com.amalitech.user.service.mapper.UserMapper;
 import com.amalitech.user.service.model.User;
@@ -26,6 +27,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -39,13 +41,36 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 /**
- * Service class for handling authentication operations including registration, login, token management,
- * and password recovery
+ * Implementation of {@link AuthService} providing comprehensive authentication and authorization operations.
+ * <p>
+ * This service handles:
+ * <ul>
+ *   <li>User registration and email verification</li>
+ *   <li>Login/logout with JWT token management</li>
+ *   <li>Access and refresh token generation and rotation</li>
+ *   <li>Password reset and change operations</li>
+ *   <li>Admin-initiated user creation with temporary passwords</li>
+ *   <li>One-time password (OTP) verification</li>
+ * </ul>
+ * <p>
+ * Security features include:
+ * <ul>
+ *   <li>BCrypt password hashing</li>
+ *   <li>Secure token storage in Redis with expiration</li>
+ *   <li>Token blacklisting for logout</li>
+ *   <li>Cryptographically secure random password generation</li>
+ *   <li>HTTP-only secure cookies for token storage</li>
+ * </ul>
+ *
+ * @see AuthService
+ * @see JwtUtil
+ * @see RedisUtil
  */
 @Service
 public class AuthServiceImpl implements AuthService {
     private static final Logger log = LoggerFactory.getLogger(AuthServiceImpl.class);
-    private static final int MIN_REQUIRED_CHARS = 4;
+
+    private final ApplicationEventPublisher eventPublisher;
 
     private final UserRepository userRepository;
     private final BCryptPasswordEncoder passwordEncoder;
@@ -62,6 +87,16 @@ public class AuthServiceImpl implements AuthService {
     private Integer tempCode;
     private CookieUtil cookieUtil;
 
+    /**
+     * Minimum number of required character categories in generated passwords
+     * (uppercase, lowercase, number, special character).
+     */
+    private static final int MIN_REQUIRED_CHARS = 4;
+
+    /**
+     * Thread-safe map storing active verification codes and their associated metadata.
+     * Keys are verification codes, values are {@link VerificationObject} instances.
+     */
     private final Map<Integer, VerificationObject> activeVerifications = new ConcurrentHashMap<>();
 
     @Value("${app.frontend-url}")
@@ -69,7 +104,7 @@ public class AuthServiceImpl implements AuthService {
 
 
     public AuthServiceImpl(
-            UserRepository userRepository, PasswordConfig passwordConfig,
+            ApplicationEventPublisher eventPublisher, UserRepository userRepository, PasswordConfig passwordConfig,
             JwtUtil jwtUtil,
             BCryptPasswordEncoder passwordEncoder,
             EmailService emailService,
@@ -82,6 +117,7 @@ public class AuthServiceImpl implements AuthService {
             AuthenticationManager authenticationManager,
             CookieUtil cookieUtil
     ) {
+        this.eventPublisher = eventPublisher;
         this.userRepository = userRepository;
         this.passwordConfig = passwordConfig;
         this.passwordEncoder = passwordEncoder;
@@ -112,6 +148,12 @@ public class AuthServiceImpl implements AuthService {
         }
 
         User user = UserMapper.toEntity(userdto);
+        
+        UserProfile profile = new UserProfile();
+        profile.setEmailNotifications(true);
+        profile.setPushNotifications(true);
+        user.setProfile(profile);
+        
         User savedUser = userRepository.save(user);
 
         int verificationCode = generateCode();
@@ -122,12 +164,8 @@ public class AuthServiceImpl implements AuthService {
                 "Account created successfully!",
                 "Enter this verification code to verify your identity: " + verificationCode);
 
-        UserProfile profile = new UserProfile();
-        profile.setEmailNotifications(true);
-        profile.setPushNotifications(true);
-        savedUser.setProfile(profile);
-
         return UserMapper.toDto(savedUser);
+
     }
 
     /**
@@ -347,8 +385,11 @@ public class AuthServiceImpl implements AuthService {
     }
 
     public void createVerification(UUID userId, int code) {
+        activeVerifications.entrySet().removeIf(entry ->
+                entry.getValue().getUserId().equals(userId)
+        );
+
         activeVerifications.put(code, new VerificationObject(userId, code));
-        System.out.println("Verification Map: " + activeVerifications.toString() );
 
         if(activeVerifications.get(code) == null){
             throw new RuntimeException("Verification object does not exist");
@@ -361,6 +402,25 @@ public class AuthServiceImpl implements AuthService {
         return tempCode;
     }
 
+    /**
+     * Creates a new user account by an administrator with a temporary password.
+     * <p>
+     * This method performs the following operations:
+     * <ul>
+     *   <li>Validates that the email is not already registered</li>
+     *   <li>Generates a temporary password for the new user</li>
+     *   <li>Creates a user with default settings (verified, FREE tier, English language)</li>
+     *   <li>Sends a welcome email with login credentials to the new user</li>
+     *   <li>Logs the user creation event</li>
+     * </ul>
+     *
+     * @param request the user creation request containing email and role information
+     * @param adminEmail the email address of the administrator creating the user
+     * @return a {@link UserResponseDTO} containing the created user's information
+     * @throws EmailAlreadyExistsException if a user with the given email already exists
+     * @see CreateUserByAdminRequest
+     * @see UserResponseDTO
+     */
     @Override
     @Transactional
     public UserResponseDTO createUserByAdmin(CreateUserByAdminRequest request, String adminEmail) {
@@ -371,51 +431,66 @@ public class AuthServiceImpl implements AuthService {
 
         String tempPassword = generateTemporaryPassword();
 
-        User user = new User();
-        user.setEmail(request.email());
-        user.setPasswordHash(passwordEncoder.encode(tempPassword));
-        user.setRole(request.role());
-        user.setIsVerified(true);
-        user.setState(UserState.REGISTERED);
-        user.setPremiumTier(PremiumTier.FREE);
-        user.setLanguage("en");
-        user.setTimezone("UTC");
-        user.setTourStatus(GuidedTourStatus.NOT_STARTED);
+        User user = User.builder()
+                .email(request.email())
+                .passwordHash(passwordEncoder.encode(tempPassword))
+                .role(request.role())
+                .isVerified(true)
+                .state(UserState.REGISTERED)
+                .premiumTier(PremiumTier.FREE)
+                .language("en")
+                .timezone("UTC")
+                .tourStatus(GuidedTourStatus.NOT_STARTED)
+                .build();
+
+        UserProfile userProfile = new UserProfile();
+        user.setProfile(userProfile);
 
         User savedUser = userRepository.save(user);
 
-        UserProfile userProfile = new UserProfile();
-        savedUser.setProfile(userProfile);
-        userRepository.save(savedUser);
-
-        emailService.sendAdminCreatedUserEmail(request.email(), tempPassword, adminEmail, loginUrl);
+        eventPublisher.publishEvent(new AdminCreatedUserEvent(
+                savedUser.getId(),
+                savedUser.getEmail(),
+                tempPassword,
+                adminEmail,
+                loginUrl
+        ));
 
         log.info("Admin {} created new {} user: {}", adminEmail, request.role(), request.email());
         return UserMapper.toDto(savedUser);
     }
 
     /**
-     * Generates a secure temporary password with at least one character from each category
-     * (uppercase, lowercase, number, special character) and shuffles them for randomness.
+     * Generates a cryptographically secure temporary password for new user accounts.
+     * <p>
+     * The generated password meets the following security requirements:
+     * <ul>
+     *   <li>Contains at least one uppercase letter (A-Z)</li>
+     *   <li>Contains at least one lowercase letter (a-z)</li>
+     *   <li>Contains at least one numeric digit (0-9)</li>
+     *   <li>Contains at least one special character</li>
+     *   <li>Total length configured via {@link PasswordConfig}</li>
+     *   <li>Characters are randomly shuffled to prevent predictable patterns</li>
+     * </ul>
+     * <p>
+     * Uses {@link SecureRandom} for cryptographic strength randomness.
+     * Users should be prompted to change this password upon first login.
      *
-     * @return a randomly generated temporary password
+     * @return a randomly generated temporary password meeting all security requirements
+     * @see PasswordConfig
      */
     private String generateTemporaryPassword() {
         SecureRandom random = new SecureRandom();
         StringBuilder password = new StringBuilder();
 
-        password.append(passwordConfig.getUppercaseLetters()
-                .charAt(random.nextInt(passwordConfig.getUppercaseLetters().length())));
-        password.append(passwordConfig.getLowercaseLetters()
-                .charAt(random.nextInt(passwordConfig.getLowercaseLetters().length())));
-        password.append(passwordConfig.getNumbers()
-                .charAt(random.nextInt(passwordConfig.getNumbers().length())));
-        password.append(passwordConfig.getSpecialCharacters()
-                .charAt(random.nextInt(passwordConfig.getSpecialCharacters().length())));
+        password.append(getRandomChar(passwordConfig.getUppercaseLetters(), random));
+        password.append(getRandomChar(passwordConfig.getLowercaseLetters(), random));
+        password.append(getRandomChar(passwordConfig.getNumbers(), random));
+        password.append(getRandomChar(passwordConfig.getSpecialCharacters(), random));
 
         String allChars = passwordConfig.getAllCharacters();
         for (int i = MIN_REQUIRED_CHARS; i < passwordConfig.getLength(); i++) {
-            password.append(allChars.charAt(random.nextInt(allChars.length())));
+            password.append(getRandomChar(allChars, random));
         }
 
         List<Character> passwordChars = password.chars()
@@ -426,5 +501,20 @@ public class AuthServiceImpl implements AuthService {
         return passwordChars.stream()
                 .map(String::valueOf)
                 .collect(Collectors.joining());
+    }
+
+
+    /**
+     * Selects a random character from the given character set using secure randomness.
+     * <p>
+     * This is a helper method used by password generation to ensure cryptographic
+     * randomness in character selection.
+     *
+     * @param characters the character set to choose from
+     * @param random the {@link SecureRandom} instance for cryptographic randomness
+     * @return a randomly selected character from the provided set
+     */
+    private char getRandomChar(String characters, SecureRandom random) {
+        return characters.charAt(random.nextInt(characters.length()));
     }
 }

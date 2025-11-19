@@ -8,11 +8,13 @@ import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.core.Ordered;
 import org.springframework.http.HttpCookie;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.ReactiveSecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.jwt.JwtException;
 import org.springframework.security.oauth2.jwt.ReactiveJwtDecoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Component;
@@ -81,6 +83,7 @@ public class JwtGlobalFilter implements GlobalFilter, Ordered {
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
         ServerHttpRequest request = exchange.getRequest();
         String path = request.getPath().value();
+
 
         if (path.startsWith("/ws")) {
             return handleWebSocketRequest(exchange, chain, request, path);
@@ -196,16 +199,10 @@ public class JwtGlobalFilter implements GlobalFilter, Ordered {
     private String extractToken(ServerHttpRequest request) {
         String authHeader = request.getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
         if (StringUtils.hasText(authHeader) && authHeader.startsWith("Bearer ")) {
+            log.debug("Token extracted from Authorization header");
             return authHeader.substring(7);
         }
 
-        String queryToken = request.getQueryParams().getFirst("token");
-        if (StringUtils.hasText(queryToken)) {
-            log.debug("Token extracted from query parameter");
-            return queryToken;
-        }
-
-        // Try cookie (for browser-based clients)
         HttpCookie accessTokenCookie = request.getCookies().getFirst(ACCESS_TOKEN_COOKIE_NAME);
         if (accessTokenCookie != null) {
             log.debug("Token extracted from cookie");
@@ -240,21 +237,18 @@ public class JwtGlobalFilter implements GlobalFilter, Ordered {
      */
     private ServerHttpRequest enrichRequest(ServerHttpRequest request, Jwt jwt) {
         String userId = jwt.getClaim("userId");
-        if (userId == null) {
-            userId = jwt.getId();
-            log.warn("JWT is missing 'userId' claim, falling back to 'jti'. " +
-                    "Ensure user-service is deployed with the latest JwtUtil.");
+
+        if (userId == null || userId.isBlank()) {
+            userId = jwt.getClaim("sub");
+        }
+
+        if (userId == null || userId.isBlank()) {
+            log.error("Invalid token: JWT is missing mandatory 'userId' or 'sub' claim. JTI: {}", jwt.getId());
+            throw new JwtException("Missing user identifier claim in token");
         }
 
         List<String> rolesList = jwt.getClaimAsStringList("roles");
-        String rolesHeader;
-
-        if (rolesList == null || rolesList.isEmpty()) {
-            String role = jwt.getClaimAsString("roles");
-            rolesHeader = (role != null) ? role : "";
-        } else {
-            rolesHeader = String.join(",", rolesList);
-        }
+        String rolesHeader = (rolesList != null) ? String.join(",", rolesList) : "";
 
         log.debug("Enriching request. X-User-Id: {}, X-User-Roles: {}", userId, rolesHeader);
 

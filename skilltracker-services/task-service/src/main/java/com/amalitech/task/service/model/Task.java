@@ -40,6 +40,8 @@ public class Task {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
+    private String userId;
+
     @Column(nullable = false, length = 255)
     private String title;
 
@@ -75,8 +77,8 @@ public class Task {
     @Column(nullable = false)
     private Integer xpReward = 0;
 
-    @Column(name = "is_published", nullable = false)
-    private Boolean isPublished = false;
+    @Column(name = "is_published", nullable = true)
+    private Boolean isPublished = true;
 
     @CreationTimestamp
     @Column(nullable = false)

@@ -24,7 +24,6 @@ import java.util.UUID;
  * @param languageName The programming language or natural language context for the task (e.g., "Java", "English"). Optional, but highly recommended for technical tasks.
  */
 public record GenerateTaskRequest(
-        @NotNull
         UUID userId,
 
         @NotNull(message = "Task type is required")
@@ -36,7 +35,6 @@ public record GenerateTaskRequest(
         @NotNull(message = "Difficulty is required")
         TaskDifficulty difficulty,
 
-        @NotBlank(message = "Topic is required")
         String topic,
 
         String languageName
