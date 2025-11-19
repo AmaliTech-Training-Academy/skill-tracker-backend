@@ -81,5 +81,6 @@ docs/api/
 /docs/**
 AGENTS.md
 htmlReport/
+.agent/
 
 # application.properties
