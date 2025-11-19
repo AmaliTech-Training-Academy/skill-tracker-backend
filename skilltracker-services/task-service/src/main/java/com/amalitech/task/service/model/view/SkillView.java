@@ -49,7 +49,7 @@ public class SkillView implements Serializable {
     @Column(nullable = false, length = 500)
     private String name;
 
-    @Column(length = 2000)
+    @Column(columnDefinition = "TEXT")
     private String description;
 
     @Type(ListArrayType.class)
