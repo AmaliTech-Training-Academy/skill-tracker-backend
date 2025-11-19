@@ -5,7 +5,7 @@ import com.amalitech.user.service.model.enums.PremiumTier;
 import com.amalitech.user.service.model.enums.Role;
 import com.amalitech.user.service.model.enums.UserState;
 import lombok.Builder;
-import java.time.LocalDateTime;
+
 import java.util.UUID;
 
 @Builder
@@ -18,7 +18,6 @@ public record UserResponseDTO(
         GuidedTourStatus tourStatus,
         Boolean is_verified,
         PremiumTier premiumTier,
-        GuidedTourStatus guidedTourStatus,
         String language,
         String timezone
 ) {}
