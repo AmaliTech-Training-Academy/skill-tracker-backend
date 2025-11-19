@@ -29,4 +29,16 @@ public class ApiResponse<T> {
                 )
         );
     }
+
+    public static <T> ApiResponse<T> error(String message, String traceId) {
+        return new ApiResponse<> (
+                false,
+                message,
+                null,
+                Map.of(
+                        "traceId", traceId != null ? traceId : "...",
+                        "timestamp", Instant.now().toString()
+                )
+        );
+    }
 }

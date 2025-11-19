@@ -9,6 +9,8 @@ import com.amalitech.user.service.dto.request.ForgotPasswordRequest;
 import com.amalitech.user.service.dto.request.LoginRequest;
 import com.amalitech.user.service.dto.request.ResetPasswordRequest;
 import com.amalitech.user.service.dto.response.AuthResponse;
+import com.amalitech.user.service.exception.InvalidVerificationCodeException;
+import com.amalitech.user.service.exception.UserNotFoundException;
 import com.amalitech.user.service.service.AuthService;
 import com.amalitech.user.service.service.impl.AuthServiceImpl;
 import jakarta.servlet.http.HttpServletRequest;
@@ -46,19 +48,28 @@ public class AuthController {
             @RequestParam("code") String code,
             @RequestParam("email") String email,
             HttpServletResponse response) {
-
-        UserResponseDTO user = authService.verifyCode(code, email, response).orElseThrow(() ->
-                new RuntimeException("Invalid verification code"));
-
-        return ResponseEntity.ok(ApiResponse.success("Verification is Successful", user, null));
+        try {
+            UserResponseDTO user = authService.verifyCode(code, email, response).orElseThrow(() ->
+                    new RuntimeException("Could not map user after successful verification."));
+            return ResponseEntity.ok(ApiResponse.success("Verification is Successful", user, null));
+        } catch (InvalidVerificationCodeException e) {
+            return ResponseEntity.ok(ApiResponse.error(e.getMessage(), null));
+        } catch (Exception e) {
+            return ResponseEntity.ok(ApiResponse.error("An unexpected error occurred: " + e.getMessage(), null));
+        }
     }
 
     @PostMapping("/resend-verification")
     public ResponseEntity<ApiResponse<String>> resendVerification(
             @RequestParam("email") String email
     ) {
-        authService.sendVerificationCode(email);
-        return ResponseEntity.ok(ApiResponse.success("Verification sent", null, null)) ;
+
+        try {
+            authService.sendVerificationCode(email);
+            return ResponseEntity.ok(ApiResponse.success("Verification sent", null, null)) ;
+        } catch (Exception e) {
+            return ResponseEntity.ok(ApiResponse.error("An unexpected error occurred: " + e.getMessage(), null)) ;
+        }
     }
 
     /** Authenticates the user and returns an access token */
