@@ -64,7 +64,7 @@ public class TaskController {
     @GetMapping("/learning-path")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<LearningPathResponseDTO>> getLearningPathByUserId(
-            @PathVariable("id") String userId,
+            @RequestParam("id") String userId,
             @RequestParam("skill") String skill
     ) {
         log.info("Fetching Learning path by user ID: {}", userId);
