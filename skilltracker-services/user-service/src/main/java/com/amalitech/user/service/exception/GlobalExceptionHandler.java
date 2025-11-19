@@ -44,6 +44,19 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
     }
 
+    @ExceptionHandler(UserSuspendedException.class)
+    public ResponseEntity<ApiError> handleUserSuspendedException(RefreshTokenException ex, HttpServletRequest request) {
+        ApiError error = ApiError.of(
+                HttpStatus.UNAUTHORIZED.value(),
+                "User Suspended",
+                null,
+                request.getRequestURI(),
+                null,
+                getTraceId()
+        );
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
+    }
+
     @ExceptionHandler(EmailAlreadyExistsException.class)
     public ResponseEntity<ApiError> handleEmailAlreadyExistsException(EmailAlreadyExistsException ex, HttpServletRequest request) {
         ApiError error = ApiError.of(
