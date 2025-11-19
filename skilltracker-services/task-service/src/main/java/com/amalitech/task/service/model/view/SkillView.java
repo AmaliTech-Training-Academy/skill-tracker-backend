@@ -46,9 +46,10 @@ public class SkillView implements Serializable {
     @Id
     private UUID id;
 
-    @Column(nullable = false)
+    @Column(nullable = false, length = 500)
     private String name;
 
+    @Column(length = 2000)
     private String description;
 
     @Type(ListArrayType.class)
