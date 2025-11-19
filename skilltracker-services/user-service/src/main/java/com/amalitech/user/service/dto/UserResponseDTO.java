@@ -18,6 +18,7 @@ public record UserResponseDTO(
         GuidedTourStatus tourStatus,
         Boolean is_verified,
         PremiumTier premiumTier,
+        GuidedTourStatus guidedTourStatus,
         String language,
         String timezone
 ) {}
