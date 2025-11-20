@@ -1,4 +1,4 @@
-package com.amalitech.user.service;
+package com.amalitech.user.service.service.impl;
 
 import com.amalitech.user.service.dto.request.CreateUserByAdminRequest;
 import com.amalitech.user.service.model.enums.Role;
@@ -6,7 +6,10 @@ import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
 import jakarta.validation.ValidatorFactory;
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 
 import java.util.Set;
 
