@@ -253,7 +253,6 @@ public class AuthServiceImpl implements AuthService {
             if (user.getState() == UserState.SUSPENDED) {
                 throw new UserSuspendedException("User is suspended");
             }
-
             String resetToken = UUID.randomUUID().toString();;
             String key = resetPrefix + resetToken;
             redisUtil.set(key, email, resetExpiration / 1000);
