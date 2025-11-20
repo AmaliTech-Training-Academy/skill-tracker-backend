@@ -248,10 +248,12 @@ public class AuthServiceImpl implements AuthService {
         userRepository.findByEmail(email).ifPresent(user -> {
             if (user.getIsVerified() == false) {
                 throw new UnverifiedUserException("User not verified");
+
             }
             if (user.getState() == UserState.SUSPENDED) {
                 throw new UserSuspendedException("User is suspended");
             }
+
             String resetToken = UUID.randomUUID().toString();;
             String key = resetPrefix + resetToken;
             redisUtil.set(key, email, resetExpiration / 1000);
