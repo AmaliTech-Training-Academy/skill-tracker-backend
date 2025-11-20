@@ -1,4 +1,4 @@
-package com.amalitech.user.service;
+package com.amalitech.user.service.service.impl;
 
 import com.amalitech.user.service.dto.request.UpdateUserProfileRequest;
 import com.amalitech.user.service.dto.response.UserProfileResponse;
@@ -11,8 +11,6 @@ import com.amalitech.user.service.model.enums.PremiumTier;
 import com.amalitech.user.service.model.enums.Role;
 import com.amalitech.user.service.model.enums.UserState;
 import com.amalitech.user.service.repository.UserProfileRepository;
-import com.amalitech.user.service.service.impl.UserProfileServiceImpl;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;

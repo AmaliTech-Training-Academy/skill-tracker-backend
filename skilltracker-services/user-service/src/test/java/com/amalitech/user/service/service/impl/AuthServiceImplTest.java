@@ -1,4 +1,4 @@
-package com.amalitech.user.service;
+package com.amalitech.user.service.service.impl;
 
 import com.amalitech.user.service.config.PasswordConfig;
 import com.amalitech.user.service.dto.UserRequestDTO;
@@ -14,13 +14,15 @@ import com.amalitech.user.service.repository.UserRepository;
 import com.amalitech.user.service.security.CustomUserDetails;
 import com.amalitech.user.service.security.util.JwtUtil;
 import com.amalitech.user.service.service.EmailService;
-import com.amalitech.user.service.service.impl.AuthServiceImpl;
 import com.amalitech.user.service.util.CookieUtil;
 import com.amalitech.user.service.util.RedisUtil;
 import jakarta.servlet.http.HttpServletResponse;
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.*;
+import org.mockito.Mock;
+import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.mock.web.MockHttpServletRequest;

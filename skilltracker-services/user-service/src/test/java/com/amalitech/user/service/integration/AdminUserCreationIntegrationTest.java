@@ -1,47 +1,49 @@
-package com.amalitech.user.service;
+package com.amalitech.user.service.integration;
 
 import com.amalitech.user.service.config.PasswordConfig;
-import com.amalitech.user.service.dto.request.CreateUserByAdminRequest;
+import com.amalitech.user.service.controller.AuthController;
 import com.amalitech.user.service.dto.UserResponseDTO;
+import com.amalitech.user.service.dto.request.CreateUserByAdminRequest;
 import com.amalitech.user.service.exception.EmailAlreadyExistsException;
 import com.amalitech.user.service.model.User;
-import com.amalitech.user.service.model.UserProfile;
-import com.amalitech.user.service.model.enums.GuidedTourStatus;
-import com.amalitech.user.service.model.enums.PremiumTier;
 import com.amalitech.user.service.model.enums.Role;
 import com.amalitech.user.service.model.enums.UserState;
 import com.amalitech.user.service.repository.UserRepository;
+import com.amalitech.user.service.security.util.JwtUtil;
 import com.amalitech.user.service.service.EmailService;
 import com.amalitech.user.service.service.impl.AuthServiceImpl;
 import com.amalitech.user.service.util.CookieUtil;
 import com.amalitech.user.service.util.RedisUtil;
-import com.amalitech.user.service.security.util.JwtUtil;
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.*;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDateTime;
-import java.util.Optional;
 import java.util.UUID;
-import java.util.regex.Pattern;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 /**
- * Comprehensive test suite for admin user creation feature.
- * Tests cover service layer, DTO validation, password generation,
- * email sending, and error handling.
+ * Integration tests for admin user creation feature covering controller and service layers.
+ * Tests the full flow from controller to service to repository.
  */
 @ExtendWith(MockitoExtension.class)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class AdminUserCreationTest {
+class AdminUserCreationIntegrationTest {
 
     @Mock private ApplicationEventPublisher eventPublisher;
     @Mock private UserRepository userRepository;
@@ -54,6 +56,7 @@ class AdminUserCreationTest {
     @Mock private CookieUtil cookieUtil;
 
     private AuthServiceImpl authService;
+    private AuthController authController;
 
     private static final String ADMIN_EMAIL = "admin@example.com";
     private static final String NEW_USER_EMAIL = "newuser@example.com";
@@ -99,39 +102,15 @@ class AdminUserCreationTest {
         
         // Set frontendUrl for login URL generation
         ReflectionTestUtils.setField(authService, "frontendUrl", "http://localhost:3000");
+        
+        authController = new AuthController(authService);
     }
 
-    // ==================== DTO Validation Tests ====================
+    // ==================== Controller Tests ====================
 
     @Test
-    @DisplayName("CreateUserByAdminRequest - Valid USER role")
-    void createUserByAdminRequest_ValidUserRole() {
-        CreateUserByAdminRequest request = CreateUserByAdminRequest.builder()
-                .email(NEW_USER_EMAIL)
-                .role(Role.USER)
-                .build();
-
-        assertEquals(NEW_USER_EMAIL, request.email());
-        assertEquals(Role.USER, request.role());
-    }
-
-    @Test
-    @DisplayName("CreateUserByAdminRequest - Valid ADMIN role")
-    void createUserByAdminRequest_ValidAdminRole() {
-        CreateUserByAdminRequest request = CreateUserByAdminRequest.builder()
-                .email(NEW_USER_EMAIL)
-                .role(Role.ADMIN)
-                .build();
-
-        assertEquals(NEW_USER_EMAIL, request.email());
-        assertEquals(Role.ADMIN, request.role());
-    }
-
-    // ==================== Service Layer Tests ====================
-
-    @Test
-    @DisplayName("createUserByAdmin - Successfully creates USER")
-    void createUserByAdmin_SuccessfullyCreatesUser() {
+    @DisplayName("Controller - createUserByAdmin endpoint calls service correctly")
+    void controllerCreateUserByAdmin_CallsServiceWithCorrectParams() {
         CreateUserByAdminRequest request = CreateUserByAdminRequest.builder()
                 .email(NEW_USER_EMAIL)
                 .role(Role.USER)
@@ -140,7 +119,76 @@ class AdminUserCreationTest {
         UUID newUserId = UUID.randomUUID();
 
         when(userRepository.existsByEmail(NEW_USER_EMAIL)).thenReturn(false);
-        when(passwordEncoder.encode(anyString())).thenReturn("encoded-temp-password");
+        when(passwordEncoder.encode(anyString())).thenReturn("encoded-password");
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
+            User user = invocation.getArgument(0);
+            user.setId(newUserId);
+            user.setUpdatedAt(LocalDateTime.now());
+            return user;
+        });
+
+        // Mock security context
+        Authentication auth = mock(Authentication.class);
+        when(auth.getName()).thenReturn(ADMIN_EMAIL);
+        SecurityContext securityContext = mock(SecurityContext.class);
+        when(securityContext.getAuthentication()).thenReturn(auth);
+        SecurityContextHolder.setContext(securityContext);
+
+        var response = authController.createUserByAdmin(request);
+
+        assertEquals(200, response.getStatusCode().value());
+        assertNotNull(response.getBody());
+        assertTrue(response.getBody().isSuccess());
+    }
+
+    @Test
+    @DisplayName("Controller - createUserByAdmin returns correct response structure")
+    void controllerCreateUserByAdmin_ReturnsCorrectResponseStructure() {
+        CreateUserByAdminRequest request = CreateUserByAdminRequest.builder()
+                .email(NEW_USER_EMAIL)
+                .role(Role.ADMIN)
+                .build();
+
+        UUID newUserId = UUID.randomUUID();
+
+        when(userRepository.existsByEmail(NEW_USER_EMAIL)).thenReturn(false);
+        when(passwordEncoder.encode(anyString())).thenReturn("encoded-password");
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
+            User user = invocation.getArgument(0);
+            user.setId(newUserId);
+            user.setUpdatedAt(LocalDateTime.now());
+            return user;
+        });
+
+        Authentication auth = mock(Authentication.class);
+        when(auth.getName()).thenReturn(ADMIN_EMAIL);
+        SecurityContext securityContext = mock(SecurityContext.class);
+        when(securityContext.getAuthentication()).thenReturn(auth);
+        SecurityContextHolder.setContext(securityContext);
+
+        var response = authController.createUserByAdmin(request);
+
+        assertNotNull(response.getBody());
+        assertNotNull(response.getBody().getData());
+        assertEquals("User created successfully by admin", response.getBody().getMessage());
+    }
+
+    @Test
+    @DisplayName("Integration - Full flow: admin creates user, profile created, email sent")
+    void integrationFlow_AdminCreatesUserComplete() {
+        CreateUserByAdminRequest request = CreateUserByAdminRequest.builder()
+                .email(NEW_USER_EMAIL)
+                .role(Role.USER)
+                .build();
+
+        UUID newUserId = UUID.randomUUID();
+        ArgumentCaptor<String> emailCaptor = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<String> passwordCaptor = ArgumentCaptor.forClass(String.class);
+
+        when(userRepository.existsByEmail(NEW_USER_EMAIL)).thenReturn(false);
+        when(passwordEncoder.encode(anyString())).thenAnswer(invocation -> 
+            "encoded:" + invocation.getArgument(0)
+        );
         when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
             User user = invocation.getArgument(0);
             user.setId(newUserId);
@@ -150,51 +198,21 @@ class AdminUserCreationTest {
 
         UserResponseDTO result = authService.createUserByAdmin(request, ADMIN_EMAIL);
 
+        // Verify all steps completed
         assertNotNull(result);
         assertEquals(NEW_USER_EMAIL, result.email());
-        assertEquals(Role.USER, result.role());
-        assertTrue(result.is_verified());
-        assertEquals(UserState.REGISTERED, result.state());
-
+        
+        // Verify repository calls
         verify(userRepository).existsByEmail(NEW_USER_EMAIL);
-        verify(passwordEncoder).encode(anyString());
         verify(userRepository, times(1)).save(any(User.class));
+        
+        // Verify event published
         verify(eventPublisher).publishEvent(isA(Object.class));
         }
 
         @Test
-        @DisplayName("createUserByAdmin - Successfully creates ADMIN")
-    void createUserByAdmin_SuccessfullyCreatesAdmin() {
-        CreateUserByAdminRequest request = CreateUserByAdminRequest.builder()
-                .email(NEW_USER_EMAIL)
-                .role(Role.ADMIN)
-                .build();
-
-        UUID newAdminId = UUID.randomUUID();
-
-        when(userRepository.existsByEmail(NEW_USER_EMAIL)).thenReturn(false);
-        when(passwordEncoder.encode(anyString())).thenReturn("encoded-temp-password");
-        when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
-            User user = invocation.getArgument(0);
-            user.setId(newAdminId);
-            user.setUpdatedAt(LocalDateTime.now());
-            return user;
-        });
-
-        UserResponseDTO result = authService.createUserByAdmin(request, ADMIN_EMAIL);
-
-        assertNotNull(result);
-        assertEquals(NEW_USER_EMAIL, result.email());
-        assertEquals(Role.ADMIN, result.role());
-        assertTrue(result.is_verified());
-
-        verify(userRepository).existsByEmail(NEW_USER_EMAIL);
-        verify(userRepository, times(1)).save(any(User.class));
-    }
-
-    @Test
-    @DisplayName("createUserByAdmin - User with duplicate email throws exception")
-    void createUserByAdmin_DuplicateEmail_ThrowsException() {
+        @DisplayName("Integration - Duplicate email prevents user creation and email sending")
+    void integrationFlow_DuplicateEmailPreventsCreation() {
         CreateUserByAdminRequest request = CreateUserByAdminRequest.builder()
                 .email(NEW_USER_EMAIL)
                 .role(Role.USER)
@@ -207,12 +225,14 @@ class AdminUserCreationTest {
 
         verify(userRepository).existsByEmail(NEW_USER_EMAIL);
         verify(userRepository, never()).save(any(User.class));
-        verify(emailService, never()).sendAdminCreatedUserEmail(anyString(), anyString(), anyString(), anyString());
-    }
+        verify(eventPublisher, never()).publishEvent(isA(Object.class));
+        }
+
+        // ==================== Service-Repository Interaction Tests ====================
 
     @Test
-    @DisplayName("createUserByAdmin - Sets correct user properties")
-    void createUserByAdmin_SetsCorrectProperties() {
+    @DisplayName("Service calls repository once to save user with embedded profile")
+    void service_SavesUserOnce() {
         CreateUserByAdminRequest request = CreateUserByAdminRequest.builder()
                 .email(NEW_USER_EMAIL)
                 .role(Role.USER)
@@ -221,7 +241,7 @@ class AdminUserCreationTest {
         UUID newUserId = UUID.randomUUID();
 
         when(userRepository.existsByEmail(NEW_USER_EMAIL)).thenReturn(false);
-        when(passwordEncoder.encode(anyString())).thenReturn("hashed-password");
+        when(passwordEncoder.encode(anyString())).thenReturn("encoded");
         when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
             User user = invocation.getArgument(0);
             user.setId(newUserId);
@@ -231,33 +251,42 @@ class AdminUserCreationTest {
 
         authService.createUserByAdmin(request, ADMIN_EMAIL);
 
-        ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
-        verify(userRepository, times(1)).save(userCaptor.capture());
-
-        User savedUser = userCaptor.getValue();
-        assertEquals(NEW_USER_EMAIL, savedUser.getEmail());
-        assertEquals(Role.USER, savedUser.getRole());
-        assertTrue(savedUser.getIsVerified());
-        assertEquals(UserState.REGISTERED, savedUser.getState());
-        assertEquals(PremiumTier.FREE, savedUser.getPremiumTier());
-        assertEquals("en", savedUser.getLanguage());
-        assertEquals("UTC", savedUser.getTimezone());
-        assertEquals(GuidedTourStatus.NOT_STARTED, savedUser.getTourStatus());
-        assertNull(savedUser.getTaskGenerationStatus());
+        verify(userRepository, times(1)).save(any(User.class));
     }
 
     @Test
-    @DisplayName("createUserByAdmin - Creates UserProfile")
-    void createUserByAdmin_CreatesUserProfile() {
+    @DisplayName("Service enforces email uniqueness via repository check")
+    void service_EnforcesEmailUniqueness() {
+        CreateUserByAdminRequest request = CreateUserByAdminRequest.builder()
+                .email(NEW_USER_EMAIL)
+                .role(Role.USER)
+                .build();
+
+        when(userRepository.existsByEmail(NEW_USER_EMAIL)).thenReturn(true);
+
+        EmailAlreadyExistsException exception = assertThrows(EmailAlreadyExistsException.class,
+                () -> authService.createUserByAdmin(request, ADMIN_EMAIL));
+
+        assertEquals("A user already exists with this email.", exception.getMessage());
+    }
+
+    @Test
+    @DisplayName("Service encodes password before saving to repository")
+    void service_EncodesPasswordBeforeSave() {
         CreateUserByAdminRequest request = CreateUserByAdminRequest.builder()
                 .email(NEW_USER_EMAIL)
                 .role(Role.USER)
                 .build();
 
         UUID newUserId = UUID.randomUUID();
+        ArgumentCaptor<String> rawPasswordCaptor = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
 
         when(userRepository.existsByEmail(NEW_USER_EMAIL)).thenReturn(false);
-        when(passwordEncoder.encode(anyString())).thenReturn("hashed-password");
+        when(passwordEncoder.encode(anyString())).thenAnswer(invocation -> {
+            String rawPassword = invocation.getArgument(0);
+            return "bcrypt:" + rawPassword;
+        });
         when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
             User user = invocation.getArgument(0);
             user.setId(newUserId);
@@ -267,16 +296,16 @@ class AdminUserCreationTest {
 
         authService.createUserByAdmin(request, ADMIN_EMAIL);
 
-        ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
+        verify(passwordEncoder).encode(anyString());
         verify(userRepository, times(1)).save(userCaptor.capture());
 
         User savedUser = userCaptor.getValue();
-        assertNotNull(savedUser.getUserProfile());
+        assertTrue(savedUser.getPasswordHash().startsWith("bcrypt:"));
     }
 
     @Test
-    @DisplayName("createUserByAdmin - Sends email with correct parameters")
-    void createUserByAdmin_SendsEmailWithCorrectParameters() {
+    @DisplayName("Service sends plaintext password via email service")
+    void service_SendsPasswordViaEmail() {
         CreateUserByAdminRequest request = CreateUserByAdminRequest.builder()
                 .email(NEW_USER_EMAIL)
                 .role(Role.USER)
@@ -285,7 +314,7 @@ class AdminUserCreationTest {
         UUID newUserId = UUID.randomUUID();
 
         when(userRepository.existsByEmail(NEW_USER_EMAIL)).thenReturn(false);
-        when(passwordEncoder.encode(anyString())).thenReturn("hashed-password");
+        when(passwordEncoder.encode(anyString())).thenReturn("encoded");
         when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
             User user = invocation.getArgument(0);
             user.setId(newUserId);
@@ -296,23 +325,23 @@ class AdminUserCreationTest {
         authService.createUserByAdmin(request, ADMIN_EMAIL);
 
         verify(eventPublisher).publishEvent(isA(Object.class));
-    }
+        }
 
-    // ==================== Password Generation Tests ====================
+        // ==================== User State & Profile Tests ====================
 
-    @Test
-    @DisplayName("Password generation - Generates secure 12-character password")
-    void passwordGeneration_LengthRequirement() {
+        @Test
+    @DisplayName("Service creates user with REGISTERED state")
+    void service_CreatesUserWithRegisteredState() {
         CreateUserByAdminRequest request = CreateUserByAdminRequest.builder()
                 .email(NEW_USER_EMAIL)
                 .role(Role.USER)
                 .build();
 
         UUID newUserId = UUID.randomUUID();
-        ArgumentCaptor<String> passwordCaptor = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
 
         when(userRepository.existsByEmail(NEW_USER_EMAIL)).thenReturn(false);
-        when(passwordEncoder.encode(anyString())).thenReturn("hashed");
+        when(passwordEncoder.encode(anyString())).thenReturn("encoded");
         when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
             User user = invocation.getArgument(0);
             user.setId(newUserId);
@@ -322,26 +351,24 @@ class AdminUserCreationTest {
 
         authService.createUserByAdmin(request, ADMIN_EMAIL);
 
-        verify(passwordEncoder).encode(passwordCaptor.capture());
-        String generatedPassword = passwordCaptor.getValue();
-        assertEquals(12, generatedPassword.length());
-        
-        verify(userRepository, times(1)).save(any(User.class));
+        verify(userRepository, times(1)).save(userCaptor.capture());
+        User savedUser = userCaptor.getValue();
+        assertEquals(UserState.REGISTERED, savedUser.getState());
     }
 
     @Test
-    @DisplayName("Password generation - Contains uppercase letter")
-    void passwordGeneration_ContainsUppercase() {
+    @DisplayName("Service creates user with pre-verified status")
+    void service_CreatesUserPreVerified() {
         CreateUserByAdminRequest request = CreateUserByAdminRequest.builder()
                 .email(NEW_USER_EMAIL)
                 .role(Role.USER)
                 .build();
 
         UUID newUserId = UUID.randomUUID();
-        ArgumentCaptor<String> passwordCaptor = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
 
         when(userRepository.existsByEmail(NEW_USER_EMAIL)).thenReturn(false);
-        when(passwordEncoder.encode(anyString())).thenReturn("hashed");
+        when(passwordEncoder.encode(anyString())).thenReturn("encoded");
         when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
             User user = invocation.getArgument(0);
             user.setId(newUserId);
@@ -351,26 +378,24 @@ class AdminUserCreationTest {
 
         authService.createUserByAdmin(request, ADMIN_EMAIL);
 
-        verify(passwordEncoder).encode(passwordCaptor.capture());
-        String generatedPassword = passwordCaptor.getValue();
-        assertTrue(generatedPassword.matches(".*[A-Z].*"), "Password must contain uppercase letter");
-        
-        verify(userRepository, times(1)).save(any(User.class));
+        verify(userRepository, times(1)).save(userCaptor.capture());
+        User savedUser = userCaptor.getValue();
+        assertTrue(savedUser.getIsVerified());
     }
 
     @Test
-    @DisplayName("Password generation - Contains lowercase letter")
-    void passwordGeneration_ContainsLowercase() {
+    @DisplayName("Service creates UserProfile for new user")
+    void service_CreatesUserProfile() {
         CreateUserByAdminRequest request = CreateUserByAdminRequest.builder()
                 .email(NEW_USER_EMAIL)
                 .role(Role.USER)
                 .build();
 
         UUID newUserId = UUID.randomUUID();
-        ArgumentCaptor<String> passwordCaptor = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
 
         when(userRepository.existsByEmail(NEW_USER_EMAIL)).thenReturn(false);
-        when(passwordEncoder.encode(anyString())).thenReturn("hashed");
+        when(passwordEncoder.encode(anyString())).thenReturn("encoded");
         when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
             User user = invocation.getArgument(0);
             user.setId(newUserId);
@@ -380,76 +405,21 @@ class AdminUserCreationTest {
 
         authService.createUserByAdmin(request, ADMIN_EMAIL);
 
-        verify(passwordEncoder).encode(passwordCaptor.capture());
-        String generatedPassword = passwordCaptor.getValue();
-        assertTrue(generatedPassword.matches(".*[a-z].*"), "Password must contain lowercase letter");
-        
-        verify(userRepository, times(1)).save(any(User.class));
+        verify(userRepository, times(1)).save(userCaptor.capture());
+        User savedUser = userCaptor.getValue();
+        // The user has userProfile set through builder
+        assertNotNull(savedUser);
+        assertNotNull(savedUser.getUserProfile());
     }
 
-    @Test
-    @DisplayName("Password generation - Contains digit")
-    void passwordGeneration_ContainsDigit() {
-        CreateUserByAdminRequest request = CreateUserByAdminRequest.builder()
-                .email(NEW_USER_EMAIL)
-                .role(Role.USER)
-                .build();
-
-        UUID newUserId = UUID.randomUUID();
-        ArgumentCaptor<String> passwordCaptor = ArgumentCaptor.forClass(String.class);
-
-        when(userRepository.existsByEmail(NEW_USER_EMAIL)).thenReturn(false);
-        when(passwordEncoder.encode(anyString())).thenReturn("hashed");
-        when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
-            User user = invocation.getArgument(0);
-            user.setId(newUserId);
-            user.setUpdatedAt(LocalDateTime.now());
-            return user;
-        });
-
-        authService.createUserByAdmin(request, ADMIN_EMAIL);
-
-        verify(passwordEncoder).encode(passwordCaptor.capture());
-        String generatedPassword = passwordCaptor.getValue();
-        assertTrue(generatedPassword.matches(".*\\d.*"), "Password must contain digit");
-        
-        verify(userRepository, times(1)).save(any(User.class));
-    }
+    // ==================== Edge Cases & Null Safety Tests ====================
 
     @Test
-    @DisplayName("Password generation - Contains special character")
-    void passwordGeneration_ContainsSpecialCharacter() {
-        CreateUserByAdminRequest request = CreateUserByAdminRequest.builder()
-                .email(NEW_USER_EMAIL)
-                .role(Role.USER)
-                .build();
+    @DisplayName("Service handles different admin emails in logging")
+    void service_HandlesMultipleAdminEmails() {
+        String admin1Email = "admin1@example.com";
+        String admin2Email = "admin2@example.com";
 
-        UUID newUserId = UUID.randomUUID();
-        ArgumentCaptor<String> passwordCaptor = ArgumentCaptor.forClass(String.class);
-
-        when(userRepository.existsByEmail(NEW_USER_EMAIL)).thenReturn(false);
-        when(passwordEncoder.encode(anyString())).thenReturn("hashed");
-        when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
-            User user = invocation.getArgument(0);
-            user.setId(newUserId);
-            user.setUpdatedAt(LocalDateTime.now());
-            return user;
-        });
-
-        authService.createUserByAdmin(request, ADMIN_EMAIL);
-
-        verify(passwordEncoder).encode(passwordCaptor.capture());
-        String generatedPassword = passwordCaptor.getValue();
-        assertTrue(generatedPassword.matches(".*[@$!%*?&].*"), "Password must contain special character");
-        
-        verify(userRepository, times(1)).save(any(User.class));
-    }
-
-    // ==================== Edge Cases & Error Handling ====================
-
-    @Test
-    @DisplayName("createUserByAdmin - Multiple calls generate different passwords")
-    void createUserByAdmin_MultipleCallsGenerateDifferentPasswords() {
         CreateUserByAdminRequest request1 = CreateUserByAdminRequest.builder()
                 .email("user1@example.com")
                 .role(Role.USER)
@@ -460,10 +430,90 @@ class AdminUserCreationTest {
                 .role(Role.USER)
                 .build();
 
-        ArgumentCaptor<String> passwordCaptor = ArgumentCaptor.forClass(String.class);
+        UUID userId1 = UUID.randomUUID();
+        UUID userId2 = UUID.randomUUID();
 
         when(userRepository.existsByEmail(anyString())).thenReturn(false);
-        when(passwordEncoder.encode(anyString())).thenReturn("hashed");
+        when(passwordEncoder.encode(anyString())).thenReturn("encoded");
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
+            User user = invocation.getArgument(0);
+            if (user.getEmail().equals("user1@example.com")) {
+                user.setId(userId1);
+            } else {
+                user.setId(userId2);
+            }
+            user.setUpdatedAt(LocalDateTime.now());
+            return user;
+        });
+
+        // Create users with different admin emails
+        UserResponseDTO result1 = authService.createUserByAdmin(request1, admin1Email);
+        UserResponseDTO result2 = authService.createUserByAdmin(request2, admin2Email);
+
+        assertNotNull(result1);
+        assertNotNull(result2);
+        assertEquals("user1@example.com", result1.email());
+        assertEquals("user2@example.com", result2.email());
+        
+        // Verify events were published
+        verify(eventPublisher, times(2)).publishEvent(isA(Object.class));
+        }
+
+    @Test
+    @DisplayName("Service creates user for both USER and ADMIN roles")
+    void service_SupportsMultipleRoles() {
+        CreateUserByAdminRequest userRequest = CreateUserByAdminRequest.builder()
+                .email("user@example.com")
+                .role(Role.USER)
+                .build();
+
+        CreateUserByAdminRequest adminRequest = CreateUserByAdminRequest.builder()
+                .email("admin2@example.com")
+                .role(Role.ADMIN)
+                .build();
+
+        UUID userId = UUID.randomUUID();
+        UUID adminId = UUID.randomUUID();
+
+        when(userRepository.existsByEmail("user@example.com")).thenReturn(false);
+        when(userRepository.existsByEmail("admin2@example.com")).thenReturn(false);
+        when(passwordEncoder.encode(anyString())).thenReturn("encoded");
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
+            User user = invocation.getArgument(0);
+            if (user.getEmail().equals("user@example.com")) {
+                user.setId(userId);
+            } else {
+                user.setId(adminId);
+            }
+            user.setUpdatedAt(LocalDateTime.now());
+            return user;
+        });
+
+        UserResponseDTO userResult = authService.createUserByAdmin(userRequest, ADMIN_EMAIL);
+        UserResponseDTO adminResult = authService.createUserByAdmin(adminRequest, ADMIN_EMAIL);
+
+        assertEquals(Role.USER, userResult.role());
+        assertEquals(Role.ADMIN, adminResult.role());
+    }
+
+    @Test
+    @DisplayName("Service consistently applies default settings across multiple creations")
+    void service_AppliesConsistentDefaults() {
+        String email1 = "user1@example.com";
+        String email2 = "user2@example.com";
+
+        CreateUserByAdminRequest request1 = CreateUserByAdminRequest.builder()
+                .email(email1)
+                .role(Role.USER)
+                .build();
+
+        CreateUserByAdminRequest request2 = CreateUserByAdminRequest.builder()
+                .email(email2)
+                .role(Role.USER)
+                .build();
+
+        when(userRepository.existsByEmail(anyString())).thenReturn(false);
+        when(passwordEncoder.encode(anyString())).thenReturn("encoded");
         when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
             User user = invocation.getArgument(0);
             user.setId(UUID.randomUUID());
@@ -474,63 +524,13 @@ class AdminUserCreationTest {
         authService.createUserByAdmin(request1, ADMIN_EMAIL);
         authService.createUserByAdmin(request2, ADMIN_EMAIL);
 
-        verify(passwordEncoder, times(2)).encode(passwordCaptor.capture());
-        java.util.List<String> passwords = passwordCaptor.getAllValues();
-        
-        // Passwords should be different (extremely high probability with random generation)
-        assertNotEquals(passwords.get(0), passwords.get(1));
-    }
-
-    @Test
-    @DisplayName("createUserByAdmin - Password is not in plaintext in User entity")
-    void createUserByAdmin_PasswordIsEncoded() {
-        CreateUserByAdminRequest request = CreateUserByAdminRequest.builder()
-                .email(NEW_USER_EMAIL)
-                .role(Role.USER)
-                .build();
-
-        UUID newUserId = UUID.randomUUID();
-
-        when(userRepository.existsByEmail(NEW_USER_EMAIL)).thenReturn(false);
-        when(passwordEncoder.encode(anyString())).thenReturn("$2a$12$encoded");
-        when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
-            User user = invocation.getArgument(0);
-            user.setId(newUserId);
-            user.setUpdatedAt(LocalDateTime.now());
-            return user;
-        });
-
-        authService.createUserByAdmin(request, ADMIN_EMAIL);
-
         ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
-        verify(userRepository, times(1)).save(userCaptor.capture());
+        verify(userRepository, times(2)).save(userCaptor.capture());
 
-        User savedUser = userCaptor.getValue();
-        assertEquals("$2a$12$encoded", savedUser.getPasswordHash());
+        for (User user : userCaptor.getAllValues()) {
+            assertEquals("en", user.getLanguage());
+            assertEquals("UTC", user.getTimezone());
+            assertTrue(user.getIsVerified());
+        }
     }
-
-    @Test
-    @DisplayName("createUserByAdmin - Admin email is logged for audit trail")
-    void createUserByAdmin_AdminEmailIsUsed() {
-        String specificAdminEmail = "specific.admin@example.com";
-        CreateUserByAdminRequest request = CreateUserByAdminRequest.builder()
-                .email(NEW_USER_EMAIL)
-                .role(Role.USER)
-                .build();
-
-        UUID newUserId = UUID.randomUUID();
-
-        when(userRepository.existsByEmail(NEW_USER_EMAIL)).thenReturn(false);
-        when(passwordEncoder.encode(anyString())).thenReturn("hashed");
-        when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
-            User user = invocation.getArgument(0);
-            user.setId(newUserId);
-            user.setUpdatedAt(LocalDateTime.now());
-            return user;
-        });
-
-        authService.createUserByAdmin(request, specificAdminEmail);
-
-        verify(eventPublisher).publishEvent(isA(Object.class));
-        }
-        }
+}

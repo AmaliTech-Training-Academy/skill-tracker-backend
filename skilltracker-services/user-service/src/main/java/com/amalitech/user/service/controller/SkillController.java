@@ -1,16 +1,20 @@
 package com.amalitech.user.service.controller;
 
 import com.amalitech.common.security.dto.response.ApiResponse;
+import com.amalitech.user.service.dto.UserSkillDto;
 import com.amalitech.user.service.dto.response.SkillResponse;
 import com.amalitech.user.service.service.SkillService;
 
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.UUID;
+import org.springframework.web.bind.annotation.RequestHeader;
 
 /**
  * REST controller for managing skill-related operations.
@@ -38,5 +42,13 @@ public class SkillController {
     ) {
         List<SkillResponse> skills = skillService.getAllSkills(pageable);
         return ResponseEntity.ok(ApiResponse.success("Skill retrieved successfully", skills, null));
+    }
+
+    @GetMapping("/me")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<List<UserSkillDto>> getMySkills(
+            @RequestHeader("X-User-Id") UUID userId
+    ) {
+        return ResponseEntity.ok(skillService.getUserSkills(userId));
     }
 }

@@ -18,4 +18,11 @@ public interface SkillService {
      * @return A list of SkillResponseDto objects.
      */
     List<SkillResponse> getAllSkills(Pageable pageable);
+    /**
+     * Retrieves all skills associated with a specific user.
+     *
+     * @param userId the ID of the user
+     * @return a list of UserSkillDto
+     */
+    java.util.List<com.amalitech.user.service.dto.UserSkillDto> getUserSkills(java.util.UUID userId);
 }

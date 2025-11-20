@@ -1,14 +1,16 @@
-package com.amalitech.user.service;
+package com.amalitech.user.service.controller;
 
 import com.amalitech.common.security.dto.response.ApiResponse;
-import com.amalitech.user.service.controller.AuthController;
 import com.amalitech.user.service.dto.UserResponseDTO;
 import com.amalitech.user.service.dto.request.CreateUserByAdminRequest;
 import com.amalitech.user.service.exception.EmailAlreadyExistsException;
 import com.amalitech.user.service.model.enums.Role;
 import com.amalitech.user.service.model.enums.UserState;
 import com.amalitech.user.service.service.impl.AuthServiceImpl;
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;

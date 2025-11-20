@@ -1,9 +1,11 @@
 package com.amalitech.user.service.service.impl;
 
+import com.amalitech.user.service.dto.UserSkillDto;
 import com.amalitech.user.service.dto.response.SkillResponse;
 import com.amalitech.user.service.mapper.SkillMapper;
 import com.amalitech.user.service.model.Skill;
 import com.amalitech.user.service.repository.SkillRepository;
+import com.amalitech.user.service.repository.UserSkillRepository;
 import com.amalitech.user.service.service.SkillService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
@@ -13,6 +15,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * Implementation of the {@link SkillService} interface.
@@ -24,6 +28,7 @@ public class SkillServiceImpl implements SkillService {
 
     private final SkillRepository skillRepository;
     private final SkillMapper skillMapper;
+    private final UserSkillRepository userSkillRepository;
 
     /**
      * {@inheritDoc}
@@ -39,5 +44,18 @@ public class SkillServiceImpl implements SkillService {
     public List<SkillResponse> getAllSkills(Pageable pageable) {
         Page<Skill> skillPage = skillRepository.findAll(pageable);
         return skillPage.map(skillMapper::toSkillResponse).getContent();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<UserSkillDto> getUserSkills(UUID userId) {
+        return userSkillRepository.findByUserId(userId).stream()
+                .map(userSkill -> new UserSkillDto(
+                        userSkill.getSkill().getId(),
+                        userSkill.getSkill().getName(),
+                        userSkill.getCurrentLevel(),
+                        userSkill.getSelectedAt()
+                ))
+                .collect(Collectors.toList());
     }
 }
