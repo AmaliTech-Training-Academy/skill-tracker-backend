@@ -7,6 +7,7 @@ import org.springframework.messaging.simp.config.MessageBrokerRegistry;
 import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
+import org.springframework.web.socket.server.support.HttpSessionHandshakeInterceptor;
 
 /**
  * Configures WebSocket and STOMP messaging for the notification service.
@@ -18,7 +19,8 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
 @EnableWebSocketMessageBroker
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
-    private final WebSocketAuthInterceptor webSocketAuthInterceptor;
+    private final HeaderHandshakeInterceptor headerHandshakeInterceptor;
+    private final CustomHandshakeHandler customHandshakeHandler;
 
     @Value("${stomp.relay.host}")
     private String relayHost;
@@ -32,8 +34,10 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     @Value("${stomp.relay.system-password}")
     private String clientPasscode;
 
-    public WebSocketConfig(WebSocketAuthInterceptor webSocketAuthInterceptor) {
-        this.webSocketAuthInterceptor = webSocketAuthInterceptor;
+    public WebSocketConfig(HeaderHandshakeInterceptor headerHandshakeInterceptor,
+                           CustomHandshakeHandler customHandshakeHandler) {
+        this.headerHandshakeInterceptor = headerHandshakeInterceptor;
+        this.customHandshakeHandler = customHandshakeHandler;
     }
 
     /**
@@ -71,20 +75,8 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         registry.addEndpoint("/ws")
-                .setAllowedOrigins(
-                        "https://dev.dy006p1vkpl2e.amplifyapp.com",
-                        "http://localhost:3000",
-                        "http://localhost:8080"
-                );
-    }
-
-    /**
-     * Configures the client inbound channel to include the authentication interceptor.
-     * This ensures that user information is attached to the session upon connection.
-     * @param registration The registration for the client inbound channel.
-     */
-    @Override
-    public void configureClientInboundChannel(ChannelRegistration registration) {
-        registration.interceptors(webSocketAuthInterceptor);
+                .addInterceptors(headerHandshakeInterceptor, new HttpSessionHandshakeInterceptor())
+                .setHandshakeHandler(customHandshakeHandler)
+                .setAllowedOriginPatterns("*");
     }
 }
