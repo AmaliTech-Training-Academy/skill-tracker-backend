@@ -171,7 +171,13 @@ Test Cases:
 - Visible tests (2-3): Help user understand requirements
 - Hidden tests (2-3): Validate comprehensive solution
 - Each test must have clear description of what it validates
-- Inputs should be raw strings ready for stdin (e.g. "\"hello\"" or "[1,2]").
+- "input": Should be JSON-serialized for stdin (e.g., "\"hello\"" for string, "[1,2]" for array).
+  This allows the submission harness to parse it correctly from STDIN.
+- "expectedOutput": Should be the RAW, DESERIALIZED value the function should produce.
+  DO NOT include quotes or JSON serialization. Examples:
+  * If the function returns the string "olleh", use: "expectedOutput": "olleh" (not "\"olleh\"")
+  * If the function returns an integer 42, use: "expectedOutput": "42"
+  * If the function returns an array, use: "expectedOutput": "[1,2,3]" (the string representation)
 
 Evaluation Criteria:
 

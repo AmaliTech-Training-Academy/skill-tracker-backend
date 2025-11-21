@@ -45,6 +45,7 @@ public class HeaderAuthenticationFilter extends OncePerRequestFilter {
     protected boolean shouldNotFilterAsyncDispatch() {
         return false;
     }
+
     /**
      * Performs the internal filtering logic, executed once per request.
      * <p>
