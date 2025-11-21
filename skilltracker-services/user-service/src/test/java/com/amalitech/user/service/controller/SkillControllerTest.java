@@ -1,5 +1,6 @@
 package com.amalitech.user.service.controller;
 
+import com.amalitech.common.security.dto.response.ApiResponse;
 import com.amalitech.user.service.dto.UserSkillDto;
 import com.amalitech.user.service.model.enums.DifficultyLevel;
 import com.amalitech.user.service.service.SkillService;
@@ -46,13 +47,13 @@ class SkillControllerTest {
 
         when(skillService.getUserSkills(userId)).thenReturn(List.of(skill1, skill2));
 
-        ResponseEntity<List<UserSkillDto>> response = skillController.getMySkills(userId);
+        ResponseEntity<ApiResponse<List<UserSkillDto>>> response = skillController.getMySkills(userId);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
-        assertEquals(2, response.getBody().size());
-        assertEquals("Java", response.getBody().get(0).skillName());
-        assertEquals("Python", response.getBody().get(1).skillName());
+        assertEquals(2, response.getBody().getData().size());
+        assertEquals("Java", response.getBody().getData().get(0).skillName());
+        assertEquals("Python", response.getBody().getData().get(1).skillName());
         verify(skillService, times(1)).getUserSkills(userId);
     }
 
@@ -60,11 +61,11 @@ class SkillControllerTest {
     void getMySkills_ShouldReturnEmptyListWhenUserHasNoSkills() {
         when(skillService.getUserSkills(userId)).thenReturn(Collections.emptyList());
 
-        ResponseEntity<List<UserSkillDto>> response = skillController.getMySkills(userId);
+        ResponseEntity<ApiResponse<List<UserSkillDto>>> response = skillController.getMySkills(userId);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
-        assertTrue(response.getBody().isEmpty());
+        assertTrue(response.getBody().getData().isEmpty());
         verify(skillService, times(1)).getUserSkills(userId);
     }
 
@@ -87,9 +88,9 @@ class SkillControllerTest {
 
         when(skillService.getUserSkills(userId)).thenReturn(List.of(skill));
 
-        ResponseEntity<List<UserSkillDto>> response = skillController.getMySkills(userId);
+        ResponseEntity<ApiResponse<List<UserSkillDto>>> response = skillController.getMySkills(userId);
 
-        UserSkillDto result = response.getBody().get(0);
+        UserSkillDto result = response.getBody().getData().get(0);
         assertEquals(skillId, result.skillId());
         assertEquals("JavaScript", result.skillName());
         assertEquals(DifficultyLevel.ADVANCED, result.difficultyLevel());
