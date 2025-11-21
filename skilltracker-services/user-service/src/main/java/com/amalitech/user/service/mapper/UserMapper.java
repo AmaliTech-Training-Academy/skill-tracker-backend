@@ -69,7 +69,9 @@ public class UserMapper {
                 user.getId(),
                 user.getEmail(),
                 user.getState(),
-                user.getTaskGenerationStatus()
+                user.getTaskGenerationStatus(),
+                user.getTourStatus(),
+                user.getPremiumTier()
         );
     }
 }
