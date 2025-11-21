@@ -248,6 +248,7 @@ public class AuthServiceImpl implements AuthService {
         userRepository.findByEmail(email).ifPresent(user -> {
             if (user.getIsVerified() == false) {
                 throw new UnverifiedUserException("User not verified");
+
             }
             if (user.getState() == UserState.SUSPENDED) {
                 throw new UserSuspendedException("User is suspended");
