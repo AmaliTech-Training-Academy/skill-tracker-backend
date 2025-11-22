@@ -72,7 +72,7 @@ class ContentGeneratorServiceImplTest {
         testDefinition.setTitle("Test Task");
         testDefinition.setLatestVersion(0);
 
-        objectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
+        objectMapper = new ObjectMapper();
         
         // Manually set ObjectMapper on the service via reflection since it's not a constructor parameter
         java.lang.reflect.Field field = ContentGeneratorServiceImpl.class.getDeclaredField("objectMapper");
