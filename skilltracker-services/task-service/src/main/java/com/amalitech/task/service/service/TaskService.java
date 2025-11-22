@@ -21,11 +21,6 @@ import java.util.UUID;
  * This defines the contract for all task-related business logic.
  */
 public interface TaskService {
-
-    McqResponseDTO generateMCQ(McqRequestDTO taskDTO) throws Exception;
-
-    McqResponseDTO getMCQByUserId(String userId);
-
     LearningPathResponseDTO generateLearningPath(UserProfileRequestDTO userProfileRequestDTO) throws IOException;
 
     LearningPathResponseDTO getLPByUserIdAndCurrentSkill(String userId, String currentSkill);
