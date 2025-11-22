@@ -1,9 +1,6 @@
 package com.amalitech.task.service.service.impl;
 
-import com.amalitech.task.service.dto.LearningPathDTO;
-import com.amalitech.task.service.dto.MCQquestionDTO;
-import com.amalitech.task.service.dto.TaskAvailabilityDTO;
-import com.amalitech.task.service.dto.TaskDTO;
+import com.amalitech.task.service.dto.*;
 import com.amalitech.task.service.dto.request.BatchGenerationRequest;
 import com.amalitech.task.service.dto.request.GenerateTaskRequest;
 import com.amalitech.task.service.dto.request.McqRequestDTO;
@@ -13,10 +10,7 @@ import com.amalitech.task.service.events.RabbitMQEventProducer;
 import com.amalitech.task.service.exception.AiServiceException;
 import com.amalitech.task.service.exception.ResourceNotFoundException;
 import com.amalitech.task.service.mapper.TaskMapper;
-import com.amalitech.task.service.model.Task;
-import com.amalitech.task.service.model.UserLearningPath;
-import com.amalitech.task.service.model.TaskSubmission;
-import com.amalitech.task.service.model.UserSkillProfile;
+import com.amalitech.task.service.model.*;
 import com.amalitech.task.service.model.content.impl.McqTaskContent;
 import com.amalitech.task.service.model.enums.CompletedTaskPeriod;
 import com.amalitech.task.service.model.enums.TaskDifficulty;
@@ -357,41 +351,6 @@ public class TaskServiceImpl implements TaskService {
     }
 
     @Override
-    public McqResponseDTO generateMCQ(McqRequestDTO mcqRequestDTO) throws IOException {
-        ClassPathResource prompt = new ClassPathResource("prompts/mcq/mcq_prompt.json");
-
-        String updatedFields = updateFields(
-                new String(prompt.getInputStream().readAllBytes(), StandardCharsets.UTF_8),
-                Map.of(
-                        "userId", mcqRequestDTO.getUserId().toString(),
-                        "interest", mcqRequestDTO.getInterest(),
-                        "difficulty", mcqRequestDTO.getDifficulty(),
-                        "no_of_questions", String.valueOf(mcqRequestDTO.getNo_of_questions()))
-                );
-
-        GenerateContentResponse response =
-                getClient().models.generateContent(
-                        model,
-                        updatedFields,
-                        null);
-
-        if (response.text() == null) {
-            throw new AiServiceException("No response from AI API");
-        }
-        List<MCQquestionDTO> questions = parseJsonToMcqList(response.text());
-
-        saveQuestions(questions);
-
-        return new McqResponseDTO(questions);
-    }
-
-    @Override
-    public McqResponseDTO getMCQByUserId(String userId) {
-        List<Task> tasks = taskRepository.findByUserIdAndType(userId, TaskType.MULTIPLE_CHOICE);
-        return parseTasksToMcqResponseDTO(tasks);
-    }
-
-    @Override
     public LearningPathResponseDTO getLPByUserIdAndCurrentSkill(String userId, String currentSkill) {
         UserLearningPath learningPath =  userLPrepo.findByUserIdAndCurrentSkill(userId, currentSkill);
 
@@ -477,85 +436,6 @@ public class TaskServiceImpl implements TaskService {
             cleanedJson = cleanedJson.substring(0, cleanedJson.length() - 3);
         }
         return cleanedJson.trim();
-    }
-
-    public static String updateFields (String jsonString, Map < String, String > updates){
-        Gson gson = new Gson();
-        JsonObject jsonObject = gson.fromJson(jsonString, JsonObject.class);
-        updates.forEach(jsonObject::addProperty);
-        return gson.toJson(jsonObject);
-    }
-
-    public static List<MCQquestionDTO> parseJsonToMcqList (String jsonArrayString){
-        Gson gson = new GsonBuilder().setStrictness(Strictness.LENIENT).create();
-
-        Type listType = new TypeToken<List<MCQquestionDTO>>() {
-        }.getType();
-
-        return gson.fromJson(jsonArrayString, listType);
-    }
-
-    public static McqResponseDTO parseTasksToMcqResponseDTO(List<Task> tasks) {
-        if (tasks == null || tasks.isEmpty()) {
-            return new McqResponseDTO(List.of());
-        }
-
-        List<MCQquestionDTO> mcqQuestions = tasks.stream()
-                .filter(task -> task.getType() == TaskType.MULTIPLE_CHOICE)
-                .filter(task -> task.getContent() instanceof McqTaskContent)
-                .map(task -> {
-
-                    McqTaskContent content = (McqTaskContent) task.getContent();
-                    return MCQquestionDTO.builder()
-                            .userId(task.getUserId())
-                            .question_title(task.getTitle())
-                            .question_description(task.getDescription())
-                            .question_type(task.getType().toString())
-                            .question_difficulty(task.getDifficulty().toString())
-                            .xpReward(task.getXpReward())
-
-                            .question_number(content.getQuestion_number())
-                            .question_text(content.getQuestion_text())
-                            .question_duration(content.getQuestion_duration())
-                            .options(content.getOptions())
-                            .hint(content.getHint())
-                            .correct_answer(content.getCorrect_answer())
-                            .explanation(content.getExplanation())
-                            .build();
-                })
-                .collect(Collectors.toList());
-
-        return new McqResponseDTO(mcqQuestions);
-    }
-
-    public void saveQuestions(List<MCQquestionDTO> questions) {
-
-        for(MCQquestionDTO question : questions) {
-            Task task = new Task().builder()
-                    .userId(question.getUserId())
-                    .title(question.getQuestion_title())
-                    .description(question.getQuestion_description())
-                    .type(TaskType.valueOf(question.getQuestion_type()))
-                    .difficulty(TaskDifficulty.valueOf(question.getQuestion_difficulty()))
-                    .content(createMCQContent(question))
-                    .xpReward(question.getXpReward())
-                    .build();
-
-            taskRepository.save(task);
-        }
-    }
-
-    public McqTaskContent createMCQContent(MCQquestionDTO content) {
-
-        return McqTaskContent.builder()
-                .question_number(content.getQuestion_number())
-                .question_text(content.getQuestion_text())
-                .question_duration(content.getQuestion_duration())
-                .options(content.getOptions())
-                .hint(content.getHint())
-                .correct_answer(content.getCorrect_answer())
-                .explanation(content.getExplanation())
-                .build();
     }
 
     /**
