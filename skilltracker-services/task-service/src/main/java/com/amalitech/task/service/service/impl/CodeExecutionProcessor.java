@@ -239,13 +239,14 @@ public class CodeExecutionProcessor implements CodeExecutionService {
     }
 
     /**
-     * Normalizes output strings for consistent comparison.
+     * Normalizes output strings for consistent comparison across all languages.
      * 
-     * Handles varying line ending formats and surrounding whitespace by:
+     * Handles varying output formats, line ending formats, and surrounding whitespace by:
      * <ul>
      * <li>Trimming leading and trailing whitespace</li>
      * <li>Converting Windows-style CRLF line endings to Unix-style LF</li>
      * <li>Converting old Mac-style CR line endings to Unix-style LF</li>
+     * <li>Removing escaped quotes that some languages may add to string output</li>
      * <li>Preserving the semantic content of multi-line output</li>
      * </ul>
      * 
@@ -255,7 +256,15 @@ public class CodeExecutionProcessor implements CodeExecutionService {
     private String normalize(String s) {
         if (s == null)
             return "";
-        return s.trim().replaceAll("\\r\\n", "\n").replaceAll("\\r", "\n");
+        String normalized = s.trim()
+                .replaceAll("\\r\\n", "\n")
+                .replaceAll("\\r", "\n");
+
+        if (normalized.startsWith("\"") && normalized.endsWith("\"") && normalized.length() >= 2) {
+            normalized = normalized.substring(1, normalized.length() - 1);
+        }
+        
+        return normalized;
     }
 
     /**
