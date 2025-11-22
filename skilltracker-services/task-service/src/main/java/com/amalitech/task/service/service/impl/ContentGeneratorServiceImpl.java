@@ -24,8 +24,10 @@ import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.chat.prompt.PromptTemplate;
+import org.springframework.ai.converter.ListOutputConverter;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.core.convert.support.DefaultConversionService;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -140,15 +142,16 @@ public class ContentGeneratorServiceImpl implements ContentGeneratorService {
     @Transactional
     @CacheEvict(cacheNames = "tasks-public-cache", allEntries = true)
     public List<Task> generateMCQTask(SkillView skill, TaskDifficulty difficulty, int quantity) throws IOException {
-        ClassPathResource prompt = new ClassPathResource("prompts/mcq/mcq_prompt.json");
-        String updatedFields = updateFields(
-                new String(prompt.getInputStream().readAllBytes(), StandardCharsets.UTF_8),
-                Map.of(
-                        "interest", skill.getName(),
-                        "difficulty", difficulty.toString(),
-                        "no_of_questions", String.valueOf(quantity)));
+        log.info("Generating {} MCQ tasks via OpenAI for skill: {}, difficulty: {}, no_of_questions: {}",
+                quantity, skill.getName(), difficulty, quantity);
+        var outputConverter = new ListOutputConverter(new DefaultConversionService());
 
-        Prompt mcqPrompt = mcqPromptTemplate.create(Map.of("prompt", updatedFields));
+        Prompt mcqPrompt = mcqPromptTemplate.create(Map.of(
+                "skill", skill.getName(),
+                "difficulty", difficulty.toString(),
+                "no_of_questions", String.valueOf(quantity),
+                "format", outputConverter.getFormat()
+        ));
 
         String response = callOpenAI(mcqPrompt);
 
