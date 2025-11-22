@@ -1,7 +1,5 @@
 package com.amalitech.task.service.dto;
 
-import com.amalitech.task.service.model.TaskDefinition;
-import com.amalitech.task.service.model.content.TaskContent;
 import lombok.*;
 
 import java.util.List;
@@ -13,7 +11,7 @@ import java.util.UUID;
 @AllArgsConstructor
 @Builder
 public class MCQquestionDTO {
-    private String userId;
+    private UUID userId;
     private String question_number;
     private String question_title;
     private String question_description;
