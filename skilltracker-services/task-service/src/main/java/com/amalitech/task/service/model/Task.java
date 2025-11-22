@@ -40,8 +40,6 @@ public class Task {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    private String userId;
-
     @Column(nullable = false, length = 255)
     private String title;
 
