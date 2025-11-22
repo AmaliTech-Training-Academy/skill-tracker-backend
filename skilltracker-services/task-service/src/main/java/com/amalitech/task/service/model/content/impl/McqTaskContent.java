@@ -18,8 +18,6 @@ import java.util.UUID;
 @AllArgsConstructor
 @Builder
 public class McqTaskContent implements TaskContent {
-
-    private UUID userId;
     private String question_number;
     private String question_title;
     private String question_description;
