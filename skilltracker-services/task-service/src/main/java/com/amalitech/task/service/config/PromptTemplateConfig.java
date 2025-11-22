@@ -50,4 +50,11 @@ public class PromptTemplateConfig {
     ) {
         return new PromptTemplate(essayPromptResource);
     }
+
+    @Bean
+    public PromptTemplate mcqPromptTemplate(
+            @Value("classpath:prompts/mcq/mcq_prompt.json") String mcqPromptResource
+    ) {
+        return new PromptTemplate(mcqPromptResource);
+    }
 }
