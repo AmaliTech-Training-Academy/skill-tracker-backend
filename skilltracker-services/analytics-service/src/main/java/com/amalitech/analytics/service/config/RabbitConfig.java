@@ -2,10 +2,8 @@ package com.amalitech.analytics.service.config;
 
 
 import com.amalitech.analytics.service.events.RabbitMQConstants;
-import org.springframework.amqp.core.Binding;
-import org.springframework.amqp.core.BindingBuilder;
-import org.springframework.amqp.core.Queue;
-import org.springframework.amqp.core.TopicExchange;
+import com.rabbitmq.client.AMQP;
+import org.springframework.amqp.core.*;
 import org.springframework.amqp.rabbit.config.SimpleRabbitListenerContainerFactory;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -37,8 +35,8 @@ public class RabbitConfig {
      * @return a {@link TopicExchange} configured with the skill exchange name
      */
     @Bean
-    public TopicExchange skillExchange() {
-        return new TopicExchange(RabbitMQConstants.SKILL_EXCHANGE);
+    public TopicExchange userExchange() {
+        return new TopicExchange(RabbitMQConstants.USER_EXCHANGE);
     }
 
     /**
@@ -57,13 +55,13 @@ public class RabbitConfig {
      * using the defined routing key.
      *
      * @param skillQueue     the queue to bind
-     * @param skillExchange  the exchange to bind to
+     * @param userExchange  the exchange to bind to
      * @return a {@link Binding} linking the queue and exchange
      */
     @Bean
-    public Binding skillBinding(Queue skillQueue, TopicExchange skillExchange) {
+    public Binding skillBinding(Queue skillQueue, TopicExchange userExchange) {
         return BindingBuilder.bind(skillQueue)
-                .to(skillExchange)
+                .to(userExchange)
                 .with(RabbitMQConstants.SKILL_ROUTING_KEY);
     }
 
@@ -84,7 +82,17 @@ public class RabbitConfig {
                 .with(RabbitMQConstants.TASK_COMPLETION_ROUTING_KEY);
     }
 
+    @Bean
+    public  Queue onBoardingCompletedQueue(){ return new Queue(RabbitMQConstants.ONBOARDING_COMPLETED_QUEUE);};
 
+    @Bean
+    public  Binding onBoardingCompletedBinding(
+            Queue onBoardingCompletedQueue,
+            TopicExchange userExchange ){
+        return BindingBuilder.bind(onBoardingCompletedQueue)
+                .to(userExchange)
+                .with(RabbitMQConstants.ONBOARDING_COMPLETED_ROUTING_KEY);
+    }
 
 
     /**
