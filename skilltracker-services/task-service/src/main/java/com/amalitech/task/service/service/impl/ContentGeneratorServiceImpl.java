@@ -162,7 +162,7 @@ public class ContentGeneratorServiceImpl implements ContentGeneratorService {
                     savedTask.getTitle(), savedTask.getId());
         }
 
-        log.info("Generated {} coding tasks for topic", savedTasks.size());
+        log.info("Generated {} MCQ tasks for topic", savedTasks.size());
         return savedTasks;
     }
 
@@ -174,7 +174,7 @@ public class ContentGeneratorServiceImpl implements ContentGeneratorService {
     }
 
     private Task createAndSaveMCQTask(SkillView skill, TaskDifficulty difficulty, JsonNode challengeNode) {
-        String title = challengeNode.path("title").asText("AI-Generated Coding Task");
+        String title = challengeNode.path("title").asText("AI-Generated MCQ Task");
         String description = challengeNode.path("description").asText("AI-generated description.");
         int xpReward = challengeNode.path("maxXP").asInt(25);
         int duration = challengeNode.path("estimatedDuration").asInt(15);
@@ -233,8 +233,8 @@ public class ContentGeneratorServiceImpl implements ContentGeneratorService {
         } catch (InvalidAiResponseException e) {
             throw e;
         } catch (JsonProcessingException e) {
-            log.error("Failed to parse coding challenge JSON: {}", response, e);
-            throw new AiResponseParsingException("Failed to parse OpenAI coding response", e);
+            log.error("Failed to parse MCQ tasks JSON: {}", response, e);
+            throw new AiResponseParsingException("Failed to parse OpenAI MCQ response", e);
         }
     }
 
