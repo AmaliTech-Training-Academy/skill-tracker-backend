@@ -24,6 +24,7 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.IOException;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -117,6 +118,9 @@ public class TaskGenerationServiceImpl implements TaskGenerationService {
                     generatedTaskIds.addAll(essayTasks.stream().map(Task::getId).toList());
                     break;
                 case MULTIPLE_CHOICE:
+                    var mcqTasks = contentGeneratorService.generateMCQTask(skill, request.difficulty(), request.requiredCount());
+                    generatedTaskIds.addAll(mcqTasks.stream().map(Task::getId).toList());
+                    break;
                 default:
                     log.warn("Batch generation for {} not yet implemented for skill: {}", request.taskType(), skill.getName());
                     throw new UnsupportedOperationException("Generation for " + request.taskType() + " is not supported.");
@@ -173,6 +177,9 @@ public class TaskGenerationServiceImpl implements TaskGenerationService {
                     generatedTaskIds.addAll(essayTasks.stream().map(Task::getId).toList());
                     break;
                 case MULTIPLE_CHOICE:
+                    var mcqTasks = contentGeneratorService.generateMCQTask(skill, request.difficulty(), 1);
+                    generatedTaskIds.addAll(mcqTasks.stream().map(Task::getId).toList());
+                    break;
                 default:
                     log.warn("Admin generation for {} not yet implemented for skill: {}", request.taskType(), skill.getName());
                     throw new UnsupportedOperationException("Generation for " + request.taskType() + " is not supported.");
@@ -262,7 +269,7 @@ public class TaskGenerationServiceImpl implements TaskGenerationService {
     }
 
     private List<UUID> generateTasksOfType(UserOnboardingCompletedEvent.SkillSelectionData skillData,
-                                           TaskType taskType, int quantity) {
+                                           TaskType taskType, int quantity) throws IOException {
         SkillView skill = skillViewRepository.findById(skillData.getSkillId())
                 .orElseThrow(() -> new TaskGenerationException("Skill not found: " + skillData.getSkillId()));
 
@@ -289,8 +296,8 @@ public class TaskGenerationServiceImpl implements TaskGenerationService {
                 var essayTasks = contentGeneratorService.generateEssayTask(skill, difficulty, tasksToGenerate);
                 return essayTasks.stream().map(Task::getId).toList();
             case MULTIPLE_CHOICE:
-                log.warn("MCQ generation not yet implemented for skill: {}", skill.getName());
-                return List.of();
+                var mcqTasks = contentGeneratorService.generateMCQTask(skill, difficulty, tasksToGenerate);
+                return mcqTasks.stream().map(Task::getId).toList();
             default:
                 return List.of();
         }
