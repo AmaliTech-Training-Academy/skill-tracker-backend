@@ -50,12 +50,7 @@ public class SkillServiceImpl implements SkillService {
     @Transactional(readOnly = true)
     public List<UserSkillDto> getUserSkills(UUID userId) {
         return userSkillRepository.findByUserId(userId).stream()
-                .map(userSkill -> new UserSkillDto(
-                        userSkill.getSkill().getId(),
-                        userSkill.getSkill().getName(),
-                        userSkill.getCurrentLevel(),
-                        userSkill.getSelectedAt()
-                ))
+                .map(skillMapper::toUserSkillDto)
                 .collect(Collectors.toList());
     }
 }

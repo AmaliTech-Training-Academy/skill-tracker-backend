@@ -74,7 +74,6 @@ skilltracker-services/user-service/src/main/java/com/amalitech/user/service/seed
 
 skilltracker-services/task-service/src/main/java/com/amalitech/task/service/controller/McqTestController.java
 
-# AI agent documentation (local only)
 /docs/
 docs/api/
 /docs/api/
@@ -82,5 +81,6 @@ docs/api/
 AGENTS.md
 htmlReport/
 .agent/
+docs/
 
 # application.properties

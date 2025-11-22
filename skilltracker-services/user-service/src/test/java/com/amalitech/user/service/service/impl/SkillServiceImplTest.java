@@ -1,6 +1,7 @@
 package com.amalitech.user.service.service.impl;
 
 import com.amalitech.user.service.dto.UserSkillDto;
+import com.amalitech.user.service.mapper.SkillMapper;
 import com.amalitech.user.service.model.Skill;
 import com.amalitech.user.service.model.User;
 import com.amalitech.user.service.model.UserSkill;
@@ -26,6 +27,9 @@ class SkillServiceImplTest {
 
     @Mock
     private UserSkillRepository userSkillRepository;
+
+    @Mock
+    private SkillMapper skillMapper;
 
     @InjectMocks
     private SkillServiceImpl skillService;
@@ -58,15 +62,23 @@ class SkillServiceImplTest {
         userSkill1.setUser(user);
         userSkill1.setSkill(skill1);
         userSkill1.setCurrentLevel(DifficultyLevel.INTERMEDIATE);
-        userSkill1.setSelectedAt(LocalDateTime.now());
+        LocalDateTime time1 = LocalDateTime.now();
+        userSkill1.setSelectedAt(time1);
 
         UserSkill userSkill2 = new UserSkill();
         userSkill2.setUser(user);
         userSkill2.setSkill(skill2);
         userSkill2.setCurrentLevel(DifficultyLevel.BEGINNER);
-        userSkill2.setSelectedAt(LocalDateTime.now().minusDays(1));
+        LocalDateTime time2 = LocalDateTime.now().minusDays(1);
+        userSkill2.setSelectedAt(time2);
 
         when(userSkillRepository.findByUserId(userId)).thenReturn(List.of(userSkill1, userSkill2));
+        when(skillMapper.toUserSkillDto(userSkill1)).thenReturn(
+                new UserSkillDto(skillId1, "Java", DifficultyLevel.INTERMEDIATE, time1)
+        );
+        when(skillMapper.toUserSkillDto(userSkill2)).thenReturn(
+                new UserSkillDto(skillId2, "Python", DifficultyLevel.BEGINNER, time2)
+        );
 
         List<UserSkillDto> result = skillService.getUserSkills(userId);
 
@@ -110,6 +122,9 @@ class SkillServiceImplTest {
         userSkill.setSelectedAt(selectedAt);
 
         when(userSkillRepository.findByUserId(userId)).thenReturn(List.of(userSkill));
+        when(skillMapper.toUserSkillDto(userSkill)).thenReturn(
+                new UserSkillDto(skillId1, "TypeScript", DifficultyLevel.ADVANCED, selectedAt)
+        );
 
         List<UserSkillDto> result = skillService.getUserSkills(userId);
 
@@ -131,6 +146,15 @@ class SkillServiceImplTest {
         UserSkill skill3 = createUserSkill(user, "JavaScript", DifficultyLevel.ADVANCED);
 
         when(userSkillRepository.findByUserId(userId)).thenReturn(List.of(skill1, skill2, skill3));
+        when(skillMapper.toUserSkillDto(skill1)).thenReturn(
+                new UserSkillDto(skill1.getSkill().getId(), "Java", DifficultyLevel.BEGINNER, skill1.getSelectedAt())
+        );
+        when(skillMapper.toUserSkillDto(skill2)).thenReturn(
+                new UserSkillDto(skill2.getSkill().getId(), "Python", DifficultyLevel.INTERMEDIATE, skill2.getSelectedAt())
+        );
+        when(skillMapper.toUserSkillDto(skill3)).thenReturn(
+                new UserSkillDto(skill3.getSkill().getId(), "JavaScript", DifficultyLevel.ADVANCED, skill3.getSelectedAt())
+        );
 
         List<UserSkillDto> result = skillService.getUserSkills(userId);
 
@@ -157,6 +181,9 @@ class SkillServiceImplTest {
         userSkill.setSelectedAt(now);
 
         when(userSkillRepository.findByUserId(userId)).thenReturn(List.of(userSkill));
+        when(skillMapper.toUserSkillDto(userSkill)).thenReturn(
+                new UserSkillDto(skillId1, "Go", DifficultyLevel.INTERMEDIATE, now)
+        );
 
         List<UserSkillDto> result = skillService.getUserSkills(userId);
 

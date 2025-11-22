@@ -1,9 +1,11 @@
 package com.amalitech.user.service.mapper;
 
+import com.amalitech.user.service.dto.UserSkillDto;
 import com.amalitech.user.service.dto.request.CreateSkillRequest;
 import com.amalitech.user.service.dto.request.UpdateSkillRequest;
 import com.amalitech.user.service.dto.response.SkillResponse;
 import com.amalitech.user.service.model.Skill;
+import com.amalitech.user.service.model.UserSkill;
 
 import org.springframework.stereotype.Component;
 import org.springframework.data.domain.Page;
@@ -111,6 +113,21 @@ public class SkillMapper {
             skill.getCategory(),
             skill.getIconUrl(),
             skill.getSupportedTaskTypes()
+        );
+    }
+
+    /**
+     * Maps a UserSkill entity to a UserSkillDto.
+     *
+     * @param userSkill The user skill entity
+     * @return The corresponding UserSkillDto
+     */
+    public UserSkillDto toUserSkillDto(UserSkill userSkill) {
+        return new UserSkillDto(
+                userSkill.getSkill().getId(),
+                userSkill.getSkill().getName(),
+                userSkill.getCurrentLevel(),
+                userSkill.getSelectedAt()
         );
     }
 }

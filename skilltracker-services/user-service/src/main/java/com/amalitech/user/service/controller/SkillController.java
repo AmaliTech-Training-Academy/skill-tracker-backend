@@ -44,11 +44,18 @@ public class SkillController {
         return ResponseEntity.ok(ApiResponse.success("Skill retrieved successfully", skills, null));
     }
 
+    /**
+     * Retrieves the authenticated user's skills.
+     *
+     * @param userId The user ID from the X-User-Id header.
+     * @return A ResponseEntity containing an ApiResponse with a list of UserSkillDto objects.
+     */
     @GetMapping("/me")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<List<UserSkillDto>> getMySkills(
+    public ResponseEntity<ApiResponse<List<UserSkillDto>>> getMySkills(
             @RequestHeader("X-User-Id") UUID userId
     ) {
-        return ResponseEntity.ok(skillService.getUserSkills(userId));
+        List<UserSkillDto> userSkills = skillService.getUserSkills(userId);
+        return ResponseEntity.ok(ApiResponse.success("User skills retrieved successfully", userSkills, null));
     }
 }
