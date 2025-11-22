@@ -18,8 +18,6 @@ import java.util.UUID;
 @Repository
 public interface TaskRepository extends JpaRepository<Task, UUID>,
         JpaSpecificationExecutor<Task> {
-
-    List<Task> findByUserIdAndType(String userId, TaskType type);
     /**
      * Finds tasks by joining through TaskDefinition to get the skill.
      * This is the correct, normalized query.
