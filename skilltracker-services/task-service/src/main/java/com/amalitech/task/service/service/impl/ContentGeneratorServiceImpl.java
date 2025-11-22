@@ -1,5 +1,9 @@
 package com.amalitech.task.service.service.impl;
 
+import com.amalitech.task.service.dto.MCQquestionDTO;
+import com.amalitech.task.service.dto.SkillDetailsDTO;
+import com.amalitech.task.service.dto.request.McqRequestDTO;
+import com.amalitech.task.service.dto.response.McqResponseDTO;
 import com.amalitech.task.service.exception.AiResponseParsingException;
 import com.amalitech.task.service.exception.AiServiceException;
 import com.amalitech.task.service.exception.InvalidAiResponseException;
@@ -7,6 +11,7 @@ import com.amalitech.task.service.model.Task;
 import com.amalitech.task.service.model.TaskDefinition;
 import com.amalitech.task.service.model.content.impl.CodingTaskContent;
 import com.amalitech.task.service.model.content.impl.EssayTaskContent;
+import com.amalitech.task.service.model.content.impl.McqTaskContent;
 import com.amalitech.task.service.model.enums.TaskDifficulty;
 import com.amalitech.task.service.model.enums.TaskType;
 import com.amalitech.task.service.model.view.SkillView;
@@ -16,6 +21,12 @@ import com.amalitech.task.service.service.ContentGeneratorService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.genai.types.GenerateContentResponse;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonObject;
+import com.google.gson.Strictness;
+import com.google.gson.reflect.TypeToken;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
@@ -23,9 +34,14 @@ import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.chat.prompt.PromptTemplate;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.IOException;
+import java.lang.reflect.Type;
+import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -42,13 +58,15 @@ public class ContentGeneratorServiceImpl implements ContentGeneratorService {
     private final TaskDefinitionRepository taskDefinitionRepository;
     private final PromptTemplate codingPromptTemplate;
     private final PromptTemplate essayPromptTemplate;
+    private final PromptTemplate mcqPromptTemplate;
 
     public ContentGeneratorServiceImpl(@Qualifier("flagshipChatModel") ChatModel chatModel,
                                        ObjectMapper objectMapper,
                                        TaskRepository taskRepository,
                                        TaskDefinitionRepository taskDefinitionRepository,
                                        PromptTemplate codingPromptTemplate,
-                                       PromptTemplate essayPromptTemplate
+                                       PromptTemplate essayPromptTemplate,
+                                       PromptTemplate mcqPromptTemplate
     ) {
         this.chatModel = chatModel;
         this.objectMapper = objectMapper;
@@ -56,6 +74,7 @@ public class ContentGeneratorServiceImpl implements ContentGeneratorService {
         this.taskDefinitionRepository = taskDefinitionRepository;
         this.codingPromptTemplate = codingPromptTemplate;
         this.essayPromptTemplate = essayPromptTemplate;
+        this.mcqPromptTemplate = mcqPromptTemplate;
     }
 
     /**
@@ -124,6 +143,108 @@ public class ContentGeneratorServiceImpl implements ContentGeneratorService {
 
         log.info("Generated {} essay tasks for skill: {}", savedTasks.size(), skill.getName());
         return savedTasks;
+    }
+
+    @Override
+    @Transactional
+    @CacheEvict(cacheNames = "tasks-public-cache", allEntries = true)
+    public List<Task> generateMCQTask(SkillView skill, TaskDifficulty difficulty, int quantity) throws IOException {
+        ClassPathResource prompt = new ClassPathResource("prompts/mcq/mcq_prompt.json");
+        String updatedFields = updateFields(
+                new String(prompt.getInputStream().readAllBytes(), StandardCharsets.UTF_8),
+                Map.of(
+                        "interest", skill.getName(),
+                        "difficulty", difficulty.toString(),
+                        "no_of_questions", String.valueOf(quantity)));
+
+        Prompt mcqPrompt = mcqPromptTemplate.create(Map.of("prompt", updatedFields));
+
+        String response = callOpenAI(mcqPrompt);
+
+        List<JsonNode> challengeNodes = parseMcqResponseToNodes(response);
+
+        List<Task> savedTasks = new ArrayList<>();
+        for (JsonNode challengeNode : challengeNodes) {
+            Task savedTask = createAndSaveMCQTask(skill, difficulty, challengeNode);
+            savedTasks.add(savedTask);
+            log.info("Successfully created MCQ task: {} (ID: {})",
+                    savedTask.getTitle(), savedTask.getId());
+        }
+
+        log.info("Generated {} coding tasks for topic", savedTasks.size());
+        return savedTasks;
+    }
+
+    public static String updateFields (String jsonString, Map < String, String > updates){
+        Gson gson = new Gson();
+        JsonObject jsonObject = gson.fromJson(jsonString, JsonObject.class);
+        updates.forEach(jsonObject::addProperty);
+        return gson.toJson(jsonObject);
+    }
+
+    private Task createAndSaveMCQTask(SkillView skill, TaskDifficulty difficulty, JsonNode challengeNode) {
+        String title = challengeNode.path("title").asText("AI-Generated Coding Task");
+        String description = challengeNode.path("description").asText("AI-generated description.");
+        int xpReward = challengeNode.path("maxXP").asInt(25);
+        int duration = challengeNode.path("estimatedDuration").asInt(15);
+
+        Task task = Task.builder()
+                .title(title)
+                .description(description)
+                .type(TaskType.MULTIPLE_CHOICE)
+                .difficulty(difficulty)
+                .content(createMCQContent(challengeNode))
+                .taskDefinition(TaskDefinition.builder()
+                        .skill(skill)
+                        .title(skill.getName())
+                        .createdAt(LocalDateTime.now())
+                        .updatedAt(LocalDateTime.now())
+                        .build())
+                .version(1)
+                .estimatedDurationInMinutes(duration)
+                .xpReward(xpReward)
+                .updatedAt(LocalDateTime.now())
+                .build();
+
+
+
+        return taskRepository.save(task);
+
+    }
+
+    public McqTaskContent createMCQContent(JsonNode challengeNode) {
+
+        List<String> options = jsonArrayToStringList(challengeNode.path("options"));
+
+        return McqTaskContent.builder()
+                .question_number(challengeNode.path("question_number").asText())
+                .question_text(challengeNode.path("question_text").asText())
+                .question_duration(challengeNode.path("question_duration").asInt())
+                .options(options)
+                .hint(challengeNode.path("hint").asText())
+                .correct_answer(challengeNode.path("correct_answer").asText())
+                .explanation(challengeNode.path("explanation").asText())
+                .build();
+    }
+
+    private List<JsonNode> parseMcqResponseToNodes(String response) {
+        try {
+            JsonNode root = objectMapper.readTree(response);
+            JsonNode challengesNode = root.path("expected_output");
+
+            if (challengesNode.isMissingNode() || !challengesNode.isArray()) {
+                throw new InvalidAiResponseException("Missing or invalid 'challenges' array in OpenAI response");
+            }
+
+            return StreamSupport.stream(challengesNode.spliterator(), false)
+                    .collect(Collectors.toList());
+
+        } catch (InvalidAiResponseException e) {
+            throw e;
+        } catch (JsonProcessingException e) {
+            log.error("Failed to parse coding challenge JSON: {}", response, e);
+            throw new AiResponseParsingException("Failed to parse OpenAI coding response", e);
+        }
     }
 
     /**
