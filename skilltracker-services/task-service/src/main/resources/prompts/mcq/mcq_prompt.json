@@ -1,12 +1,10 @@
 {
   "input": {
-    "userId": "UUID",
     "interest": "Databases",
     "difficulty": "beginner",
     "no_of_questions": 10
   },
   "expected_output": {
-    "userId": "String(UserId from input block)",
     "question_number": "Integer(eg: 1, 2, 3, 4, ..., n)",
     "question_title": "String(Very short title of question)",
     "question_description": "String(Brief description of the objective of this question)",
