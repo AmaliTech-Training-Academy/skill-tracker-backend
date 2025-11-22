@@ -1,9 +1,11 @@
 package com.amalitech.task.service.config;
 
 import org.springframework.ai.chat.prompt.PromptTemplate;
+import org.springframework.ai.converter.ListOutputConverter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.convert.support.DefaultConversionService;
 import org.springframework.core.io.Resource;
 
 /**
@@ -53,7 +55,7 @@ public class PromptTemplateConfig {
 
     @Bean
     public PromptTemplate mcqPromptTemplate(
-            @Value("classpath:prompts/mcq/mcq_prompt.json") String mcqPromptResource
+            @Value("classpath:prompts/mcq/mcq_prompt.txt") Resource mcqPromptResource
     ) {
         return new PromptTemplate(mcqPromptResource);
     }
