@@ -215,7 +215,7 @@ class TaskControllerComprehensiveTest {
             McqRequestDTO requestDTO = McqRequestDTO.builder()
                     .userId(userId)
                     .interest("Java")
-                    .difficulty("INTERMEDIATE")
+                    .difficulty(TaskDifficulty.INTERMEDIATE)
                     .no_of_questions(5)
                     .build();
 
@@ -241,7 +241,7 @@ class TaskControllerComprehensiveTest {
             McqRequestDTO requestDTO = McqRequestDTO.builder()
                     .userId(userId)
                     .interest("Python")
-                    .difficulty("ADVANCED")
+                    .difficulty(TaskDifficulty.ADVANCED)
                     .no_of_questions(10)
                     .build();
 
@@ -268,7 +268,7 @@ class TaskControllerComprehensiveTest {
             McqRequestDTO requestDTO = McqRequestDTO.builder()
                     .userId(userId)
                     .interest("JavaScript")
-                    .difficulty("BEGINNER")
+                    .difficulty(TaskDifficulty.BEGINNER)
                     .no_of_questions(3)
                     .build();
 
@@ -289,7 +289,7 @@ class TaskControllerComprehensiveTest {
             McqRequestDTO requestDTO = McqRequestDTO.builder()
                     .userId(userId)
                     .interest("C++")
-                    .difficulty("INTERMEDIATE")
+                    .difficulty(TaskDifficulty.INTERMEDIATE)
                     .no_of_questions(5)
                     .build();
 
@@ -311,7 +311,7 @@ class TaskControllerComprehensiveTest {
             McqRequestDTO requestDTO = McqRequestDTO.builder()
                     .userId(userId)
                     .interest("Go")
-                    .difficulty("ADVANCED")
+                    .difficulty(TaskDifficulty.ADVANCED)
                     .no_of_questions(5)
                     .build();
 
