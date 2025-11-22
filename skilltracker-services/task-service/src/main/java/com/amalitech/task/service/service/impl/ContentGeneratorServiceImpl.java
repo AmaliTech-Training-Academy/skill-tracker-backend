@@ -1,9 +1,5 @@
 package com.amalitech.task.service.service.impl;
 
-import com.amalitech.task.service.dto.MCQquestionDTO;
-import com.amalitech.task.service.dto.SkillDetailsDTO;
-import com.amalitech.task.service.dto.request.McqRequestDTO;
-import com.amalitech.task.service.dto.response.McqResponseDTO;
 import com.amalitech.task.service.exception.AiResponseParsingException;
 import com.amalitech.task.service.exception.AiServiceException;
 import com.amalitech.task.service.exception.InvalidAiResponseException;
@@ -21,12 +17,8 @@ import com.amalitech.task.service.service.ContentGeneratorService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.genai.types.GenerateContentResponse;
 import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
-import com.google.gson.Strictness;
-import com.google.gson.reflect.TypeToken;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
@@ -39,7 +31,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
-import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
