@@ -2,10 +2,7 @@ package com.amalitech.analytics.service.service;
 
 import com.amalitech.analytics.service.dto.*;
 import com.amalitech.analytics.service.exception.EntityNotFoundException;
-import com.amalitech.analytics.service.model.SkillSnapShot;
-import com.amalitech.analytics.service.model.UserAggregateStats;
-import com.amalitech.analytics.service.model.UserGoal;
-import com.amalitech.analytics.service.model.UserSkillProgress;
+import com.amalitech.analytics.service.model.*;
 import com.amalitech.analytics.service.model.enums.GoalStatus;
 import com.amalitech.analytics.service.model.enums.Granularity;
 import com.amalitech.analytics.service.repository.*;
@@ -57,6 +54,7 @@ public class AnalyticsReadService implements AnalyticsReadServiceInterface {
     private final JdbcTemplate jdbcTemplate;
     private final TaskSubmissionLogRepository logRepository;
     private final UserGoalRepository goalRepository;
+    private final UserSkillSelectionRepository selectionRepository;
 
     /** {@inheritDoc} */
     @Override
@@ -155,7 +153,10 @@ public class AnalyticsReadService implements AnalyticsReadServiceInterface {
         );
 
         int currentXp = progress.getTotalXpEarned();
-        String currentLevel = details.getCurrentLevel(currentXp);
+        String levelBasedOnXp = details.getCurrentLevel(currentXp);
+        UserSkillSelection userSkill = selectionRepository.findBySkillId(snapshot.getId());
+        String initialClaimLevel = userSkill.getInitialClaimLevel();
+        String currentLevel = getEffectiveLevel(initialClaimLevel, levelBasedOnXp);
         String nextLevel = details.getNextLevel(currentLevel);
         int xpForNextLevel = details.getXpForLevel(nextLevel);
         int xpForCurrentLevel = details.getXpForLevel(currentLevel);
@@ -207,6 +208,34 @@ public class AnalyticsReadService implements AnalyticsReadServiceInterface {
                 goal.getDeadline(),
                 status
         );
+    }
+
+    /**
+     * Determines the final level shown to the user.
+     * It ensures the user's initial claim is honored until XP naturally surpasses it.
+     */
+    private String getEffectiveLevel(String initialClaim, String calculatedLevel) {
+        if (initialClaim == null) {
+            return calculatedLevel;
+        }
+
+        int calculatedRank = getLevelRank(calculatedLevel);
+        int claimedRank = getLevelRank(initialClaim);
+
+        if (claimedRank > calculatedRank) {
+            return initialClaim;
+        }
+
+        return calculatedLevel;
+    }
+
+    private int getLevelRank(String level) {
+        return switch (level.toUpperCase()) {
+            case "BEGINNER" -> 1;
+            case "INTERMEDIATE" -> 2;
+            case "ADVANCED" -> 3;
+            default -> 0;
+        };
     }
 
     private double calculateGoalProgressPercentage(UserGoal goal) {
