@@ -125,7 +125,7 @@
         <dependency>
             <groupId>org.flywaydb</groupId>
             <artifactId>flyway-database-postgresql</artifactId>
-        </dependency>
+        </dependency> 
 
         <!-- JJWT Library (token generation/parsing) -->
         <dependency>
