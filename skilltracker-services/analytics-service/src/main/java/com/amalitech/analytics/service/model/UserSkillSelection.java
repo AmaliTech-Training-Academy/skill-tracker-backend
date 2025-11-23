@@ -21,8 +21,6 @@ public class UserSkillSelection {
     @Column(nullable = false)
     private UUID skillId;
 
-    private String selectedLevel;
-
     private String skillName;
 
     @Column(nullable = false, updatable = false)
