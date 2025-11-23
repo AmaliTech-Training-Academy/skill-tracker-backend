@@ -1,9 +1,11 @@
 package com.amalitech.task.service.service;
 
+import com.amalitech.task.service.dto.request.McqRequestDTO;
 import com.amalitech.task.service.model.Task;
 import com.amalitech.task.service.model.enums.TaskDifficulty;
 import com.amalitech.task.service.model.view.SkillView;
 
+import java.io.IOException;
 import java.util.List;
 
 public interface ContentGeneratorService {
@@ -27,5 +29,7 @@ public interface ContentGeneratorService {
      * @return A list of the persisted Task entities.
      */
     List<Task> generateEssayTask(SkillView skill, TaskDifficulty difficulty, int quantity);
+
+    List<Task> generateMCQTask(SkillView skill, TaskDifficulty difficulty, int quantity) throws IOException;
 
 }

@@ -80,26 +80,6 @@ public class TaskController {
         return ResponseEntity.ok(response);
     }
 
-
-    /**
-     * This accepts an McqResponseDTO and returns a McqResponseDTO*/
-    @PostMapping("/generate/mcq")
-    @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<ApiResponse<McqResponseDTO>> generateMCQ(
-            @RequestBody McqRequestDTO taskDTO
-    ) throws Exception {
-        McqResponseDTO mcqTask = taskService.generateMCQ(taskDTO);
-        return ResponseEntity.ok(ApiResponse.success("MCQ Task Generated Successfully", mcqTask, ""));
-    }
-
-    @GetMapping("/getMCQs/{id}")
-    @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<ApiResponse<McqResponseDTO>> getMCQsByUserId(
-            @PathVariable("id") String id) {
-        McqResponseDTO tasks = taskService.getMCQByUserId(id);
-        return ResponseEntity.ok(ApiResponse.success("MCQ Task Generated Successfully", tasks, ""));
-    }
-
     @PostMapping("/generate/learning-path")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<LearningPathResponseDTO>> generateLearningPath(

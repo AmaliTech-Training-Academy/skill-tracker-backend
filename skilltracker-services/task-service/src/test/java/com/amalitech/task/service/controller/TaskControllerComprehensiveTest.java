@@ -3,12 +3,9 @@ package com.amalitech.task.service.controller;
 import com.amalitech.common.security.dto.response.ApiResponse;
 import com.amalitech.task.service.dto.CurrentProgressDTO;
 import com.amalitech.task.service.dto.LearningPathDTO;
-import com.amalitech.task.service.dto.MCQquestionDTO;
 import com.amalitech.task.service.dto.TaskDTO;
-import com.amalitech.task.service.dto.request.McqRequestDTO;
 import com.amalitech.task.service.dto.request.UserProfileRequestDTO;
 import com.amalitech.task.service.dto.response.LearningPathResponseDTO;
-import com.amalitech.task.service.dto.response.McqResponseDTO;
 import com.amalitech.task.service.dto.response.UserTasksResponse;
 import com.amalitech.task.service.exception.ResourceNotFoundException;
 import com.amalitech.task.service.model.enums.TaskDifficulty;
@@ -202,128 +199,6 @@ class TaskControllerComprehensiveTest {
             taskController.getTaskById(specificId);
 
             verify(taskService).getTaskById(specificId);
-        }
-    }
-
-    @Nested
-    @DisplayName("POST /generate/mcq - Generate MCQ")
-    class GenerateMcqTests {
-
-        @Test
-        @DisplayName("Should successfully generate MCQ")
-        void testGenerateMCQ_Success() throws Exception {
-            McqRequestDTO requestDTO = McqRequestDTO.builder()
-                    .userId(userId)
-                    .interest("Java")
-                    .difficulty("INTERMEDIATE")
-                    .no_of_questions(5)
-                    .build();
-
-            McqResponseDTO responseDTO = McqResponseDTO.builder()
-                    .mcqQuestion(List.of())
-                    .build();
-
-            when(taskService.generateMCQ(requestDTO)).thenReturn(responseDTO);
-
-            ResponseEntity<ApiResponse<McqResponseDTO>> response = taskController.generateMCQ(requestDTO);
-
-            assertNotNull(response);
-            assertEquals(HttpStatus.OK, response.getStatusCode());
-            assertNotNull(response.getBody());
-            assertTrue(response.getBody().isSuccess());
-            assertEquals("MCQ Task Generated Successfully", response.getBody().getMessage());
-            verify(taskService, times(1)).generateMCQ(requestDTO);
-        }
-
-        @Test
-        @DisplayName("Should handle MCQ with multiple questions")
-        void testGenerateMCQ_MultipleQuestions() throws Exception {
-            McqRequestDTO requestDTO = McqRequestDTO.builder()
-                    .userId(userId)
-                    .interest("Python")
-                    .difficulty("ADVANCED")
-                    .no_of_questions(10)
-                    .build();
-
-            List<MCQquestionDTO> questions = new ArrayList<>();
-            for (int i = 0; i < 10; i++) {
-                questions.add(MCQquestionDTO.builder()
-                        .build());
-            }
-
-            McqResponseDTO responseDTO = McqResponseDTO.builder()
-                    .mcqQuestion(questions)
-                    .build();
-
-            when(taskService.generateMCQ(requestDTO)).thenReturn(responseDTO);
-
-            ResponseEntity<ApiResponse<McqResponseDTO>> response = taskController.generateMCQ(requestDTO);
-
-            assertEquals(10, response.getBody().getData().getMcqQuestion().size());
-        }
-
-        @Test
-        @DisplayName("Should pass request DTO to service")
-        void testGenerateMCQ_PassRequestToService() throws Exception {
-            McqRequestDTO requestDTO = McqRequestDTO.builder()
-                    .userId(userId)
-                    .interest("JavaScript")
-                    .difficulty("BEGINNER")
-                    .no_of_questions(3)
-                    .build();
-
-            McqResponseDTO responseDTO = McqResponseDTO.builder()
-                    .mcqQuestion(List.of())
-                    .build();
-
-            when(taskService.generateMCQ(requestDTO)).thenReturn(responseDTO);
-
-            taskController.generateMCQ(requestDTO);
-
-            verify(taskService).generateMCQ(requestDTO);
-        }
-
-        @Test
-        @DisplayName("Should wrap response in ApiResponse")
-        void testGenerateMCQ_WrapsResponse() throws Exception {
-            McqRequestDTO requestDTO = McqRequestDTO.builder()
-                    .userId(userId)
-                    .interest("C++")
-                    .difficulty("INTERMEDIATE")
-                    .no_of_questions(5)
-                    .build();
-
-            McqResponseDTO responseDTO = McqResponseDTO.builder()
-                    .mcqQuestion(List.of())
-                    .build();
-
-            when(taskService.generateMCQ(requestDTO)).thenReturn(responseDTO);
-
-            ResponseEntity<ApiResponse<McqResponseDTO>> response = taskController.generateMCQ(requestDTO);
-
-            assertNotNull(response.getBody().getData());
-            assertTrue(response.getBody().isSuccess());
-        }
-
-        @Test
-        @DisplayName("Should return 200 OK status")
-        void testGenerateMCQ_StatusOk() throws Exception {
-            McqRequestDTO requestDTO = McqRequestDTO.builder()
-                    .userId(userId)
-                    .interest("Go")
-                    .difficulty("ADVANCED")
-                    .no_of_questions(5)
-                    .build();
-
-            McqResponseDTO responseDTO = McqResponseDTO.builder()
-                    .mcqQuestion(List.of())
-                    .build();
-
-            when(taskService.generateMCQ(requestDTO)).thenReturn(responseDTO);
-
-            ResponseEntity<ApiResponse<McqResponseDTO>> response = taskController.generateMCQ(requestDTO);
-
-            assertEquals(HttpStatus.OK, response.getStatusCode());
         }
     }
 
