@@ -7,40 +7,7 @@ on:
       - dev
 
 jobs:
-  sonarqube-analysis:
-    if: github.event.pull_request.merged == true
-    name: Build and analyze
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0  
-      - name: Set up JDK 21
-        uses: actions/setup-java@v4
-        with:
-          java-version: 21
-          distribution: 'zulu' 
-      - name: Cache SonarQube packages
-        uses: actions/cache@v4
-        with:
-          path: ~/.sonar/cache
-          key: ${{ runner.os }}-sonar
-          restore-keys: ${{ runner.os }}-sonar
-      - name: Cache Maven packages
-        uses: actions/cache@v4
-        with:
-          path: ~/.m2
-          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
-          restore-keys: ${{ runner.os }}-m2
-      - name: Build and analyze
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
-        run: mvn -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.projectKey=AmaliTech-Training-Academy_skill-tracker-backend_0d65d202-d646-4e06-87bf-d53e6ff43cc6 -Dsonar.projectName='skill-tracker-backend'
-
   trigger-devops-workflow:
-    needs: sonarqube-analysis
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     permissions:
@@ -52,4 +19,4 @@ jobs:
           token: ${{ secrets.REPO_ACCESS_TOKEN }}
           repository: ${{ secrets.REPOSITORY_NAME }}
           event-type: backend-feature-to-dev-merged
-          client-payload: '{\"pr_title\": \"${{ github.event.pull_request.title }}\", \"pr_author\": \"${{ github.event.pull_request.user.login }}\", \"pr_url\": \"${{ github.event.pull_request.html_url }}\", \"target_branch\": \"dev\", \"commit_sha\": \"${{ github.event.pull_request.merge_commit_sha }}\"}'
+          client-payload: '{"pr_title": "${{ github.event.pull_request.title }}", "pr_author": "${{ github.event.pull_request.user.login }}", "pr_url": "${{ github.event.pull_request.html_url }}", "target_branch": "dev", "commit_sha": "${{ github.event.pull_request.merge_commit_sha }}"}'
