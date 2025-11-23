@@ -1,15 +1,17 @@
 package com.amalitech.analytics.service.model;
 
-import com.amalitech.analytics.service.model.enums.TaskType;
 import jakarta.persistence.*;
-import lombok.Data;
+import lombok.*;
 
 import java.util.Set;
 import java.util.UUID;
 
 @Entity
 @Table(name = "user_skill_selection")
-@Data
+@Getter
+@Setter
+@ToString(exclude = "event")
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 public class UserSkillSelection {
 
     @Id
@@ -19,10 +21,11 @@ public class UserSkillSelection {
     @Column(nullable = false)
     private UUID skillId;
 
-    @Column(nullable = false, updatable = false)
     private String selectedLevel;
 
     private String skillName;
+
+    @Column(nullable = false, updatable = false)
     private String initialClaimLevel;
 
     @ElementCollection(fetch = FetchType.EAGER)
