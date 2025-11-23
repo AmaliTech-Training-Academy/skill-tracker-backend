@@ -46,7 +46,6 @@ public class UserSkillAnalyticsListener {
                     s.setSkillId(data.getSkillId());
                     s.setSkillName(data.getSkillName());
                     s.setInitialClaimLevel(data.getDifficultyLevel());
-                    s.setSelectedLevel(data.getDifficultyLevel());
                     s.setSupportedTaskTypes(data.getSupportedTaskTypes());
                     s.setEvent(skillEvent);
                     return s;
