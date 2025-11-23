@@ -22,10 +22,8 @@ import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.chat.prompt.PromptTemplate;
-import org.springframework.ai.converter.ListOutputConverter;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.core.convert.support.DefaultConversionService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -138,75 +136,85 @@ public class ContentGeneratorServiceImpl implements ContentGeneratorService {
     @Transactional
     @CacheEvict(cacheNames = "tasks-public-cache", allEntries = true)
     public List<Task> generateMCQTask(SkillView skill, TaskDifficulty difficulty, int quantity) throws IOException {
-        log.info("Generating {} MCQ tasks via OpenAI for skill: {}, difficulty: {}, no_of_questions: {}",
-                quantity, skill.getName(), difficulty, quantity);
-        var outputConverter = new ListOutputConverter(new DefaultConversionService());
+        log.info("Generating {} MCQ questions via OpenAI for skill: {}, difficulty: {}",
+                quantity, skill.getName(), difficulty);
 
         Prompt mcqPrompt = mcqPromptTemplate.create(Map.of(
                 "skill", skill.getName(),
                 "difficulty", difficulty.toString(),
-                "no_of_questions", String.valueOf(quantity),
-                "format", outputConverter.getFormat()
+                "quantity", String.valueOf(quantity)
         ));
 
         String response = callOpenAI(mcqPrompt);
 
-        List<JsonNode> challengeNodes = parseMcqResponseToNodes(response);
+        List<JsonNode> questionNodes = parseMcqResponseToNodes(response);
 
-        List<Task> savedTasks = new ArrayList<>();
-        for (JsonNode challengeNode : challengeNodes) {
-            Task savedTask = createAndSaveMCQTask(skill, difficulty, challengeNode);
-            savedTasks.add(savedTask);
-            log.info("Successfully created MCQ task: {} (ID: {})",
-                    savedTask.getTitle(), savedTask.getId());
-        }
+        Task savedTask = createAndSaveMCQTask(skill, difficulty, questionNodes);
 
-        log.info("Generated {} MCQ tasks for topic", savedTasks.size());
-        return savedTasks;
+        log.info("Generated MCQ task with {} questions (ID: {})", 
+                questionNodes.size(), savedTask.getId());
+
+        return List.of(savedTask);
     }
 
-    private Task createAndSaveMCQTask(SkillView skill, TaskDifficulty difficulty, JsonNode challengeNode) {
-        String title = challengeNode.path("title").asText("AI-Generated MCQ Task");
-        String description = challengeNode.path("description").asText("AI-generated description.");
-        int xpReward = challengeNode.path("maxXP").asInt(25);
-        int duration = challengeNode.path("estimatedDuration").asInt(15);
+    private Task createAndSaveMCQTask(SkillView skill, TaskDifficulty difficulty, List<JsonNode> questionNodes) {
+        String taskTitle = skill.getName() + " - MCQ Quiz";
+        String description = "Multiple choice assessment for " + skill.getName();
+        
+        // Calculate total duration and max XP from all questions
+        int totalDuration = 0;
+        int totalXpReward = 0;
+        for (JsonNode node : questionNodes) {
+            totalDuration += node.path("question_duration").asInt(3);
+            totalXpReward += node.path("xpReward").asInt(50);
+        }
+
+        TaskDefinition definition = getOrCreateTaskDefinition(skill, taskTitle);
 
         Task task = Task.builder()
-                .title(title)
+                .taskDefinition(definition)
+                .version(definition.getLatestVersion())
+                .title(taskTitle)
                 .description(description)
                 .type(TaskType.MULTIPLE_CHOICE)
                 .difficulty(difficulty)
-                .content(createMCQContent(challengeNode))
-                .taskDefinition(TaskDefinition.builder()
-                        .skill(skill)
-                        .title(skill.getName())
-                        .createdAt(LocalDateTime.now())
-                        .updatedAt(LocalDateTime.now())
-                        .build())
-                .version(1)
-                .estimatedDurationInMinutes(duration)
-                .xpReward(xpReward)
+                .content(createMCQContent(questionNodes))
+                .estimatedDurationInMinutes(totalDuration)
+                .xpReward(totalXpReward)
+                .isPublished(true)
                 .updatedAt(LocalDateTime.now())
                 .build();
-
-
 
         return taskRepository.save(task);
 
     }
 
-    public McqTaskContent createMCQContent(JsonNode challengeNode) {
+    public McqTaskContent createMCQContent(List<JsonNode> questionNodes) {
+        List<McqTaskContent.Question> questions = new ArrayList<>();
 
-        List<String> options = jsonArrayToStringList(challengeNode.path("options"));
+        for (int i = 0; i < questionNodes.size(); i++) {
+            JsonNode questionNode = questionNodes.get(i);
+            List<String> options = jsonArrayToStringList(questionNode.path("options"));
+
+            McqTaskContent.Question question = McqTaskContent.Question.builder()
+                    .question_number(String.valueOf(i + 1))
+                    .question_title(questionNode.path("question_title").asText())
+                    .question_description(questionNode.path("question_description").asText())
+                    .question_text(questionNode.path("question_text").asText())
+                    .question_duration(questionNode.path("question_duration").asInt(3))
+                    .question_difficulty(questionNode.path("question_difficulty").asText())
+                    .options(options)
+                    .hint(questionNode.path("hint").asText())
+                    .correct_answer(questionNode.path("correct_answer").asText())
+                    .explanation(questionNode.path("explanation").asText())
+                    .xpReward(questionNode.path("xpReward").asInt(50))
+                    .build();
+
+            questions.add(question);
+        }
 
         return McqTaskContent.builder()
-                .question_number(challengeNode.path("question_number").asText())
-                .question_text(challengeNode.path("question_text").asText())
-                .question_duration(challengeNode.path("question_duration").asInt())
-                .options(options)
-                .hint(challengeNode.path("hint").asText())
-                .correct_answer(challengeNode.path("correct_answer").asText())
-                .explanation(challengeNode.path("explanation").asText())
+                .questions(questions)
                 .build();
     }
 
@@ -216,7 +224,7 @@ public class ContentGeneratorServiceImpl implements ContentGeneratorService {
             JsonNode challengesNode = root.path("expected_output");
 
             if (challengesNode.isMissingNode() || !challengesNode.isArray()) {
-                throw new InvalidAiResponseException("Missing or invalid 'challenges' array in OpenAI response");
+                throw new InvalidAiResponseException("Missing or invalid 'expected_output' array in OpenAI response");
             }
 
             return StreamSupport.stream(challengesNode.spliterator(), false)
