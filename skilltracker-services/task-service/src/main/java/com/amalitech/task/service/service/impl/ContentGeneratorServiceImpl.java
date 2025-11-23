@@ -17,8 +17,6 @@ import com.amalitech.task.service.service.ContentGeneratorService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.gson.Gson;
-import com.google.gson.JsonObject;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
@@ -28,12 +26,10 @@ import org.springframework.ai.converter.ListOutputConverter;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.core.convert.support.DefaultConversionService;
-import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -167,13 +163,6 @@ public class ContentGeneratorServiceImpl implements ContentGeneratorService {
 
         log.info("Generated {} MCQ tasks for topic", savedTasks.size());
         return savedTasks;
-    }
-
-    public static String updateFields (String jsonString, Map < String, String > updates){
-        Gson gson = new Gson();
-        JsonObject jsonObject = gson.fromJson(jsonString, JsonObject.class);
-        updates.forEach(jsonObject::addProperty);
-        return gson.toJson(jsonObject);
     }
 
     private Task createAndSaveMCQTask(SkillView skill, TaskDifficulty difficulty, JsonNode challengeNode) {
