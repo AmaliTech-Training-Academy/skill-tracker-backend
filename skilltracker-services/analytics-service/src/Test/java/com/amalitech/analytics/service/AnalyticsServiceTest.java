@@ -77,7 +77,7 @@ class AnalyticsServiceTest {
                 NEW_XP,
                 true,
                 Instant.now(),
-                TaskType.Coding,
+                TaskType.CODING,
                 "MEDIUM",
                 Map.of("Clarity", new RubricScoreDTO(8, 10, 80))
         );
@@ -145,7 +145,7 @@ class AnalyticsServiceTest {
 
         ArgumentCaptor<SkillTrajectorySnapshot> trajectoryCaptor = ArgumentCaptor.forClass(SkillTrajectorySnapshot.class);
         verify(trajectoryRepository).save(trajectoryCaptor.capture());
-        assertThat(trajectoryCaptor.getValue().getTasksCompletedUpToDate()).isEqualTo(6);
+        assertThat(trajectoryCaptor.getValue().getTasksCompletedToday()).isEqualTo(6);
     }
 
     @Test
