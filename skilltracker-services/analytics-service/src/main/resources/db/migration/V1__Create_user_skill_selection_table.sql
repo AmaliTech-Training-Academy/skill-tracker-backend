@@ -2,7 +2,6 @@
 CREATE TABLE IF NOT EXISTS user_skill_selection (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     skill_id UUID NOT NULL,
-    selected_level VARCHAR(255) NOT NULL,
     skill_name VARCHAR(255),
     initial_claim_level VARCHAR(255) NOT NULL,
     event_id UUID
