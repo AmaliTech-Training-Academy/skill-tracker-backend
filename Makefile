@@ -35,6 +35,11 @@ help:
 	@echo "🧪  make test-common                - Run tests for common module"
 	@echo "📦  make package                    - Package all modules (skip tests)"
 	@echo ""
+	@echo "🗄️   FLYWAY DATABASE MIGRATIONS"
+	@echo "-------------------------------------------------------------------------------------------"
+	@echo "🗄️   make migrate                   - Run Flyway migrations for all services"
+	@echo "🗄️   make migrate-service SERVICE=task - Run Flyway migrations for a specific service"
+	@echo ""
 	@echo "🚀  make run SERVICE=user           - Run a specific service (e.g. user)"
 	@echo "🔁  make rebuild SERVICE=task       - Clean, build, and run a service"
 	@echo ""
@@ -86,6 +91,8 @@ help:
 	@echo "  make rebuild SERVICE=task"
 	@echo "  make test-service SERVICE=analytics"
 	@echo "  make test-infra COMPONENT=config-server"
+	@echo "  make migrate"
+	@echo "  make migrate-service SERVICE=task"
 	@echo "  make run-infra"
 	@echo "  make run-services"
 	@echo "  make run-all"
@@ -483,3 +490,26 @@ test-infra:
 test-common:
 	@echo "🧪 Running tests for common module..."
 	$(MVN) -f $(COMMON_DIR) test
+
+# -------------------------------------------------------
+# DATABASE MIGRATION COMMANDS (FLYWAY)
+# -------------------------------------------------------
+# Migrate all services
+# Example: make migrate
+# -------------------------------------------------------
+migrate:
+	@echo "🗄️  Running Flyway migrations for all services..."
+	$(MVN) flyway:migrate
+	@echo "✅ All migrations completed!"
+
+# Migrate a specific service
+# Example: make migrate-service SERVICE=task
+# -------------------------------------------------------
+migrate-service:
+	@if [ -z "$(SERVICE)" ]; then \
+		echo "❌ Please provide a SERVICE variable, e.g. make migrate-service SERVICE=task"; \
+		exit 1; \
+	fi
+	@echo "🗄️  Running Flyway migrations for $(SERVICE)-service..."
+	$(MVN) flyway:migrate -pl $(SERVICES_DIR)/$(SERVICE)-service
+	@echo "✅ Migration completed for $(SERVICE)-service!"
