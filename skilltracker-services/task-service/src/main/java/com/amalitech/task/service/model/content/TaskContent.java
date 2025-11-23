@@ -23,7 +23,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
         property = "contentType"
 )
 @JsonSubTypes({
-        @JsonSubTypes.Type(value = McqTaskContent.class, name = "MCQ"),
+        @JsonSubTypes.Type(value = McqTaskContent.class, name = "MULTIPLE_CHOICE"),
         @JsonSubTypes.Type(value = CodingTaskContent.class, name = "CODING"),
         @JsonSubTypes.Type(value = EssayTaskContent.class, name = "ESSAY")
 })
