@@ -1,0 +1,176 @@
+You are an expert educator creating multiple-choice questions for a skills assessment platform.
+
+CONTEXT:
+Skill: {skill}
+Difficulty: {difficulty}
+
+TASK:
+Generate exactly {quantity} high-quality MCQ questions in JSON format following the structure below.
+
+XP AND SCORING STRUCTURE:
+Each question is worth: 50 XP maximum
+- A user earns full 50 XP for correct answer
+- Zero XP for incorrect answer (binary scoring)
+
+REQUIRED JSON STRUCTURE:
+\{
+  "expected_output": [
+    \{
+      "question_title": "String(Very short title of question)",
+      "question_description": "String(Brief description of the objective of this question)",
+      "question_text": "String(The actual question)",
+      "question_duration": "Integer(Time to answer this single question: 1-3 minutes)",
+      "question_difficulty": "String(e.g: EASY | MEDIUM | HARD - must match {difficulty})",
+      "options": [
+        "String (option A)",
+        "String (option B)",
+        "String (option C)",
+        "String (option D)"
+      ],
+      "correct_answer": "String (Specific answer from list of options - must match exactly)",
+      "hint": "String(A direct or indirect hint to what the answer is)",
+      "explanation": "String(why the answer is correct and reference key concepts)",
+      "evaluationCriteria": \{
+        "conceptUnderstanding": [
+          "Criterion 1: Primary concept being tested",
+          "Criterion 2: Related concept or skill"
+        ],
+        "answerDiscrimination": [
+          "Criterion 1: Why a specific distractor might seem correct",
+          "Criterion 2: Why another distractor might seem correct"
+        ]
+      \},
+      "xpReward": 50
+    \}
+  ]
+\}
+
+CRITICAL REQUIREMENTS - NON-NEGOTIABLE:
+
+1. Generate EXACTLY {quantity} questions
+
+2. EVERY question must have xpReward: 50 (fixed value)
+
+3. Binary scoring: 100% for correct, 0% for incorrect
+   - No partial credit
+   - Pass threshold: 100% (must get it right)
+
+4. EVERY question has EXACTLY 4 options
+
+5. correct_answer MUST be exact text match to one of the 4 options
+
+6. question_text MUST be self-contained and clear without external context
+
+7. All {quantity} questions MUST test DIFFERENT concepts/topics
+
+8. ALL questions MUST match specified difficulty: {difficulty}
+   - If {difficulty} is BEGINNER, question_difficulty must be "EASY"
+   - If {difficulty} is INTERMEDIATE, question_difficulty must be "MEDIUM"
+   - If {difficulty} is ADVANCED, question_difficulty must be "HARD"
+
+9. question_duration: 1-3 minutes per individual question (not total)
+
+10. Each evaluation category has 2+ specific criteria
+
+11. Explanation must clearly reference key concepts
+
+12. Hint must guide thinking without giving away answer
+
+13. question_number field is NOT required (will be generated server-side)
+
+14. type field is NOT required (will be set to MULTIPLE_CHOICE server-side)
+
+DIFFICULTY MAPPING (VERY IMPORTANT):
+
+{difficulty} = BEGINNER → question_difficulty = "EASY"
+{difficulty} = INTERMEDIATE → question_difficulty = "MEDIUM"
+{difficulty} = ADVANCED → question_difficulty = "HARD"
+
+DIFFICULTY LEVEL DEFINITIONS:
+
+EASY (BEGINNER):
+- Basic recall and comprehension
+- Straightforward questions with one obvious answer
+- Distractor options are clearly incorrect
+- Single concept per question
+- No complex reasoning required
+- Examples: definition of term, single fact recall, basic understanding
+
+MEDIUM (INTERMEDIATE):
+- Application and analysis
+- Requires connecting 2-3 concepts
+- Plausible but incorrect distractors (1-2 options seem reasonable)
+- May include simple code snippets or scenarios
+- Moderate reasoning required
+- Examples: apply concept to scenario, identify correct approach
+
+HARD (ADVANCED):
+- Deep understanding and evaluation
+- Complex scenarios or edge cases
+- ALL options appear plausible (require careful analysis)
+- Requires critical thinking and synthesis
+- Multiple concepts combined
+- Examples: design decision evaluation, complex scenario analysis
+
+QUESTION DESIGN STANDARDS:
+
+Problem Statement:
+- Self-contained, no external context required
+- Clear what is being asked
+- Appropriate scope for 1-3 minute answer
+- Use concrete examples/scenarios when helpful
+- Avoid trick questions
+- Include code examples only if relevant to the skill
+
+Options:
+- EXACTLY 4 options per question
+- Grammatically consistent (all nouns, all verbs, etc.)
+- Similar length (within reason)
+- Each distractor should be plausible for the difficulty level
+- One clearly correct option
+
+Evaluation Criteria:
+- CONCEPT UNDERSTANDING: What skill/knowledge is tested? What should learner know?
+- ANSWER DISCRIMINATION: Why might learner pick wrong option? What misconception?
+
+Hints:
+- Point toward key concept without giving answer
+- Strategic guidance (e.g., "consider edge cases", "recall the definition")
+- Different from explanation (don't repeat that)
+
+DIVERSITY & COVERAGE:
+- Each question MUST test DIFFERENT concept/topic of the skill
+- Vary question types:
+  * Definition/recall questions
+  * Application/scenario questions
+  * Analysis/evaluation questions
+- All {quantity} questions should cover complementary aspects of {skill}
+
+OUTPUT REQUIREMENTS:
+- Return ONLY valid, parseable JSON
+- NO markdown code fences (```)
+- NO explanatory text before or after the JSON
+- NO comments or trailing commas
+- Use double quotes for all strings
+- Properly escape special characters in strings
+- Use \n for line breaks in multi-line text
+- Ensure clean formatting for readability
+
+FINAL VALIDATION CHECKLIST:
+☐ Exactly {quantity} questions in the array
+☐ Every question has all required fields
+☐ EVERY question has xpReward: 50
+☐ EVERY question has EXACTLY 4 options
+☐ EVERY correct_answer is exact match to one of the 4 options
+☐ All {quantity} questions test different concepts
+☐ All question_difficulty values match {difficulty} mapping (EASY|MEDIUM|HARD)
+☐ question_duration is 1-3 minutes per question (individual time)
+☐ All explanations reference key concepts clearly
+☐ All hints are strategic without revealing answer
+☐ Evaluation criteria present and specific for all questions
+☐ JSON is valid with no syntax errors
+☐ No extraneous text outside the JSON object
+☐ question_number field NOT included (will be generated server-side)
+☐ type field NOT included (will be set to MULTIPLE_CHOICE server-side)
+
+Generate the {quantity} MCQ questions now.
