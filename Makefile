@@ -464,10 +464,6 @@ rebuild-all: dkr-clean build-all start-all
 # -------------------------------------------------------
 # TEST COMMANDS
 # -------------------------------------------------------
-test:
-	@echo "🧪 Running all tests..."
-	$(MVN) test
-
 # Test a specific service
 test-service:
 	@if [ -z "$(SERVICE)" ]; then \
@@ -499,7 +495,12 @@ test-common:
 # -------------------------------------------------------
 migrate:
 	@echo "🗄️  Running Flyway migrations for all services..."
-	$(MVN) flyway:migrate
+	@export POSTGRES_HOST=$$(grep '^POSTGRES_HOST=' $(ROOT_DIR)/.env | cut -d= -f2 || echo "localhost"); \
+	export POSTGRES_DB=$$(grep '^POSTGRES_DB=' $(ROOT_DIR)/.env | cut -d= -f2); \
+	export POSTGRES_URL=jdbc:postgresql://$$POSTGRES_HOST:5432/$$POSTGRES_DB; \
+	export POSTGRES_USER=$$(grep '^POSTGRES_USER=' $(ROOT_DIR)/.env | cut -d= -f2); \
+	export POSTGRES_PASSWORD=$$(grep '^POSTGRES_PASSWORD=' $(ROOT_DIR)/.env | cut -d= -f2); \
+	$(MVN) flyway:migrate -pl $(SERVICES_DIR)/analytics-service,$(SERVICES_DIR)/bff-service,$(SERVICES_DIR)/feedback-service,$(SERVICES_DIR)/gamification-service,$(SERVICES_DIR)/notification-service,$(SERVICES_DIR)/payment-service,$(SERVICES_DIR)/practice-service,$(SERVICES_DIR)/task-service,$(SERVICES_DIR)/user-service
 	@echo "✅ All migrations completed!"
 
 # Migrate a specific service
@@ -511,5 +512,10 @@ migrate-service:
 		exit 1; \
 	fi
 	@echo "🗄️  Running Flyway migrations for $(SERVICE)-service..."
+	@export POSTGRES_HOST=$$(grep '^POSTGRES_HOST=' $(ROOT_DIR)/.env | cut -d= -f2 || echo "localhost"); \
+	export POSTGRES_DB=$$(grep '^POSTGRES_DB=' $(ROOT_DIR)/.env | cut -d= -f2); \
+	export POSTGRES_URL=jdbc:postgresql://$$POSTGRES_HOST:5432/$$POSTGRES_DB; \
+	export POSTGRES_USER=$$(grep '^POSTGRES_USER=' $(ROOT_DIR)/.env | cut -d= -f2); \
+	export POSTGRES_PASSWORD=$$(grep '^POSTGRES_PASSWORD=' $(ROOT_DIR)/.env | cut -d= -f2); \
 	$(MVN) flyway:migrate -pl $(SERVICES_DIR)/$(SERVICE)-service
 	@echo "✅ Migration completed for $(SERVICE)-service!"

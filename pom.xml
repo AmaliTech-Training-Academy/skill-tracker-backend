@@ -21,6 +21,10 @@
         <java.version>21</java.version>
         <spring-cloud.version>2025.0.0</spring-cloud.version>
         <spring-ai.version>1.0.3</spring-ai.version>
+        <!-- Flyway Database Migration Properties (use service env vars) -->
+        <flyway.url>${env.POSTGRES_URL}</flyway.url>
+        <flyway.user>${env.POSTGRES_USER}</flyway.user>
+        <flyway.password>${env.POSTGRES_PASSWORD}</flyway.password>
     </properties>
 
     <modules>
@@ -169,6 +173,26 @@
 <!--                <groupId>org.springframework.boot</groupId>-->
 <!--                <artifactId>spring-boot-maven-plugin</artifactId>-->
 <!--            </plugin>-->
+
+            <!-- Flyway Database Migrations -->
+            <plugin>
+                <groupId>org.flywaydb</groupId>
+                <artifactId>flyway-maven-plugin</artifactId>
+                <version>10.8.1</version>
+                <configuration>
+                    <url>${flyway.url}</url>
+                    <user>${flyway.user}</user>
+                    <password>${flyway.password}</password>
+                    <baselineOnMigrate>true</baselineOnMigrate>
+                </configuration>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.postgresql</groupId>
+                        <artifactId>postgresql</artifactId>
+                        <version>42.7.7</version>
+                    </dependency>
+                </dependencies>
+            </plugin>
 
             <!-- Unit tests -->
             <plugin>
