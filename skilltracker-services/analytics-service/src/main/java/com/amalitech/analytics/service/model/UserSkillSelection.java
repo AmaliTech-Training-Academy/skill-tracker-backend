@@ -19,6 +19,9 @@ public class UserSkillSelection {
     private UUID id;
 
     @Column(nullable = false)
+    private UUID userId;
+
+    @Column(nullable = false)
     private UUID skillId;
 
     private String skillName;

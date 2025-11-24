@@ -78,7 +78,7 @@ public class AnalyticsReadService implements AnalyticsReadServiceInterface {
         UserStatsDTO userStats = getUserStats(userId);
         List<SkillProgressDTO> skillProgress = getSkillProgress(userId);
         List<GoalStatusDTO> goalStatus = getActiveGoalStatus(userId);
-        List<SkillGapDTO> skillGaps = getSkillGaps(userId);  // ← now <3ms due to aggregates
+        List<SkillGapDTO> skillGaps = getSkillGaps(userId);
         List<RecommendationDTO> recommendations = getRecommendations(skillGaps);
         GlobalRankDTO globalRank = null;
 
@@ -123,7 +123,7 @@ public class AnalyticsReadService implements AnalyticsReadServiceInterface {
         Map<UUID, SkillSnapShot> snapshotMap = getSnapshotMap(progresses);
 
         return progresses.stream()
-                .map(progress -> mapToSkillProgressDTO(progress, snapshotMap.get(progress.getSkillId())))
+                .map(progress -> mapToSkillProgressDTO(userId ,progress, snapshotMap.get(progress.getSkillId())))
                 .collect(Collectors.toList());
     }
 
@@ -139,7 +139,7 @@ public class AnalyticsReadService implements AnalyticsReadServiceInterface {
     }
 
     /** Maps progress + snapshot into SkillProgressDTO. */
-    private SkillProgressDTO mapToSkillProgressDTO(UserSkillProgress progress, SkillSnapShot snapshot) {
+    private SkillProgressDTO mapToSkillProgressDTO(UUID userId, UserSkillProgress progress, SkillSnapShot snapshot) {
         if (snapshot == null) {
             throw new EntityNotFoundException("Skill not found", progress.getSkillId());
         }
@@ -154,7 +154,7 @@ public class AnalyticsReadService implements AnalyticsReadServiceInterface {
 
         int currentXp = progress.getTotalXpEarned();
         String levelBasedOnXp = details.getCurrentLevel(currentXp);
-        UserSkillSelection userSkill = selectionRepository.findBySkillId(snapshot.getId());
+        UserSkillSelection userSkill = selectionRepository.findByUserIdAndSkillId(userId, snapshot.getId());
         String initialClaimLevel = userSkill.getInitialClaimLevel();
         String currentLevel = getEffectiveLevel(initialClaimLevel, levelBasedOnXp);
         String nextLevel = details.getNextLevel(currentLevel);
