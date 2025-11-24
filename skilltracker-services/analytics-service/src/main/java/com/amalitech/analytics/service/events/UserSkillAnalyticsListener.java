@@ -44,6 +44,7 @@ public class UserSkillAnalyticsListener {
                 .map(data -> {
                     UserSkillSelection s = new UserSkillSelection();
                     s.setSkillId(data.getSkillId());
+                    s.setUserId(userId);
                     s.setSkillName(data.getSkillName());
                     s.setInitialClaimLevel(data.getDifficultyLevel());
                     s.setSupportedTaskTypes(data.getSupportedTaskTypes());

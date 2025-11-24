@@ -6,5 +6,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.UUID;
 
 public interface UserSkillSelectionRepository extends JpaRepository<UserSkillSelection, UUID> {
-    UserSkillSelection findBySkillId(UUID skillId);
+    UserSkillSelection findByUserIdAndSkillId(UUID userId, UUID skillId);
 }
