@@ -16,7 +16,8 @@ public record SkillProgressDTO(
         Double averageScore,
         Double proficiency,
         Integer tasksCompleted,
-
+        Integer taskSubmitted,
+        Integer tasksFailed,
         Integer currentXp,
         String currentLevel,
         String nextLevel,

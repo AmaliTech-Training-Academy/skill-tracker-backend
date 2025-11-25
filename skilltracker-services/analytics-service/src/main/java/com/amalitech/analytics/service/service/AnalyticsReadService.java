@@ -170,6 +170,8 @@ public class AnalyticsReadService implements AnalyticsReadServiceInterface {
                 progress.getProficiency(),
                 progress.getTasksCompleted(),
                 currentXp,
+                progress.getTasksSubmitted(),
+                progress.getTasksFailed(),
                 currentLevel,
                 nextLevel,
                 xpToNextLevel,
