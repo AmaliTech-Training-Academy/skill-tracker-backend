@@ -165,11 +165,9 @@ public class ContentGeneratorServiceImpl implements ContentGeneratorService {
     }
 
     private Task createAndSaveMCQTask(SkillView skill, TaskDifficulty difficulty, JsonNode responseRoot, List<JsonNode> questionNodes) {
-        String taskTitle = responseRoot.path("title").asText("MCQ Quiz");
+        String taskTitle = responseRoot.path("title").asText(skill.getName() + "MCQ Quiz");
         String description = "Multiple choice assessment for " + skill.getName();
-        
-        // Calculate total duration
-        // Fixed: MCQ tasks are worth 50 XP total, divided equally among all questions
+
         int totalDuration = 0;
         for (JsonNode node : questionNodes) {
             totalDuration += node.path("question_duration").asInt(3);
@@ -197,15 +195,13 @@ public class ContentGeneratorServiceImpl implements ContentGeneratorService {
 
     public McqTaskContent createMCQContent(List<JsonNode> questionNodes) {
         List<McqTaskContent.Question> questions = new ArrayList<>();
-        
-        // Calculate XP per question: 50 XP total divided equally among all questions
+
         int xpPerQuestion = Math.max(1, 50 / questionNodes.size());
 
         for (int i = 0; i < questionNodes.size(); i++) {
             JsonNode questionNode = questionNodes.get(i);
             List<String> options = jsonArrayToStringList(questionNode.path("options"));
 
-            // AI returns correct_answer as string value, convert to index
             String correctAnswerString = questionNode.path("correct_answer").asText();
             int correctAnswerIndex = convertCorrectAnswerToIndex(correctAnswerString, options, String.valueOf(i + 1));
 
@@ -230,7 +226,6 @@ public class ContentGeneratorServiceImpl implements ContentGeneratorService {
                 .questions(questions)
                 .build();
 
-        // Validate the generated content
         mcqContentValidator.validateMcqContent(content);
 
         return content;
@@ -292,8 +287,6 @@ public class ContentGeneratorServiceImpl implements ContentGeneratorService {
      * @return the fixed JSON response
      */
     private String fixJsonFormatting(String response) {
-        // JSON requires proper escaping of special characters
-        // If AI includes literal newlines in strings, they need to be escaped
         StringBuilder fixed = new StringBuilder();
         boolean inString = false;
         boolean escaped = false;
@@ -318,14 +311,12 @@ public class ContentGeneratorServiceImpl implements ContentGeneratorService {
                 fixed.append(c);
                 continue;
             }
-            
-            // If we're in a string and encounter a literal newline, escape it
+
             if (inString && c == '\n') {
                 fixed.append("\\n");
                 continue;
             }
-            
-            // If we're in a string and encounter a literal carriage return, escape it
+
             if (inString && c == '\r') {
                 fixed.append("\\r");
                 continue;
