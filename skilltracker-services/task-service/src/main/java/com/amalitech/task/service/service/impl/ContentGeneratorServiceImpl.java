@@ -281,19 +281,56 @@ public class ContentGeneratorServiceImpl implements ContentGeneratorService {
     }
 
     /**
-     * Validates JSON formatting. In valid JSON, single quotes within double-quoted strings 
-     * do not need escaping. This method currently returns the response as-is since the
-     * prompt now ensures proper JSON escaping. If parsing fails, Jackson will provide
-     * detailed error information.
+     * Fixes common JSON formatting issues from AI responses.
+     * Handles literal newlines in string values by escaping them as \n.
      * 
      * @param response the JSON response
-     * @return the response (unchanged if already valid)
+     * @return the fixed JSON response
      */
     private String fixJsonFormatting(String response) {
-        // JSON spec allows single quotes within double-quoted strings without escaping
-        // The prompt has been updated to enforce proper escaping of double quotes and backslashes
-        // Return response as-is for parsing
-        return response;
+        // JSON requires proper escaping of special characters
+        // If AI includes literal newlines in strings, they need to be escaped
+        StringBuilder fixed = new StringBuilder();
+        boolean inString = false;
+        boolean escaped = false;
+        
+        for (int i = 0; i < response.length(); i++) {
+            char c = response.charAt(i);
+            
+            if (escaped) {
+                fixed.append('\\').append(c);
+                escaped = false;
+                continue;
+            }
+            
+            if (c == '\\' && inString) {
+                fixed.append(c);
+                escaped = true;
+                continue;
+            }
+            
+            if (c == '"') {
+                inString = !inString;
+                fixed.append(c);
+                continue;
+            }
+            
+            // If we're in a string and encounter a literal newline, escape it
+            if (inString && c == '\n') {
+                fixed.append("\\n");
+                continue;
+            }
+            
+            // If we're in a string and encounter a literal carriage return, escape it
+            if (inString && c == '\r') {
+                fixed.append("\\r");
+                continue;
+            }
+            
+            fixed.append(c);
+        }
+        
+        return fixed.toString();
     }
 
     /**
