@@ -14,6 +14,7 @@ import com.amalitech.task.service.model.view.SkillView;
 import com.amalitech.task.service.repository.TaskDefinitionRepository;
 import com.amalitech.task.service.repository.TaskRepository;
 import com.amalitech.task.service.service.ContentGeneratorService;
+import com.amalitech.task.service.util.McqOptionShuffler;
 import com.amalitech.task.service.validation.McqContentValidator;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -48,6 +49,7 @@ public class ContentGeneratorServiceImpl implements ContentGeneratorService {
     private final PromptTemplate essayPromptTemplate;
     private final PromptTemplate mcqPromptTemplate;
     private final McqContentValidator mcqContentValidator;
+    private final McqOptionShuffler mcqOptionShuffler;
 
     public ContentGeneratorServiceImpl(@Qualifier("flagshipChatModel") ChatModel chatModel,
                                        ObjectMapper objectMapper,
@@ -56,7 +58,8 @@ public class ContentGeneratorServiceImpl implements ContentGeneratorService {
                                        PromptTemplate codingPromptTemplate,
                                        PromptTemplate essayPromptTemplate,
                                        PromptTemplate mcqPromptTemplate,
-                                       McqContentValidator mcqContentValidator
+                                       McqContentValidator mcqContentValidator,
+                                       McqOptionShuffler mcqOptionShuffler
     ) {
         this.chatModel = chatModel;
         this.objectMapper = objectMapper;
@@ -66,6 +69,7 @@ public class ContentGeneratorServiceImpl implements ContentGeneratorService {
         this.essayPromptTemplate = essayPromptTemplate;
         this.mcqPromptTemplate = mcqPromptTemplate;
         this.mcqContentValidator = mcqContentValidator;
+        this.mcqOptionShuffler = mcqOptionShuffler;
     }
 
     /**
@@ -227,6 +231,10 @@ public class ContentGeneratorServiceImpl implements ContentGeneratorService {
                 .build();
 
         mcqContentValidator.validateMcqContent(content);
+
+        // Shuffle options to eliminate AI bias towards early correct answers
+        content = mcqOptionShuffler.shuffleOptions(content);
+        log.debug("Options shuffled for MCQ content with {} questions", questions.size());
 
         return content;
     }
