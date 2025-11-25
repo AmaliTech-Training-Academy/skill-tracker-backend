@@ -161,20 +161,12 @@ public class ContentGeneratorServiceImpl implements ContentGeneratorService {
                 responseRoot.path("expected_output").spliterator(), false
         ).collect(Collectors.toList());
 
-        // If we received all questions in one call, we need to split them into separate tasks
-        // This happens when generating multiple tasks concurrently to avoid duplication
-        // Each task should contain a manageable number of questions
-        List<Task> createdTasks = new ArrayList<>();
-        
-        // For now, if we got all questions, create one task with all of them
-        // (The splitting into multiple tasks happens at the caller level in TaskGenerationServiceImpl)
         Task savedTask = createAndSaveMCQTask(skill, difficulty, responseRoot, questionNodes);
-        createdTasks.add(savedTask);
 
         log.info("Generated MCQ task with {} questions (ID: {})", 
                 questionNodes.size(), savedTask.getId());
 
-        return createdTasks;
+        return List.of(savedTask);
     }
 
     private Task createAndSaveMCQTask(SkillView skill, TaskDifficulty difficulty, JsonNode responseRoot, List<JsonNode> questionNodes) {

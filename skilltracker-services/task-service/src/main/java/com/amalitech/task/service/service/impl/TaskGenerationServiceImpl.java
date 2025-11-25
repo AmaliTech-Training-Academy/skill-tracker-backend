@@ -313,13 +313,8 @@ public class TaskGenerationServiceImpl implements TaskGenerationService {
 
     /**
      * Generates multiple MCQ tasks for a skill at a given difficulty level.
-     * Generates all questions in a single OpenAI call to ensure diversity and avoid duplication.
-     * Then splits the questions into separate task objects as needed.
-     * 
-     * Example: To generate 5 tasks with 10 questions each:
-     * - Requests 50 questions in 1 OpenAI call
-     * - Receives 1 task with 50 questions
-     * - Splits into 5 tasks with 10 questions each
+     * Generates tasks sequentially (one at a time) to avoid overwhelming OpenAI
+     * with large requests. Each task is generated independently.
      * 
      * @param skill the skill to generate MCQ tasks for
      * @param difficulty the difficulty level
@@ -328,92 +323,28 @@ public class TaskGenerationServiceImpl implements TaskGenerationService {
      * @return list of generated task IDs
      */
     private List<UUID> generateMCQTasks(SkillView skill, TaskDifficulty difficulty, int tasksToGenerate, int questionsPerTask) throws IOException {
-        int totalQuestions = tasksToGenerate * questionsPerTask;
+        List<UUID> taskIds = new ArrayList<>();
         
-        log.info("Generating {} MCQ tasks for skill {} at {} difficulty ({} total questions in single call)",
-                tasksToGenerate, skill.getName(), difficulty, totalQuestions);
+        log.info("Generating {} MCQ tasks for skill {} at {} difficulty with {} questions each (sequential generation)",
+                tasksToGenerate, skill.getName(), difficulty, questionsPerTask);
 
-        // Generate all questions in ONE call to avoid duplication
-        List<Task> allGeneratedTasks = contentGeneratorService.generateMCQTask(skill, difficulty, totalQuestions);
-        
-        // The result is a single task with all questions; split into separate tasks
-        List<Task> splitTasks = new ArrayList<>();
-        for (Task task : allGeneratedTasks) {
-            List<Task> taskChunks = splitMCQTaskIntoChunks(task, questionsPerTask);
-            splitTasks.addAll(taskChunks);
+        for (int i = 0; i < tasksToGenerate; i++) {
+            try {
+                log.info("Generating MCQ task {}/{} for skill {} at {} difficulty with {} questions",
+                        i + 1, tasksToGenerate, skill.getName(), difficulty, questionsPerTask);
+                
+                List<Task> generatedTasks = contentGeneratorService.generateMCQTask(skill, difficulty, questionsPerTask);
+                taskIds.addAll(generatedTasks.stream().map(Task::getId).toList());
+                
+            } catch (Exception e) {
+                log.error("Failed to generate MCQ task {}/{} for skill {}: {}",
+                        i + 1, tasksToGenerate, skill.getName(), e.getMessage(), e);
+                throw e;
+            }
         }
         
-        List<UUID> taskIds = splitTasks.stream()
-                .map(Task::getId)
-                .collect(Collectors.toList());
-        
-        log.info("Successfully generated {} MCQ tasks with {} total questions for skill {}", 
-                taskIds.size(), totalQuestions, skill.getName());
+        log.info("Successfully generated {} MCQ tasks for skill {}", taskIds.size(), skill.getName());
         return taskIds;
-    }
-
-    /**
-     * Splits a single MCQ task with N questions into multiple tasks with M questions each.
-     * 
-     * @param task the task to split
-     * @param questionsPerTask number of questions per resulting task
-     * @return list of split task objects (persisted to DB)
-     */
-    private List<Task> splitMCQTaskIntoChunks(Task task, int questionsPerTask) {
-        List<Task> chunks = new ArrayList<>();
-        
-        if (!(task.getContent() instanceof com.amalitech.task.service.model.content.impl.McqTaskContent)) {
-            // Not an MCQ task, return as-is
-            return List.of(task);
-        }
-        
-        com.amalitech.task.service.model.content.impl.McqTaskContent mcqContent = 
-            (com.amalitech.task.service.model.content.impl.McqTaskContent) task.getContent();
-        
-        List<com.amalitech.task.service.model.content.impl.McqTaskContent.Question> allQuestions = 
-            mcqContent.getQuestions();
-        
-        // If questions fit in one task, return as-is
-        if (allQuestions.size() <= questionsPerTask) {
-            return List.of(task);
-        }
-        
-        // Split into chunks
-        for (int i = 0; i < allQuestions.size(); i += questionsPerTask) {
-            int endIdx = Math.min(i + questionsPerTask, allQuestions.size());
-            List<com.amalitech.task.service.model.content.impl.McqTaskContent.Question> chunk = 
-                allQuestions.subList(i, endIdx);
-            
-            // Create new task with this chunk
-            com.amalitech.task.service.model.content.impl.McqTaskContent chunkContent = 
-                com.amalitech.task.service.model.content.impl.McqTaskContent.builder()
-                    .questions(new ArrayList<>(chunk))
-                    .build();
-            
-            Task chunkTask = Task.builder()
-                    .taskDefinition(task.getTaskDefinition())
-                    .version(task.getVersion())
-                    .title(task.getTitle())
-                    .description(task.getDescription())
-                    .type(task.getType())
-                    .difficulty(task.getDifficulty())
-                    .content(chunkContent)
-                    .estimatedDurationInMinutes(chunk.size())  // ~1 min per question
-                    .xpReward(task.getXpReward())
-                    .isPublished(task.getIsPublished())
-                    .updatedAt(java.time.LocalDateTime.now())
-                    .build();
-            
-            Task savedChunk = taskRepository.save(chunkTask);
-            chunks.add(savedChunk);
-            log.debug("Created MCQ task chunk with {} questions (ID: {})", chunk.size(), savedChunk.getId());
-        }
-        
-        // Delete the original task since we've split it
-        taskRepository.delete(task);
-        log.info("Split MCQ task into {} chunks", chunks.size());
-        
-        return chunks;
     }
 
     /**
