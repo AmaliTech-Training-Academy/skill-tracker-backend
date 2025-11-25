@@ -128,7 +128,6 @@ public class SubmissionMapper {
             }
         }
         else if (submission.getAnswer() instanceof McqSubmissionAnswer answer) {
-            // For MCQ tasks, send the answer as JSON
             try {
                 String answerJson = objectMapper.writeValueAsString(answer);
                 builder.contentToEvaluate(answerJson);
@@ -137,12 +136,10 @@ public class SubmissionMapper {
                 throw new RuntimeException("Failed to serialize MCQ answer", e);
             }
 
-            // Also send the task content (questions, options, correct answers) for evaluation
             if (submission.getTask() != null &&
                     submission.getTask().getContent() instanceof McqTaskContent mcqContent) {
                 try {
                     String contentJson = objectMapper.writeValueAsString(mcqContent);
-                    // Use taskDescription field to pass MCQ content to evaluator
                     builder.taskDescription(contentJson);
                 } catch (Exception e) {
                     log.error("Failed to serialize MCQ content for task {}: {}", submission.getTask().getId(), e.getMessage());

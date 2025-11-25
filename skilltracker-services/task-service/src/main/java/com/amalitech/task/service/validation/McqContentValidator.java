@@ -52,23 +52,25 @@ public class McqContentValidator {
 
         String questionNumber = question.getQuestion_number();
 
-        // Validate question number
         if (questionNumber == null || questionNumber.isBlank()) {
             throw new IllegalArgumentException("Question at index " + index + " has no question_number");
         }
 
-        // Validate question text
         if (question.getQuestion_text() == null || question.getQuestion_text().isBlank()) {
             throw new IllegalArgumentException("Question " + questionNumber + " has no question_text");
         }
 
-        // Validate options list
+        int correctAnswer = getCorrectAnswer(question, questionNumber);
+
+        log.debug("Question {} validation passed (correct_answer index: {})", questionNumber, correctAnswer);
+    }
+
+    private static int getCorrectAnswer(McqTaskContent.Question question, String questionNumber) {
         List<String> options = question.getOptions();
         if (options == null || options.isEmpty()) {
             throw new IllegalArgumentException("Question " + questionNumber + " has no options");
         }
 
-        // Validate each option is non-empty
         for (int i = 0; i < options.size(); i++) {
             String option = options.get(i);
             if (option == null || option.isBlank()) {
@@ -78,7 +80,6 @@ public class McqContentValidator {
             }
         }
 
-        // Validate correct_answer index
         int correctAnswer = question.getCorrect_answer();
         if (correctAnswer < 0 || correctAnswer >= options.size()) {
             throw new IllegalArgumentException(
@@ -90,7 +91,6 @@ public class McqContentValidator {
                     )
             );
         }
-
-        log.debug("Question {} validation passed (correct_answer index: {})", questionNumber, correctAnswer);
+        return correctAnswer;
     }
 }

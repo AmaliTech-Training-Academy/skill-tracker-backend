@@ -1,7 +1,6 @@
 package com.amalitech.task.service.model.submission.impl;
 
 import com.amalitech.task.service.model.submission.SubmissionAnswer;
-
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -29,7 +28,7 @@ public class McqSubmissionAnswer implements SubmissionAnswer {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class QuestionAnswer {
-        private String questionNumber;  // Question identifier (e.g., "1", "2", "3")
-        private int selectedOption;     // Index of the selected option (0-based)
+        private String questionNumber;
+        private int selectedOption;
     }
 }

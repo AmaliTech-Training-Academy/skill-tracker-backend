@@ -1,7 +1,6 @@
 package com.amalitech.task.service.model.feedback.impl;
 
 import com.amalitech.task.service.model.feedback.SubmissionFeedback;
-
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -31,9 +30,9 @@ public class McqSubmissionFeedback implements SubmissionFeedback {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class QuestionFeedback {
-        private String questionNumber;      // Question identifier
-        private boolean isCorrect;          // Whether the answer was correct
-        private int correctOption;          // Index of the correct option
-        private String explanation;         // Explanation of the correct answer
+        private String questionNumber;
+        private boolean isCorrect;
+        private int correctOption;
+        private String explanation;
     }
 }
