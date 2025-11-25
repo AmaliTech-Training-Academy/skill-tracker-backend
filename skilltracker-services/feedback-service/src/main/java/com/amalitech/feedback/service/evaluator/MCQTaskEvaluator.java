@@ -31,21 +31,17 @@ public class MCQTaskEvaluator implements TaskEvaluator {
         log.info("Evaluating MCQ task submission: {}", event.getSubmissionId());
 
         try {
-            // 1. Parse answer and task content from event
             McqSubmissionAnswer answer = parseAnswer(event.getContentToEvaluate());
             McqTaskContent taskContent = parseTaskContent(event.getTaskDescription());
 
-            // 2. Validate content structure
             validateContent(taskContent, answer);
 
-            // 3. Evaluate each question
             List<McqSubmissionFeedback.QuestionFeedback> feedbacks = new ArrayList<>();
             int totalCorrect = 0;
 
             for (McqSubmissionAnswer.QuestionAnswer qa : answer.getAnswers()) {
                 McqTaskContent.Question question = findQuestion(taskContent, qa.getQuestionNumber());
 
-                // Direct integer comparison - no string parsing needed!
                 int correctOption = question.getCorrect_answer();
                 boolean isCorrect = qa.getSelectedOption() == correctOption;
 
@@ -63,7 +59,6 @@ public class MCQTaskEvaluator implements TaskEvaluator {
                 ));
             }
 
-            // 4. Calculate score
             int totalQuestions = answer.getAnswers().size();
             double scorePercentage = (totalCorrect * 100.0) / totalQuestions;
 
@@ -74,7 +69,6 @@ public class MCQTaskEvaluator implements TaskEvaluator {
                     scorePercentage
             );
 
-            // 5. Build and return evaluated event
             String detailedFeedbackJson = serializeFeedback(feedback);
 
             return Mono.just(SubmissionEvaluatedEvent.builder()
@@ -82,7 +76,7 @@ public class MCQTaskEvaluator implements TaskEvaluator {
                     .userId(event.getUserId())
                     .status("COMPLETED")
                     .score((int) scorePercentage)
-                    .isCorrect(totalCorrect == totalQuestions)  // Only true if ALL correct
+                    .isCorrect(totalCorrect == totalQuestions)
                     .feedbackType("MULTIPLE_CHOICE")
                     .detailedFeedback(detailedFeedbackJson)
                     .overallFeedback(String.format(
@@ -130,7 +124,6 @@ public class MCQTaskEvaluator implements TaskEvaluator {
             throw new IllegalArgumentException("Invalid MCQ submission answer");
         }
 
-        // Validate each question's correct_answer index
         for (McqTaskContent.Question question : taskContent.getQuestions()) {
             int correctOption = question.getCorrect_answer();
             int optionCount = question.getOptions().size();
@@ -167,7 +160,6 @@ public class MCQTaskEvaluator implements TaskEvaluator {
      * Serializes the detailed MCQ feedback to JSON with polymorphic type info.
      */
     private String serializeFeedback(McqSubmissionFeedback feedback) throws Exception {
-        // Create a wrapper to include feedbackType for polymorphic deserialization in task-service
         java.util.Map<String, Object> polymorphicFeedback = new java.util.HashMap<>();
         polymorphicFeedback.put("feedbackType", "MULTIPLE_CHOICE");
         polymorphicFeedback.put("totalCorrect", feedback.getTotalCorrect());
