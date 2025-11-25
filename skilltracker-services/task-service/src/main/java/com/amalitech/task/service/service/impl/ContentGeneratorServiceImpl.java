@@ -260,7 +260,6 @@ public class ContentGeneratorServiceImpl implements ContentGeneratorService {
 
     private List<JsonNode> parseMcqResponseToNodes(String response) {
         try {
-            // Attempt to fix common JSON issues from AI responses
             String fixedResponse = fixJsonFormatting(response);
             
             JsonNode root = objectMapper.readTree(fixedResponse);
@@ -282,55 +281,19 @@ public class ContentGeneratorServiceImpl implements ContentGeneratorService {
     }
 
     /**
-     * Attempts to fix common JSON formatting issues from AI responses.
-     * Handles unescaped quotes within JSON strings.
+     * Validates JSON formatting. In valid JSON, single quotes within double-quoted strings 
+     * do not need escaping. This method currently returns the response as-is since the
+     * prompt now ensures proper JSON escaping. If parsing fails, Jackson will provide
+     * detailed error information.
      * 
-     * @param response the potentially malformed JSON response
-     * @return the fixed JSON string
+     * @param response the JSON response
+     * @return the response (unchanged if already valid)
      */
     private String fixJsonFormatting(String response) {
-        // This regex finds unescaped single quotes within JSON string values
-        // and replaces them with escaped quotes
-        // Pattern: finds quotes that are preceded by a non-backslash and not escaped
-        
-        // More direct approach: fix unescaped single quotes in string values
-        // We look for patterns like: "...text'text..." and fix to "...text\'text..."
-        StringBuilder fixed = new StringBuilder();
-        boolean inString = false;
-        boolean escaped = false;
-        
-        for (int i = 0; i < response.length(); i++) {
-            char c = response.charAt(i);
-            
-            if (escaped) {
-                fixed.append(c);
-                escaped = false;
-                continue;
-            }
-            
-            if (c == '\\') {
-                fixed.append(c);
-                escaped = true;
-                continue;
-            }
-            
-            if (c == '"' && !escaped) {
-                inString = !inString;
-                fixed.append(c);
-                continue;
-            }
-            
-            // If we're inside a string and encounter an unescaped single quote,
-            // escape it
-            if (inString && c == '\'' && !escaped) {
-                fixed.append("\\'");
-                continue;
-            }
-            
-            fixed.append(c);
-        }
-        
-        return fixed.toString();
+        // JSON spec allows single quotes within double-quoted strings without escaping
+        // The prompt has been updated to enforce proper escaping of double quotes and backslashes
+        // Return response as-is for parsing
+        return response;
     }
 
     /**
