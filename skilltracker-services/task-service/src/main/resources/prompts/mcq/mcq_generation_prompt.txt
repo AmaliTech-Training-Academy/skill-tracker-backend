@@ -16,6 +16,7 @@ Total MCQ task: 50 XP (divided equally among all questions)
 
 REQUIRED JSON STRUCTURE:
 \{
+  "title": "String(Brief descriptive title for the overall MCQ quiz, max 80 chars)",
   "expected_output": [
     \{
       "question_title": "String(Very short title of question)",
@@ -43,7 +44,7 @@ REQUIRED JSON STRUCTURE:
         ]
       \}
       \}
-  ]
+   ]
 \}
 
 CRITICAL REQUIREMENTS - NON-NEGOTIABLE:
@@ -168,6 +169,7 @@ OUTPUT REQUIREMENTS:
 - Ensure clean formatting for readability
 
 FINAL VALIDATION CHECKLIST:
+☐ Top-level "title" field is present and descriptive (max 80 chars)
 ☐ Exactly {quantity} questions in the array
 ☐ Every question has all required fields
 ☐ NO xpReward field in questions (calculated server-side as 50 ÷ {quantity})

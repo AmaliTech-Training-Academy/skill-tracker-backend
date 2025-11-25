@@ -151,9 +151,12 @@ public class ContentGeneratorServiceImpl implements ContentGeneratorService {
 
         String response = callOpenAI(mcqPrompt);
 
-        List<JsonNode> questionNodes = parseMcqResponseToNodes(response);
+        JsonNode responseRoot = parseMcqResponse(response);
+        List<JsonNode> questionNodes = StreamSupport.stream(
+                responseRoot.path("expected_output").spliterator(), false
+        ).collect(Collectors.toList());
 
-        Task savedTask = createAndSaveMCQTask(skill, difficulty, questionNodes);
+        Task savedTask = createAndSaveMCQTask(skill, difficulty, responseRoot, questionNodes);
 
         log.info("Generated MCQ task with {} questions (ID: {})", 
                 questionNodes.size(), savedTask.getId());
@@ -161,8 +164,8 @@ public class ContentGeneratorServiceImpl implements ContentGeneratorService {
         return List.of(savedTask);
     }
 
-    private Task createAndSaveMCQTask(SkillView skill, TaskDifficulty difficulty, List<JsonNode> questionNodes) {
-        String taskTitle = "MCQ Quiz";
+    private Task createAndSaveMCQTask(SkillView skill, TaskDifficulty difficulty, JsonNode responseRoot, List<JsonNode> questionNodes) {
+        String taskTitle = responseRoot.path("title").asText("MCQ Quiz");
         String description = "Multiple choice assessment for " + skill.getName();
         
         // Calculate total duration
@@ -260,7 +263,7 @@ public class ContentGeneratorServiceImpl implements ContentGeneratorService {
         return index;
     }
 
-    private List<JsonNode> parseMcqResponseToNodes(String response) {
+    private JsonNode parseMcqResponse(String response) {
         try {
             String fixedResponse = fixJsonFormatting(response);
             
@@ -271,8 +274,7 @@ public class ContentGeneratorServiceImpl implements ContentGeneratorService {
                 throw new InvalidAiResponseException("Missing or invalid 'expected_output' array in OpenAI response");
             }
 
-            return StreamSupport.stream(challengesNode.spliterator(), false)
-                    .collect(Collectors.toList());
+            return root;
 
         } catch (InvalidAiResponseException e) {
             throw e;
