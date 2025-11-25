@@ -37,7 +37,7 @@ public class McqTaskContent implements TaskContent {
         private String question_difficulty;
         private List<String> options;
         private String hint;
-        private String correct_answer;
+        private int correct_answer;  // Index of the correct option (0-based), not the string value
         private int xpReward;
         private String explanation;
     }

@@ -196,6 +196,10 @@ public class ContentGeneratorServiceImpl implements ContentGeneratorService {
             JsonNode questionNode = questionNodes.get(i);
             List<String> options = jsonArrayToStringList(questionNode.path("options"));
 
+            // AI returns correct_answer as string value, convert to index
+            String correctAnswerString = questionNode.path("correct_answer").asText();
+            int correctAnswerIndex = convertCorrectAnswerToIndex(correctAnswerString, options, String.valueOf(i + 1));
+
             McqTaskContent.Question question = McqTaskContent.Question.builder()
                     .question_number(String.valueOf(i + 1))
                     .question_title(questionNode.path("question_title").asText())
@@ -205,7 +209,7 @@ public class ContentGeneratorServiceImpl implements ContentGeneratorService {
                     .question_difficulty(questionNode.path("question_difficulty").asText())
                     .options(options)
                     .hint(questionNode.path("hint").asText())
-                    .correct_answer(questionNode.path("correct_answer").asText())
+                    .correct_answer(correctAnswerIndex)
                     .explanation(questionNode.path("explanation").asText())
                     .xpReward(questionNode.path("xpReward").asInt(50))
                     .build();
@@ -216,6 +220,33 @@ public class ContentGeneratorServiceImpl implements ContentGeneratorService {
         return McqTaskContent.builder()
                 .questions(questions)
                 .build();
+    }
+
+    /**
+     * Converts the correct_answer string (as provided by AI) to an index based on its position in options.
+     *
+     * @param correctAnswerString The correct answer string from AI response
+     * @param options The list of available options
+     * @param questionNumber The question number for error reporting
+     * @return The 0-based index of the correct answer in the options list
+     * @throws IllegalArgumentException if the correct answer is not found in options
+     */
+    private int convertCorrectAnswerToIndex(String correctAnswerString, List<String> options, String questionNumber) {
+        if (correctAnswerString == null || correctAnswerString.isBlank()) {
+            throw new IllegalArgumentException("Correct answer is null or empty for question " + questionNumber);
+        }
+
+        int index = options.indexOf(correctAnswerString);
+
+        if (index == -1) {
+            log.error("AI-generated correct_answer '{}' not found in options for question {}. Options: {}",
+                    correctAnswerString, questionNumber, options);
+            throw new IllegalArgumentException(
+                    "Generated correct_answer not found in options for question: " + questionNumber
+            );
+        }
+
+        return index;
     }
 
     private List<JsonNode> parseMcqResponseToNodes(String response) {
