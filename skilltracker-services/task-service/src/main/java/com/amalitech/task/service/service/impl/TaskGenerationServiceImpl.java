@@ -326,7 +326,7 @@ public class TaskGenerationServiceImpl implements TaskGenerationService {
         
         log.info("Generating {} MCQ tasks concurrently for skill {} at {} difficulty with {} questions each",
                 tasksToGenerate, skill.getName(), difficulty, questionsPerTask);
-        
+
         List<CompletableFuture<List<UUID>>> futures = new ArrayList<>();
         
         for (int i = 0; i < tasksToGenerate; i++) {

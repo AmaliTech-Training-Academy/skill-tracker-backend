@@ -300,7 +300,7 @@ public class ContentGeneratorServiceImpl implements ContentGeneratorService {
             char c = response.charAt(i);
             
             if (escaped) {
-                fixed.append('\\').append(c);
+                fixed.append(c);
                 escaped = false;
                 continue;
             }
