@@ -132,7 +132,8 @@ Options:
 - One clearly correct option
 - **MANDATORY: Randomize correct answer positions uniformly across all 4 indices (0, 1, 2, 3)**
 - **CRITICAL: Each position (0, 1, 2, 3) must appear as correct answer EQUALLY**
-- For {quantity} questions: approximately {quantity/4} answers should be at index 0, {quantity/4} at index 1, {quantity/4} at index 2, {quantity/4} at index 3
+- For {quantity} questions: approximately 1/4 of answers should be at each index (0, 1, 2, 3)
+  * {quantity}÷4 = approximately N answers at each position
 - **For 10 questions: aim for exactly 2-3 answers at each position (no more than 4 at any position)**
 - **For 5 questions: exactly 1-2 answers at each position**
 - Do NOT put correct answer in the same position for consecutive questions
