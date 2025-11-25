@@ -24,3 +24,4 @@ public record SkillProgressDTO(
         Integer xpToNextLevel,
         Integer currentLevelTotalXp
 ) {}
+

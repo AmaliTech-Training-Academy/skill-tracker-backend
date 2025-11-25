@@ -47,6 +47,7 @@ public class UserSkillProgress {
             this.tasksCompleted++;
         }
 
+
         if (!event.passed()) {
             this.tasksFailed++;
         }

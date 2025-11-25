@@ -82,6 +82,7 @@ public class AnalyticsService implements AnalyticsServiceInterface {
         return skillProgressRepository.save(progress);
     }
 
+
     private SkillSnapShot fetchSkillSnapshot(UUID skillId) {
         return skillSnapshotRepository.findById(skillId)
                 .orElseThrow(() -> new EntityNotFoundException("Skill snapshot not found: ", skillId));

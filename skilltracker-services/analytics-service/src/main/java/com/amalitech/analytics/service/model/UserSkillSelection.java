@@ -15,7 +15,6 @@ import java.util.UUID;
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
 
 public class UserSkillSelection {
-
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;

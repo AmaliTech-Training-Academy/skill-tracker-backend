@@ -32,7 +32,6 @@ public class UserSkillAnalyticsListener {
         );
     }
 
-
     private void saveSkillEvent(UUID userId, SkillEventSource source, List<UserOnboardingCompletedEvent.SkillSelectionData> incomingSkills) {
 
         UserSkillEvent skillEvent = new UserSkillEvent();

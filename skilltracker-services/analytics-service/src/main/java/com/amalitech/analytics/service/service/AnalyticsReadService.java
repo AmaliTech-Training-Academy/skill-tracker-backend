@@ -74,6 +74,7 @@ public class AnalyticsReadService implements AnalyticsReadServiceInterface {
     }
 
 
+
     protected DashboardDTO buildFromScratch(UUID userId) {
         UserStatsDTO userStats = getUserStats(userId);
         List<SkillProgressDTO> skillProgress = getSkillProgress(userId);
