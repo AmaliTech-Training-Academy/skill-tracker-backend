@@ -344,7 +344,7 @@ public class ContentGeneratorServiceImpl implements ContentGeneratorService {
      * @return the persisted coding task
      */
     private Task createAndSaveCodingTask(SkillView skill, TaskDifficulty difficulty, JsonNode challengeNode) {
-        String title = challengeNode.path("title").asText("AI-Generated Coding Task");
+        String title = generateCodingTaskTitle(skill, challengeNode);
         String description = challengeNode.path("description").asText("AI-generated description.");
         int xpReward = challengeNode.path("maxXP").asInt(25);
         int duration = challengeNode.path("estimatedDuration").asInt(15);
@@ -559,7 +559,7 @@ public class ContentGeneratorServiceImpl implements ContentGeneratorService {
      * @return the persisted essay task
      */
     private Task createAndSaveEssayTask(SkillView skill, TaskDifficulty difficulty, JsonNode taskNode) {
-        String title = taskNode.path("title").asText("AI-Generated Essay Task");
+        String title = generateEssayTaskTitle(skill, taskNode);
         String description = taskNode.path("description").asText("AI-generated description.");
         int xpReward = taskNode.path("maxXP").asInt(50);
         int duration = taskNode.path("estimatedDuration").asInt(20);
@@ -633,6 +633,56 @@ public class ContentGeneratorServiceImpl implements ContentGeneratorService {
                 .satisfactory(categoryNode.path("satisfactory").asText())
                 .needsImprovement(categoryNode.path("needsImprovement").asText())
                 .build();
+    }
+
+    /**
+     * Generates a descriptive coding task title based on challenge concept.
+     * Creates varied titles like "PYTHON - String Reversal Challenge" or "PYTHON - Array Sorting"
+     * instead of generic titles.
+     */
+    private String generateCodingTaskTitle(SkillView skill, JsonNode challengeNode) {
+        String aiTitle = challengeNode.path("title").asText("");
+        
+        if (aiTitle.isEmpty()) {
+            return skill.getName() + " - Coding Challenge";
+        }
+        
+        // Extract key concept from the title (usually the first 2-3 words)
+        String[] words = aiTitle.split(" ");
+        StringBuilder conceptBuilder = new StringBuilder();
+        
+        int wordLimit = Math.min(4, words.length);
+        for (int i = 0; i < wordLimit; i++) {
+            if (i > 0) conceptBuilder.append(" ");
+            conceptBuilder.append(words[i]);
+        }
+        
+        return skill.getName() + " - " + conceptBuilder.toString();
+    }
+
+    /**
+     * Generates a descriptive essay task title based on essay prompt.
+     * Creates varied titles like "PYTHON - Function Design Analysis" or "PYTHON - Error Handling Strategy"
+     * instead of generic titles.
+     */
+    private String generateEssayTaskTitle(SkillView skill, JsonNode taskNode) {
+        String aiTitle = taskNode.path("title").asText("");
+        
+        if (aiTitle.isEmpty()) {
+            return skill.getName() + " - Essay Task";
+        }
+        
+        // Extract key concept from the title (usually the first 2-3 words)
+        String[] words = aiTitle.split(" ");
+        StringBuilder conceptBuilder = new StringBuilder();
+        
+        int wordLimit = Math.min(4, words.length);
+        for (int i = 0; i < wordLimit; i++) {
+            if (i > 0) conceptBuilder.append(" ");
+            conceptBuilder.append(words[i]);
+        }
+        
+        return skill.getName() + " - " + conceptBuilder.toString();
     }
 
     /**
