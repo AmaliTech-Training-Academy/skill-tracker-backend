@@ -56,11 +56,9 @@ public class McqOptionShuffler {
         int originalCorrectIndex = question.getCorrect_answer();
 
         if (originalOptions == null || originalOptions.size() <= 1) {
-            // No shuffling needed for 0 or 1 option
             return question;
         }
 
-        // Create list of indices: [0, 1, 2, 3]
         List<Integer> indices = new ArrayList<>();
         for (int i = 0; i < originalOptions.size(); i++) {
             indices.add(i);
@@ -69,22 +67,18 @@ public class McqOptionShuffler {
         // Fisher-Yates shuffle of indices
         for (int i = indices.size() - 1; i > 0; i--) {
             int j = random.nextInt(i + 1);
-            // Swap
             Integer temp = indices.get(i);
             indices.set(i, indices.get(j));
             indices.set(j, temp);
         }
 
-        // Build new options list based on shuffled indices
         List<String> shuffledOptions = new ArrayList<>();
         for (Integer index : indices) {
             shuffledOptions.add(originalOptions.get(index));
         }
 
-        // Find new position of correct answer
         int newCorrectIndex = indices.indexOf(originalCorrectIndex);
 
-        // Create new question with shuffled options
         return McqTaskContent.Question.builder()
                 .question_number(question.getQuestion_number())
                 .question_title(question.getQuestion_title())

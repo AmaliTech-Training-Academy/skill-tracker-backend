@@ -158,6 +158,10 @@ DIVERSITY & COVERAGE:
   * Application/scenario questions
   * Analysis/evaluation questions
 - All {quantity} questions should cover complementary aspects of {skill}
+- **IMPORTANT: Do NOT generate questions about these topics (already exist):**
+  {excludeTopics}
+  * If list is empty, generate freely from the skill
+  * If list has topics, ensure NO OVERLAP with existing questions
 
 OUTPUT REQUIREMENTS:
 - Return ONLY valid, parseable JSON

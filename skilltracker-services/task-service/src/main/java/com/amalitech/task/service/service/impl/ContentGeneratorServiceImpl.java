@@ -150,7 +150,8 @@ public class ContentGeneratorServiceImpl implements ContentGeneratorService {
         Prompt mcqPrompt = mcqPromptTemplate.create(Map.of(
                 "skill", skill.getName(),
                 "difficulty", difficulty.toString(),
-                "quantity", String.valueOf(quantity)
+                "quantity", String.valueOf(quantity),
+                "excludeTopics", ""
         ));
 
         String response = callOpenAI(mcqPrompt);
@@ -231,8 +232,6 @@ public class ContentGeneratorServiceImpl implements ContentGeneratorService {
                 .build();
 
         mcqContentValidator.validateMcqContent(content);
-
-        // Shuffle options to eliminate AI bias towards early correct answers
         content = mcqOptionShuffler.shuffleOptions(content);
         log.debug("Options shuffled for MCQ content with {} questions", questions.size());
 
