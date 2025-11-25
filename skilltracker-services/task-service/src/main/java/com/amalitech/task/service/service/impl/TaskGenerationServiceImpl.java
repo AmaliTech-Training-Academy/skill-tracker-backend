@@ -47,7 +47,8 @@ public class TaskGenerationServiceImpl implements TaskGenerationService {
     private final UserSkillProfileRepository userSkillProfileRepository;
 
     private final int codingOnboardingQuantity;
-    private final int mcqOnboardingQuantity;
+    private final int mcqOnboardingTaskQuantity;
+    private final int mcqOnboardingQuestionsPerTask;
     private final int essayOnboardingQuantity;
 
     private static final String LOCK_PREFIX = "lock:task-gen:";
@@ -61,7 +62,8 @@ public class TaskGenerationServiceImpl implements TaskGenerationService {
             TaskReplyEventProducer replyEventProducer,
             UserSkillProfileRepository userSkillProfileRepository,
             @Value("${app.task.onboarding-quantity.coding:5}") int codingOnboardingQuantity,
-            @Value("${app.task.onboarding-quantity.multiple-choice:10}") int mcqOnboardingQuantity,
+            @Value("${app.task.onboarding-quantity.multiple-choice-tasks:5}") int mcqOnboardingTaskQuantity,
+            @Value("${app.task.onboarding-quantity.multiple-choice-questions:10}") int mcqOnboardingQuestionsPerTask,
             @Value("${app.task.onboarding-quantity.essay:5}") int essayOnboardingQuantity
     ) {
         this.redisTemplate = redisTemplate;
@@ -71,7 +73,8 @@ public class TaskGenerationServiceImpl implements TaskGenerationService {
         this.replyEventProducer = replyEventProducer;
         this.userSkillProfileRepository = userSkillProfileRepository;
         this.codingOnboardingQuantity = codingOnboardingQuantity;
-        this.mcqOnboardingQuantity = mcqOnboardingQuantity;
+        this.mcqOnboardingTaskQuantity = mcqOnboardingTaskQuantity;
+        this.mcqOnboardingQuestionsPerTask = mcqOnboardingQuestionsPerTask;
         this.essayOnboardingQuantity = essayOnboardingQuantity;
     }
 
@@ -261,11 +264,15 @@ public class TaskGenerationServiceImpl implements TaskGenerationService {
 
     private int getTaskQuantity(TaskType taskType) {
         return switch (taskType) {
-            case MULTIPLE_CHOICE -> this.mcqOnboardingQuantity;
+            case MULTIPLE_CHOICE -> this.mcqOnboardingTaskQuantity;
             case CODING -> this.codingOnboardingQuantity;
             case ESSAY -> this.essayOnboardingQuantity;
             default -> 5;
         };
+    }
+
+    private int getQuestionsPerMcqTask() {
+        return this.mcqOnboardingQuestionsPerTask;
     }
 
     private List<UUID> generateTasksOfType(UserOnboardingCompletedEvent.SkillSelectionData skillData,
@@ -296,11 +303,41 @@ public class TaskGenerationServiceImpl implements TaskGenerationService {
                 var essayTasks = contentGeneratorService.generateEssayTask(skill, difficulty, tasksToGenerate);
                 return essayTasks.stream().map(Task::getId).toList();
             case MULTIPLE_CHOICE:
-                var mcqTasks = contentGeneratorService.generateMCQTask(skill, difficulty, tasksToGenerate);
-                return mcqTasks.stream().map(Task::getId).toList();
+                return generateMCQTasks(skill, difficulty, tasksToGenerate);
             default:
                 return List.of();
         }
+    }
+
+    /**
+     * Generates multiple MCQ tasks for a skill at a given difficulty level.
+     * Each task contains the same number of questions (questionsPerTask).
+     * 
+     * @param skill the skill to generate MCQ tasks for
+     * @param difficulty the difficulty level
+     * @param tasksToGenerate the number of MCQ tasks to create
+     * @return list of generated task IDs
+     */
+    private List<UUID> generateMCQTasks(SkillView skill, TaskDifficulty difficulty, int tasksToGenerate) throws IOException {
+        List<UUID> taskIds = new ArrayList<>();
+        int questionsPerTask = getQuestionsPerMcqTask();
+        
+        for (int i = 0; i < tasksToGenerate; i++) {
+            try {
+                log.info("Generating MCQ task {}/{} for skill {} at {} difficulty with {} questions",
+                        i + 1, tasksToGenerate, skill.getName(), difficulty, questionsPerTask);
+                
+                List<Task> generatedTasks = contentGeneratorService.generateMCQTask(skill, difficulty, questionsPerTask);
+                taskIds.addAll(generatedTasks.stream().map(Task::getId).toList());
+                
+            } catch (Exception e) {
+                log.error("Failed to generate MCQ task {}/{} for skill {}: {}",
+                        i + 1, tasksToGenerate, skill.getName(), e.getMessage(), e);
+                throw e;
+            }
+        }
+        
+        return taskIds;
     }
 
     /**
