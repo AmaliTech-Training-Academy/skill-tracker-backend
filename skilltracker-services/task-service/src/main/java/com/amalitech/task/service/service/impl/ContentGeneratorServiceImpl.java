@@ -162,7 +162,7 @@ public class ContentGeneratorServiceImpl implements ContentGeneratorService {
     }
 
     private Task createAndSaveMCQTask(SkillView skill, TaskDifficulty difficulty, List<JsonNode> questionNodes) {
-        String taskTitle = generateMCQTaskTitle(skill, questionNodes);
+        String taskTitle = "MCQ Quiz";
         String description = "Multiple choice assessment for " + skill.getName();
         
         // Calculate total duration
@@ -344,7 +344,7 @@ public class ContentGeneratorServiceImpl implements ContentGeneratorService {
      * @return the persisted coding task
      */
     private Task createAndSaveCodingTask(SkillView skill, TaskDifficulty difficulty, JsonNode challengeNode) {
-        String title = generateCodingTaskTitle(skill, challengeNode);
+        String title = challengeNode.path("title").asText("AI-Generated Coding Task");
         String description = challengeNode.path("description").asText("AI-generated description.");
         int xpReward = challengeNode.path("maxXP").asInt(25);
         int duration = challengeNode.path("estimatedDuration").asInt(15);
@@ -559,7 +559,7 @@ public class ContentGeneratorServiceImpl implements ContentGeneratorService {
      * @return the persisted essay task
      */
     private Task createAndSaveEssayTask(SkillView skill, TaskDifficulty difficulty, JsonNode taskNode) {
-        String title = generateEssayTaskTitle(skill, taskNode);
+        String title = taskNode.path("title").asText("AI-Generated Essay Task");
         String description = taskNode.path("description").asText("AI-generated description.");
         int xpReward = taskNode.path("maxXP").asInt(50);
         int duration = taskNode.path("estimatedDuration").asInt(20);
@@ -635,83 +635,4 @@ public class ContentGeneratorServiceImpl implements ContentGeneratorService {
                 .build();
     }
 
-    /**
-     * Generates a descriptive coding task title based on challenge concept.
-     * Creates varied titles like "PYTHON - String Reversal Challenge" or "PYTHON - Array Sorting"
-     * instead of generic titles.
-     */
-    private String generateCodingTaskTitle(SkillView skill, JsonNode challengeNode) {
-        String aiTitle = challengeNode.path("title").asText("");
-        
-        if (aiTitle.isEmpty()) {
-            return skill.getName() + " - Coding Challenge";
-        }
-        
-        // Extract key concept from the title (usually the first 2-3 words)
-        String[] words = aiTitle.split(" ");
-        StringBuilder conceptBuilder = new StringBuilder();
-        
-        int wordLimit = Math.min(4, words.length);
-        for (int i = 0; i < wordLimit; i++) {
-            if (i > 0) conceptBuilder.append(" ");
-            conceptBuilder.append(words[i]);
-        }
-        
-        return skill.getName() + " - " + conceptBuilder.toString();
-    }
-
-    /**
-     * Generates a descriptive essay task title based on essay prompt.
-     * Creates varied titles like "PYTHON - Function Design Analysis" or "PYTHON - Error Handling Strategy"
-     * instead of generic titles.
-     */
-    private String generateEssayTaskTitle(SkillView skill, JsonNode taskNode) {
-        String aiTitle = taskNode.path("title").asText("");
-        
-        if (aiTitle.isEmpty()) {
-            return skill.getName() + " - Essay Task";
-        }
-        
-        // Extract key concept from the title (usually the first 2-3 words)
-        String[] words = aiTitle.split(" ");
-        StringBuilder conceptBuilder = new StringBuilder();
-        
-        int wordLimit = Math.min(4, words.length);
-        for (int i = 0; i < wordLimit; i++) {
-            if (i > 0) conceptBuilder.append(" ");
-            conceptBuilder.append(words[i]);
-        }
-        
-        return skill.getName() + " - " + conceptBuilder.toString();
-    }
-
-    /**
-     * Generates a descriptive MCQ task title based on question topics.
-     * Creates varied titles like "PYTHON - Variables & Data Types" or "PYTHON - Control Flow Mastery"
-     * instead of generic "PYTHON - MCQ Quiz".
-     */
-    private String generateMCQTaskTitle(SkillView skill, List<JsonNode> questionNodes) {
-        if (questionNodes.isEmpty()) {
-            return skill.getName() + " - MCQ Quiz";
-        }
-
-        List<String> titles = new ArrayList<>();
-        for (JsonNode node : questionNodes) {
-            String questionTitle = node.path("question_title").asText("");
-            if (!questionTitle.isEmpty()) {
-                titles.add(questionTitle);
-            }
-        }
-
-        if (titles.isEmpty()) {
-            return skill.getName() + " - MCQ Quiz";
-        }
-
-        String combinedTitle = String.join(" & ", titles.stream().limit(2).collect(Collectors.toList()));
-        if (titles.size() > 2) {
-            combinedTitle += " & More";
-        }
-
-        return skill.getName() + " - " + combinedTitle;
-    }
 }
