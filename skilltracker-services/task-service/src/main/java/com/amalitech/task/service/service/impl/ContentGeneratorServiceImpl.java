@@ -14,6 +14,7 @@ import com.amalitech.task.service.model.view.SkillView;
 import com.amalitech.task.service.repository.TaskDefinitionRepository;
 import com.amalitech.task.service.repository.TaskRepository;
 import com.amalitech.task.service.service.ContentGeneratorService;
+import com.amalitech.task.service.validation.McqContentValidator;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -46,6 +47,7 @@ public class ContentGeneratorServiceImpl implements ContentGeneratorService {
     private final PromptTemplate codingPromptTemplate;
     private final PromptTemplate essayPromptTemplate;
     private final PromptTemplate mcqPromptTemplate;
+    private final McqContentValidator mcqContentValidator;
 
     public ContentGeneratorServiceImpl(@Qualifier("flagshipChatModel") ChatModel chatModel,
                                        ObjectMapper objectMapper,
@@ -53,7 +55,8 @@ public class ContentGeneratorServiceImpl implements ContentGeneratorService {
                                        TaskDefinitionRepository taskDefinitionRepository,
                                        PromptTemplate codingPromptTemplate,
                                        PromptTemplate essayPromptTemplate,
-                                       PromptTemplate mcqPromptTemplate
+                                       PromptTemplate mcqPromptTemplate,
+                                       McqContentValidator mcqContentValidator
     ) {
         this.chatModel = chatModel;
         this.objectMapper = objectMapper;
@@ -62,6 +65,7 @@ public class ContentGeneratorServiceImpl implements ContentGeneratorService {
         this.codingPromptTemplate = codingPromptTemplate;
         this.essayPromptTemplate = essayPromptTemplate;
         this.mcqPromptTemplate = mcqPromptTemplate;
+        this.mcqContentValidator = mcqContentValidator;
     }
 
     /**
@@ -217,9 +221,14 @@ public class ContentGeneratorServiceImpl implements ContentGeneratorService {
             questions.add(question);
         }
 
-        return McqTaskContent.builder()
+        McqTaskContent content = McqTaskContent.builder()
                 .questions(questions)
                 .build();
+
+        // Validate the generated content
+        mcqContentValidator.validateMcqContent(content);
+
+        return content;
     }
 
     /**

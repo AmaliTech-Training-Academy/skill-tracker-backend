@@ -5,8 +5,10 @@ import com.amalitech.task.service.dto.TaskSubmissionDTO;
 import com.amalitech.task.service.model.Task;
 import com.amalitech.task.service.model.TaskSubmission;
 import com.amalitech.task.service.model.content.impl.CodingTaskContent;
+import com.amalitech.task.service.model.content.impl.McqTaskContent;
 import com.amalitech.task.service.model.submission.impl.CodingSubmissionAnswer;
 import com.amalitech.task.service.model.submission.impl.EssaySubmissionAnswer;
+import com.amalitech.task.service.model.submission.impl.McqSubmissionAnswer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -124,6 +126,31 @@ public class SubmissionMapper {
                             submission.getTask().getId(), e.getMessage());
                 }
             }
+        }
+        else if (submission.getAnswer() instanceof McqSubmissionAnswer answer) {
+            // For MCQ tasks, send the answer as JSON
+            try {
+                String answerJson = objectMapper.writeValueAsString(answer);
+                builder.contentToEvaluate(answerJson);
+            } catch (Exception e) {
+                log.error("Failed to serialize MCQ answer for submission {}: {}", submission.getId(), e.getMessage());
+                throw new RuntimeException("Failed to serialize MCQ answer", e);
+            }
+
+            // Also send the task content (questions, options, correct answers) for evaluation
+            if (submission.getTask() != null &&
+                    submission.getTask().getContent() instanceof McqTaskContent mcqContent) {
+                try {
+                    String contentJson = objectMapper.writeValueAsString(mcqContent);
+                    // Use taskDescription field to pass MCQ content to evaluator
+                    builder.taskDescription(contentJson);
+                } catch (Exception e) {
+                    log.error("Failed to serialize MCQ content for task {}: {}", submission.getTask().getId(), e.getMessage());
+                    throw new RuntimeException("Failed to serialize MCQ content", e);
+                }
+            }
+
+            populateCommonTaskFields(builder, submission.getTask());
         }
 
         return builder.build();
