@@ -165,12 +165,11 @@ public class ContentGeneratorServiceImpl implements ContentGeneratorService {
         String taskTitle = skill.getName() + " - MCQ Quiz";
         String description = "Multiple choice assessment for " + skill.getName();
         
-        // Calculate total duration and max XP from all questions
+        // Calculate total duration
+        // Fixed: MCQ tasks are worth 50 XP total, divided equally among all questions
         int totalDuration = 0;
-        int totalXpReward = 0;
         for (JsonNode node : questionNodes) {
             totalDuration += node.path("question_duration").asInt(3);
-            totalXpReward += node.path("xpReward").asInt(50);
         }
 
         TaskDefinition definition = getOrCreateTaskDefinition(skill, taskTitle);
@@ -184,7 +183,7 @@ public class ContentGeneratorServiceImpl implements ContentGeneratorService {
                 .difficulty(difficulty)
                 .content(createMCQContent(questionNodes))
                 .estimatedDurationInMinutes(totalDuration)
-                .xpReward(totalXpReward)
+                .xpReward(50)
                 .isPublished(true)
                 .updatedAt(LocalDateTime.now())
                 .build();
@@ -195,6 +194,9 @@ public class ContentGeneratorServiceImpl implements ContentGeneratorService {
 
     public McqTaskContent createMCQContent(List<JsonNode> questionNodes) {
         List<McqTaskContent.Question> questions = new ArrayList<>();
+        
+        // Calculate XP per question: 50 XP total divided equally among all questions
+        int xpPerQuestion = Math.max(1, 50 / questionNodes.size());
 
         for (int i = 0; i < questionNodes.size(); i++) {
             JsonNode questionNode = questionNodes.get(i);
@@ -215,7 +217,7 @@ public class ContentGeneratorServiceImpl implements ContentGeneratorService {
                     .hint(questionNode.path("hint").asText())
                     .correct_answer(correctAnswerIndex)
                     .explanation(questionNode.path("explanation").asText())
-                    .xpReward(questionNode.path("xpReward").asInt(50))
+                    .xpReward(xpPerQuestion)
                     .build();
 
             questions.add(question);

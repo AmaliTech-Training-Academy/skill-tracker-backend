@@ -8,9 +8,11 @@ TASK:
 Generate exactly {quantity} high-quality MCQ questions in JSON format following the structure below.
 
 XP AND SCORING STRUCTURE:
-Each question is worth: 50 XP maximum
-- A user earns full 50 XP for correct answer
+Total MCQ task: 50 XP (divided equally among all questions)
+- Each question worth: 50 ÷ {quantity} XP
+- A user earns full XP for correct answer
 - Zero XP for incorrect answer (binary scoring)
+- Note: XP per question is calculated server-side, do NOT include xpReward in JSON
 
 REQUIRED JSON STRUCTURE:
 \{
@@ -39,9 +41,8 @@ REQUIRED JSON STRUCTURE:
           "Criterion 1: Why a specific distractor might seem correct",
           "Criterion 2: Why another distractor might seem correct"
         ]
-      \},
-      "xpReward": 50
-    \}
+      \}
+      \}
   ]
 \}
 
@@ -49,7 +50,7 @@ CRITICAL REQUIREMENTS - NON-NEGOTIABLE:
 
 1. Generate EXACTLY {quantity} questions
 
-2. EVERY question must have xpReward: 50 (fixed value)
+2. DO NOT include xpReward field in questions (calculated server-side)
 
 3. Binary scoring: 100% for correct, 0% for incorrect
    - No partial credit
@@ -161,7 +162,7 @@ OUTPUT REQUIREMENTS:
 FINAL VALIDATION CHECKLIST:
 ☐ Exactly {quantity} questions in the array
 ☐ Every question has all required fields
-☐ EVERY question has xpReward: 50
+☐ NO xpReward field in questions (calculated server-side as 50 ÷ {quantity})
 ☐ EVERY question has EXACTLY 4 options
 ☐ EVERY correct_answer is exact match to one of the 4 options
 ☐ All {quantity} questions test different concepts
