@@ -326,7 +326,6 @@ public class TaskGenerationServiceImpl implements TaskGenerationService {
         log.info("Generating {} MCQ tasks concurrently for skill {} at {} difficulty with {} questions each",
                 tasksToGenerate, skill.getName(), difficulty, questionsPerTask);
 
-        // Create parallel generation tasks
         List<CompletableFuture<List<UUID>>> futures = new ArrayList<>();
 
         for (int i = 0; i < tasksToGenerate; i++) {
@@ -348,7 +347,6 @@ public class TaskGenerationServiceImpl implements TaskGenerationService {
             futures.add(future);
         }
 
-        // Wait for all tasks to complete and collect results
         try {
             CompletableFuture<Void> allFutures = CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
             allFutures.join();
