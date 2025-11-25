@@ -12,10 +12,14 @@ import com.amalitech.task.service.mapper.SubmissionMapper;
 import com.amalitech.task.service.mapper.TaskCompletionMapper;
 import com.amalitech.task.service.model.Task;
 import com.amalitech.task.service.model.TaskSubmission;
+import com.amalitech.task.service.model.content.impl.McqTaskContent;
 import com.amalitech.task.service.model.enums.SubmissionStatus;
+import com.amalitech.task.service.model.enums.TaskType;
 import com.amalitech.task.service.model.feedback.SubmissionFeedback;
 import com.amalitech.task.service.model.feedback.impl.CodingSubmissionFeedback;
 import com.amalitech.task.service.model.feedback.impl.EssaySubmissionFeedback;
+import com.amalitech.task.service.model.feedback.impl.McqSubmissionFeedback;
+import com.amalitech.task.service.model.submission.impl.McqSubmissionAnswer;
 import com.amalitech.task.service.repository.TaskRepository;
 import com.amalitech.task.service.repository.TaskSubmissionRepository;
 import com.amalitech.task.service.service.SubmissionService;
@@ -26,6 +30,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -69,12 +74,10 @@ public class SubmissionServiceImpl implements SubmissionService {
     }
 
     /**
-     * Creates a new task submission record in the database and publishes a creation event
-     * to the message broker to initiate the asynchronous AI evaluation process.
+     * Creates a new task submission record in the database.
      * <p>
-     * This method ensures transactional integrity: it verifies the {@link Task} existence,
-     * persists the {@link TaskSubmission} in a PENDING state, and then publishes the
-     * {@link SubmissionCreatedEvent} for the downstream Evaluation Service to consume.
+     * For MCQ tasks: Evaluates synchronously (instant results, no async hop).
+     * For ESSAY/CODING tasks: Publishes a creation event for asynchronous evaluation.
      *
      * @param request The {@link SubmitAnswerRequest} containing the task ID and user's answer.
      * @param userId The ID of the authenticated user submitting the answer.
@@ -92,19 +95,138 @@ public class SubmissionServiceImpl implements SubmissionService {
         TaskSubmission submission = new TaskSubmission();
         submission.setUserId(userId);
         submission.setTask(task);
-
         submission.setAnswer(request.answer());
-        submission.setStatus(SubmissionStatus.PENDING);
+
+        if (task.getType() == TaskType.MULTIPLE_CHOICE) {
+            log.info("MCQ task detected - evaluating synchronously");
+            evaluateMcqSubmissionSync(submission);
+        } else {
+            submission.setStatus(SubmissionStatus.PENDING);
+        }
 
         TaskSubmission savedSubmission = submissionRepository.save(submission);
 
-        SubmissionCreatedEvent event = submissionMapper.toCreatedEvent(savedSubmission);
-
-        eventProducer.publishSubmissionCreated(event);
-
-        log.info("Submission {} created and event published.", savedSubmission.getId());
+        if (task.getType() != TaskType.MULTIPLE_CHOICE) {
+            SubmissionCreatedEvent event = submissionMapper.toCreatedEvent(savedSubmission);
+            eventProducer.publishSubmissionCreated(event);
+            log.info("Submission {} published for async evaluation.", savedSubmission.getId());
+        } else {
+            publishTaskCompletionEventForMcq(savedSubmission);
+        }
 
         return submissionMapper.toDTO(savedSubmission);
+    }
+
+    /**
+     * Evaluates an MCQ submission synchronously.
+     * Compares user answers against correct answers and generates feedback immediately.
+     *
+     * @param submission The MCQ submission to evaluate
+     */
+    private void evaluateMcqSubmissionSync(TaskSubmission submission) {
+        try {
+            McqSubmissionAnswer answer = (McqSubmissionAnswer) submission.getAnswer();
+            McqTaskContent content = (McqTaskContent) submission.getTask().getContent();
+
+            if (answer == null || answer.getAnswers() == null || answer.getAnswers().isEmpty()) {
+                throw new IllegalArgumentException("MCQ answer is empty");
+            }
+
+            List<McqSubmissionFeedback.QuestionFeedback> feedbacks = new ArrayList<>();
+            int totalCorrect = 0;
+
+            for (McqSubmissionAnswer.QuestionAnswer qa : answer.getAnswers()) {
+                McqTaskContent.Question question = content.getQuestions().stream()
+                        .filter(q -> q.getQuestion_number().equals(qa.getQuestionNumber()))
+                        .findFirst()
+                        .orElseThrow(() -> new IllegalArgumentException(
+                                "Question not found: " + qa.getQuestionNumber()
+                        ));
+
+                int correctOption = question.getCorrect_answer();
+                boolean isCorrect = qa.getSelectedOption() == correctOption;
+
+                if (isCorrect) totalCorrect++;
+
+                String explanation = question.getExplanation() != null
+                        ? question.getExplanation()
+                        : "No explanation available.";
+
+                feedbacks.add(new McqSubmissionFeedback.QuestionFeedback(
+                        qa.getQuestionNumber(),
+                        isCorrect,
+                        correctOption,
+                        explanation
+                ));
+            }
+
+            int totalQuestions = answer.getAnswers().size();
+            double scorePercentage = (totalCorrect * 100.0) / totalQuestions;
+
+            McqSubmissionFeedback feedback = new McqSubmissionFeedback(
+                    feedbacks,
+                    totalCorrect,
+                    totalQuestions,
+                    scorePercentage
+            );
+
+            submission.setStatus(SubmissionStatus.COMPLETED);
+            submission.setFeedback(feedback);
+            submission.setIsCorrect(totalCorrect == totalQuestions);
+            submission.setScoreEarned((int) scorePercentage);
+            submission.setEvaluatedAt(LocalDateTime.now());
+
+            log.info("MCQ submission {} evaluated: {}/{} correct ({}%)",
+                    submission.getId(), totalCorrect, totalQuestions, scorePercentage);
+
+        } catch (Exception e) {
+            log.error("Failed to evaluate MCQ submission {}: {}", submission.getId(), e.getMessage(), e);
+            submission.setStatus(SubmissionStatus.COMPLETED);
+            submission.setIsCorrect(false);
+            submission.setScoreEarned(0);
+            submission.setEvaluatedAt(LocalDateTime.now());
+        }
+    }
+
+    /**
+     * Publishes a task completed event for MCQ submissions (which are evaluated synchronously).
+     */
+    private void publishTaskCompletionEventForMcq(TaskSubmission submission) {
+        try {
+            SubmissionEvaluatedEvent event = SubmissionEvaluatedEvent.builder()
+                    .submissionId(submission.getId())
+                    .userId(submission.getUserId())
+                    .status(submission.getStatus().name())
+                    .score(submission.getScoreEarned() != null ? submission.getScoreEarned() : 0)
+                    .isCorrect(submission.getIsCorrect() != null && submission.getIsCorrect())
+                    .feedbackType("MULTIPLE_CHOICE")
+                    .detailedFeedback(serializeMcqFeedback((McqSubmissionFeedback) submission.getFeedback()))
+                    .overallFeedback("MCQ evaluation completed")
+                    .build();
+
+            publishTaskCompletionEvent(submission, event);
+            log.info("Task completion event published for MCQ submission {}", submission.getId());
+
+        } catch (Exception e) {
+            log.error("Failed to publish task completion event for MCQ submission {}: {}",
+                    submission.getId(), e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Serializes MCQ feedback to JSON with polymorphic type info.
+     */
+    private String serializeMcqFeedback(McqSubmissionFeedback feedback) throws Exception {
+        if (feedback == null) {
+            return null;
+        }
+        java.util.Map<String, Object> polymorphicFeedback = new java.util.HashMap<>();
+        polymorphicFeedback.put("feedbackType", "MULTIPLE_CHOICE");
+        polymorphicFeedback.put("totalCorrect", feedback.getTotalCorrect());
+        polymorphicFeedback.put("totalQuestions", feedback.getTotalQuestions());
+        polymorphicFeedback.put("scorePercentage", feedback.getScorePercentage());
+        polymorphicFeedback.put("feedbacks", feedback.getFeedbacks());
+        return objectMapper.writeValueAsString(polymorphicFeedback);
     }
 
     /**

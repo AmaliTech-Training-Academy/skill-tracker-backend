@@ -14,7 +14,6 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 )
 @JsonSubTypes({
         @JsonSubTypes.Type(value = CodingTaskContent.class, name = "CODING"),
-        @JsonSubTypes.Type(value = McqTaskContent.class, name = "MCQ"),
         @JsonSubTypes.Type(value = EssayTaskContent.class, name = "ESSAY")
 })
 public interface TaskContent {

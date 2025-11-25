@@ -23,6 +23,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 
+import java.io.IOException;
 import java.time.Duration;
 import java.util.*;
 
@@ -98,7 +99,8 @@ class TaskGenerationServiceImplTest {
                 replyEventProducer,
                 userSkillProfileRepository,
                 5,   // codingOnboardingQuantity
-                10,  // mcqOnboardingQuantity
+                5,   // mcqOnboardingTaskQuantity
+                10,  // mcqOnboardingQuestionsPerTask
                 5    // essayOnboardingQuantity
         );
     }
@@ -187,7 +189,7 @@ class TaskGenerationServiceImplTest {
     }
 
     @Test
-    void testProcessBatchGeneration_UnsupportedTaskType() {
+    void testProcessBatchGeneration_SupportsMCQTaskType() throws IOException {
         BatchGenerationRequest mcqRequest = new BatchGenerationRequest(
                 userId, "PYTHON", TaskDifficulty.INTERMEDIATE, 5, TaskType.MULTIPLE_CHOICE
         );
@@ -196,11 +198,13 @@ class TaskGenerationServiceImplTest {
         when(redisOps.setIfAbsent(anyString(), anyString(), any(Duration.class)))
                 .thenReturn(true);
         when(skillViewRepository.findByName("PYTHON")).thenReturn(Optional.of(testSkill));
+        when(contentGeneratorService.generateMCQTask(testSkill, TaskDifficulty.INTERMEDIATE, 5))
+                .thenReturn(Collections.emptyList());
 
         taskGenerationService.processBatchGeneration(mcqRequest);
 
         verify(replyEventProducer, times(1))
-                .publishTaskGenerationFailed(any(TaskGenerationFailedEvent.class));
+                .publishTaskGenerationSucceeded(any(TaskGenerationSucceededEvent.class));
         verify(redisTemplate, times(1)).delete(anyString());
     }
 
@@ -316,17 +320,19 @@ class TaskGenerationServiceImplTest {
     }
 
     @Test
-    void testProcessAdminGeneration_UnsupportedTaskType() {
+    void testProcessAdminGeneration_SupportsMCQTaskType() throws IOException {
         GenerateTaskRequest mcqRequest = new GenerateTaskRequest(
                 userId, TaskType.MULTIPLE_CHOICE, "PYTHON", TaskDifficulty.INTERMEDIATE, "Test", "Python"
         );
 
         when(skillViewRepository.findByName("PYTHON")).thenReturn(Optional.of(testSkill));
+        when(contentGeneratorService.generateMCQTask(testSkill, TaskDifficulty.INTERMEDIATE, 1))
+                .thenReturn(Collections.emptyList());
 
         taskGenerationService.processAdminGeneration(mcqRequest);
 
         verify(replyEventProducer, times(1))
-                .publishTaskGenerationFailed(any(TaskGenerationFailedEvent.class));
+                .publishTaskGenerationSucceeded(any(TaskGenerationSucceededEvent.class));
     }
 
     @Test

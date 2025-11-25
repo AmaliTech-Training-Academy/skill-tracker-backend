@@ -8,12 +8,15 @@ TASK:
 Generate exactly {quantity} high-quality MCQ questions in JSON format following the structure below.
 
 XP AND SCORING STRUCTURE:
-Each question is worth: 50 XP maximum
-- A user earns full 50 XP for correct answer
+Total MCQ task: 50 XP (divided equally among all questions)
+- Each question worth: 50 ÷ {quantity} XP
+- A user earns full XP for correct answer
 - Zero XP for incorrect answer (binary scoring)
+- Note: XP per question is calculated server-side, do NOT include xpReward in JSON
 
 REQUIRED JSON STRUCTURE:
 \{
+  "title": "String(Brief descriptive title for the overall MCQ quiz, max 80 chars)",
   "expected_output": [
     \{
       "question_title": "String(Very short title of question)",
@@ -39,17 +42,16 @@ REQUIRED JSON STRUCTURE:
           "Criterion 1: Why a specific distractor might seem correct",
           "Criterion 2: Why another distractor might seem correct"
         ]
-      \},
-      "xpReward": 50
-    \}
-  ]
+      \}
+      \}
+   ]
 \}
 
 CRITICAL REQUIREMENTS - NON-NEGOTIABLE:
 
 1. Generate EXACTLY {quantity} questions
 
-2. EVERY question must have xpReward: 50 (fixed value)
+2. DO NOT include xpReward field in questions (calculated server-side)
 
 3. Binary scoring: 100% for correct, 0% for incorrect
    - No partial credit
@@ -128,6 +130,17 @@ Options:
 - Similar length (within reason)
 - Each distractor should be plausible for the difficulty level
 - One clearly correct option
+- **MANDATORY: Randomize correct answer positions uniformly across all 4 indices (0, 1, 2, 3)**
+- **CRITICAL: Each position (0, 1, 2, 3) must appear as correct answer EQUALLY**
+- For {quantity} questions: approximately 1/4 of answers should be at each index (0, 1, 2, 3)
+  * {quantity}÷4 = approximately N answers at each position
+- **For 10 questions: aim for exactly 2-3 answers at each position (no more than 4 at any position)**
+- **For 5 questions: exactly 1-2 answers at each position**
+- Do NOT put correct answer in the same position for consecutive questions
+- NEVER cluster answers in positions 0-1 only (this is a common mistake)
+- ENSURE position 3 (last option) is used at least as often as positions 0-1
+- Example GOOD: [2, 0, 3, 1, 2, 0, 3, 1, 2, 0] - perfectly balanced
+- Example BAD: [0, 0, 0, 0, 1, 1, 1, 2, 2, 3] - too many 0s, needs rebalancing
 
 Evaluation Criteria:
 - CONCEPT UNDERSTANDING: What skill/knowledge is tested? What should learner know?
@@ -145,6 +158,10 @@ DIVERSITY & COVERAGE:
   * Application/scenario questions
   * Analysis/evaluation questions
 - All {quantity} questions should cover complementary aspects of {skill}
+- **IMPORTANT: Do NOT generate questions about these topics (already exist):**
+  {excludeTopics}
+  * If list is empty, generate freely from the skill
+  * If list has topics, ensure NO OVERLAP with existing questions
 
 OUTPUT REQUIREMENTS:
 - Return ONLY valid, parseable JSON
@@ -152,16 +169,26 @@ OUTPUT REQUIREMENTS:
 - NO explanatory text before or after the JSON
 - NO comments or trailing commas
 - Use double quotes for all strings
-- Properly escape special characters in strings
+- Escape double quotes within strings as \" (backslash-quote)
+- Escape backslashes as \\ (double backslash)
+- Single quotes within double-quoted strings do NOT need escaping
 - Use \n for line breaks in multi-line text
 - Ensure clean formatting for readability
 
 FINAL VALIDATION CHECKLIST:
+☐ Top-level "title" field is present and descriptive (max 80 chars)
 ☐ Exactly {quantity} questions in the array
 ☐ Every question has all required fields
-☐ EVERY question has xpReward: 50
+☐ NO xpReward field in questions (calculated server-side as 50 ÷ {quantity})
 ☐ EVERY question has EXACTLY 4 options
 ☐ EVERY correct_answer is exact match to one of the 4 options
+☐ Correct answers are UNIFORMLY DISTRIBUTED - CRITICAL CHECK:
+   • Count how many answers are at each index (0, 1, 2, 3)
+   • For 10 questions: each index should have 2-3 answers (max 4, min 1)
+   • For 5 questions: each index should have 1-2 answers
+   • MUST include position 3 (last option) at least once
+   • NO more than 4 answers at any single index
+   • NO clustering (avoid 3+ consecutive questions with same answer position)
 ☐ All {quantity} questions test different concepts
 ☐ All question_difficulty values match {difficulty} mapping (EASY|MEDIUM|HARD)
 ☐ question_duration is 1-3 minutes per question (individual time)

@@ -14,6 +14,8 @@ import com.amalitech.task.service.model.view.SkillView;
 import com.amalitech.task.service.repository.TaskDefinitionRepository;
 import com.amalitech.task.service.repository.TaskRepository;
 import com.amalitech.task.service.service.ContentGeneratorService;
+import com.amalitech.task.service.util.McqOptionShuffler;
+import com.amalitech.task.service.validation.McqContentValidator;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -46,6 +48,8 @@ public class ContentGeneratorServiceImpl implements ContentGeneratorService {
     private final PromptTemplate codingPromptTemplate;
     private final PromptTemplate essayPromptTemplate;
     private final PromptTemplate mcqPromptTemplate;
+    private final McqContentValidator mcqContentValidator;
+    private final McqOptionShuffler mcqOptionShuffler;
 
     public ContentGeneratorServiceImpl(@Qualifier("flagshipChatModel") ChatModel chatModel,
                                        ObjectMapper objectMapper,
@@ -53,7 +57,9 @@ public class ContentGeneratorServiceImpl implements ContentGeneratorService {
                                        TaskDefinitionRepository taskDefinitionRepository,
                                        PromptTemplate codingPromptTemplate,
                                        PromptTemplate essayPromptTemplate,
-                                       PromptTemplate mcqPromptTemplate
+                                       PromptTemplate mcqPromptTemplate,
+                                       McqContentValidator mcqContentValidator,
+                                       McqOptionShuffler mcqOptionShuffler
     ) {
         this.chatModel = chatModel;
         this.objectMapper = objectMapper;
@@ -62,6 +68,8 @@ public class ContentGeneratorServiceImpl implements ContentGeneratorService {
         this.codingPromptTemplate = codingPromptTemplate;
         this.essayPromptTemplate = essayPromptTemplate;
         this.mcqPromptTemplate = mcqPromptTemplate;
+        this.mcqContentValidator = mcqContentValidator;
+        this.mcqOptionShuffler = mcqOptionShuffler;
     }
 
     /**
@@ -142,14 +150,18 @@ public class ContentGeneratorServiceImpl implements ContentGeneratorService {
         Prompt mcqPrompt = mcqPromptTemplate.create(Map.of(
                 "skill", skill.getName(),
                 "difficulty", difficulty.toString(),
-                "quantity", String.valueOf(quantity)
+                "quantity", String.valueOf(quantity),
+                "excludeTopics", ""
         ));
 
         String response = callOpenAI(mcqPrompt);
 
-        List<JsonNode> questionNodes = parseMcqResponseToNodes(response);
+        JsonNode responseRoot = parseMcqResponse(response);
+        List<JsonNode> questionNodes = StreamSupport.stream(
+                responseRoot.path("expected_output").spliterator(), false
+        ).collect(Collectors.toList());
 
-        Task savedTask = createAndSaveMCQTask(skill, difficulty, questionNodes);
+        Task savedTask = createAndSaveMCQTask(skill, difficulty, responseRoot, questionNodes);
 
         log.info("Generated MCQ task with {} questions (ID: {})", 
                 questionNodes.size(), savedTask.getId());
@@ -157,16 +169,13 @@ public class ContentGeneratorServiceImpl implements ContentGeneratorService {
         return List.of(savedTask);
     }
 
-    private Task createAndSaveMCQTask(SkillView skill, TaskDifficulty difficulty, List<JsonNode> questionNodes) {
-        String taskTitle = skill.getName() + " - MCQ Quiz";
+    private Task createAndSaveMCQTask(SkillView skill, TaskDifficulty difficulty, JsonNode responseRoot, List<JsonNode> questionNodes) {
+        String taskTitle = responseRoot.path("title").asText(skill.getName() + "MCQ Quiz");
         String description = "Multiple choice assessment for " + skill.getName();
-        
-        // Calculate total duration and max XP from all questions
+
         int totalDuration = 0;
-        int totalXpReward = 0;
         for (JsonNode node : questionNodes) {
             totalDuration += node.path("question_duration").asInt(3);
-            totalXpReward += node.path("xpReward").asInt(50);
         }
 
         TaskDefinition definition = getOrCreateTaskDefinition(skill, taskTitle);
@@ -180,7 +189,7 @@ public class ContentGeneratorServiceImpl implements ContentGeneratorService {
                 .difficulty(difficulty)
                 .content(createMCQContent(questionNodes))
                 .estimatedDurationInMinutes(totalDuration)
-                .xpReward(totalXpReward)
+                .xpReward(50)
                 .isPublished(true)
                 .updatedAt(LocalDateTime.now())
                 .build();
@@ -192,9 +201,14 @@ public class ContentGeneratorServiceImpl implements ContentGeneratorService {
     public McqTaskContent createMCQContent(List<JsonNode> questionNodes) {
         List<McqTaskContent.Question> questions = new ArrayList<>();
 
+        int xpPerQuestion = Math.max(1, 50 / questionNodes.size());
+
         for (int i = 0; i < questionNodes.size(); i++) {
             JsonNode questionNode = questionNodes.get(i);
             List<String> options = jsonArrayToStringList(questionNode.path("options"));
+
+            String correctAnswerString = questionNode.path("correct_answer").asText();
+            int correctAnswerIndex = convertCorrectAnswerToIndex(correctAnswerString, options, String.valueOf(i + 1));
 
             McqTaskContent.Question question = McqTaskContent.Question.builder()
                     .question_number(String.valueOf(i + 1))
@@ -205,30 +219,64 @@ public class ContentGeneratorServiceImpl implements ContentGeneratorService {
                     .question_difficulty(questionNode.path("question_difficulty").asText())
                     .options(options)
                     .hint(questionNode.path("hint").asText())
-                    .correct_answer(questionNode.path("correct_answer").asText())
+                    .correct_answer(correctAnswerIndex)
                     .explanation(questionNode.path("explanation").asText())
-                    .xpReward(questionNode.path("xpReward").asInt(50))
+                    .xpReward(xpPerQuestion)
                     .build();
 
             questions.add(question);
         }
 
-        return McqTaskContent.builder()
+        McqTaskContent content = McqTaskContent.builder()
                 .questions(questions)
                 .build();
+
+        mcqContentValidator.validateMcqContent(content);
+        content = mcqOptionShuffler.shuffleOptions(content);
+        log.debug("Options shuffled for MCQ content with {} questions", questions.size());
+
+        return content;
     }
 
-    private List<JsonNode> parseMcqResponseToNodes(String response) {
+    /**
+     * Converts the correct_answer string (as provided by AI) to an index based on its position in options.
+     *
+     * @param correctAnswerString The correct answer string from AI response
+     * @param options The list of available options
+     * @param questionNumber The question number for error reporting
+     * @return The 0-based index of the correct answer in the options list
+     * @throws IllegalArgumentException if the correct answer is not found in options
+     */
+    private int convertCorrectAnswerToIndex(String correctAnswerString, List<String> options, String questionNumber) {
+        if (correctAnswerString == null || correctAnswerString.isBlank()) {
+            throw new IllegalArgumentException("Correct answer is null or empty for question " + questionNumber);
+        }
+
+        int index = options.indexOf(correctAnswerString);
+
+        if (index == -1) {
+            log.error("AI-generated correct_answer '{}' not found in options for question {}. Options: {}",
+                    correctAnswerString, questionNumber, options);
+            throw new IllegalArgumentException(
+                    "Generated correct_answer not found in options for question: " + questionNumber
+            );
+        }
+
+        return index;
+    }
+
+    private JsonNode parseMcqResponse(String response) {
         try {
-            JsonNode root = objectMapper.readTree(response);
+            String fixedResponse = fixJsonFormatting(response);
+            
+            JsonNode root = objectMapper.readTree(fixedResponse);
             JsonNode challengesNode = root.path("expected_output");
 
             if (challengesNode.isMissingNode() || !challengesNode.isArray()) {
                 throw new InvalidAiResponseException("Missing or invalid 'expected_output' array in OpenAI response");
             }
 
-            return StreamSupport.stream(challengesNode.spliterator(), false)
-                    .collect(Collectors.toList());
+            return root;
 
         } catch (InvalidAiResponseException e) {
             throw e;
@@ -236,6 +284,55 @@ public class ContentGeneratorServiceImpl implements ContentGeneratorService {
             log.error("Failed to parse MCQ tasks JSON: {}", response, e);
             throw new AiResponseParsingException("Failed to parse OpenAI MCQ response", e);
         }
+    }
+
+    /**
+     * Fixes common JSON formatting issues from AI responses.
+     * Handles literal newlines in string values by escaping them as \n.
+     * 
+     * @param response the JSON response
+     * @return the fixed JSON response
+     */
+    private String fixJsonFormatting(String response) {
+        StringBuilder fixed = new StringBuilder();
+        boolean inString = false;
+        boolean escaped = false;
+        
+        for (int i = 0; i < response.length(); i++) {
+            char c = response.charAt(i);
+            
+            if (escaped) {
+                fixed.append(c);
+                escaped = false;
+                continue;
+            }
+            
+            if (c == '\\' && inString) {
+                fixed.append(c);
+                escaped = true;
+                continue;
+            }
+            
+            if (c == '"') {
+                inString = !inString;
+                fixed.append(c);
+                continue;
+            }
+
+            if (inString && c == '\n') {
+                fixed.append("\\n");
+                continue;
+            }
+
+            if (inString && c == '\r') {
+                fixed.append("\\r");
+                continue;
+            }
+            
+            fixed.append(c);
+        }
+        
+        return fixed.toString();
     }
 
     /**
@@ -537,4 +634,5 @@ public class ContentGeneratorServiceImpl implements ContentGeneratorService {
                 .needsImprovement(categoryNode.path("needsImprovement").asText())
                 .build();
     }
+
 }

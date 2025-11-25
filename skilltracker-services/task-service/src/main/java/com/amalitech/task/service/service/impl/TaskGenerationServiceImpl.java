@@ -29,6 +29,8 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 
 /**
  * Asynchronous worker service for task generation.
@@ -47,7 +49,8 @@ public class TaskGenerationServiceImpl implements TaskGenerationService {
     private final UserSkillProfileRepository userSkillProfileRepository;
 
     private final int codingOnboardingQuantity;
-    private final int mcqOnboardingQuantity;
+    private final int mcqOnboardingTaskQuantity;
+    private final int mcqOnboardingQuestionsPerTask;
     private final int essayOnboardingQuantity;
 
     private static final String LOCK_PREFIX = "lock:task-gen:";
@@ -61,7 +64,8 @@ public class TaskGenerationServiceImpl implements TaskGenerationService {
             TaskReplyEventProducer replyEventProducer,
             UserSkillProfileRepository userSkillProfileRepository,
             @Value("${app.task.onboarding-quantity.coding:5}") int codingOnboardingQuantity,
-            @Value("${app.task.onboarding-quantity.multiple-choice:10}") int mcqOnboardingQuantity,
+            @Value("${app.task.onboarding-quantity.multiple-choice-tasks:5}") int mcqOnboardingTaskQuantity,
+            @Value("${app.task.onboarding-quantity.multiple-choice-questions:10}") int mcqOnboardingQuestionsPerTask,
             @Value("${app.task.onboarding-quantity.essay:5}") int essayOnboardingQuantity
     ) {
         this.redisTemplate = redisTemplate;
@@ -71,7 +75,8 @@ public class TaskGenerationServiceImpl implements TaskGenerationService {
         this.replyEventProducer = replyEventProducer;
         this.userSkillProfileRepository = userSkillProfileRepository;
         this.codingOnboardingQuantity = codingOnboardingQuantity;
-        this.mcqOnboardingQuantity = mcqOnboardingQuantity;
+        this.mcqOnboardingTaskQuantity = mcqOnboardingTaskQuantity;
+        this.mcqOnboardingQuestionsPerTask = mcqOnboardingQuestionsPerTask;
         this.essayOnboardingQuantity = essayOnboardingQuantity;
     }
 
@@ -261,11 +266,15 @@ public class TaskGenerationServiceImpl implements TaskGenerationService {
 
     private int getTaskQuantity(TaskType taskType) {
         return switch (taskType) {
-            case MULTIPLE_CHOICE -> this.mcqOnboardingQuantity;
+            case MULTIPLE_CHOICE -> this.mcqOnboardingTaskQuantity;
             case CODING -> this.codingOnboardingQuantity;
             case ESSAY -> this.essayOnboardingQuantity;
             default -> 5;
         };
+    }
+
+    private int getQuestionsPerMcqTask() {
+        return this.mcqOnboardingQuestionsPerTask;
     }
 
     private List<UUID> generateTasksOfType(UserOnboardingCompletedEvent.SkillSelectionData skillData,
@@ -296,10 +305,63 @@ public class TaskGenerationServiceImpl implements TaskGenerationService {
                 var essayTasks = contentGeneratorService.generateEssayTask(skill, difficulty, tasksToGenerate);
                 return essayTasks.stream().map(Task::getId).toList();
             case MULTIPLE_CHOICE:
-                var mcqTasks = contentGeneratorService.generateMCQTask(skill, difficulty, tasksToGenerate);
-                return mcqTasks.stream().map(Task::getId).toList();
+                return generateMCQTasks(skill, difficulty, tasksToGenerate, getQuestionsPerMcqTask());
             default:
                 return List.of();
+        }
+    }
+
+    /**
+     * Generates multiple MCQ tasks for a skill at a given difficulty level.
+     * Generates tasks sequentially (one at a time) to avoid overwhelming OpenAI
+     * with large requests. Each task is generated independently.
+     * 
+     * @param skill the skill to generate MCQ tasks for
+     * @param difficulty the difficulty level
+     * @param tasksToGenerate the number of MCQ tasks to create
+     * @param questionsPerTask the number of questions per task (can be dynamic)
+     * @return list of generated task IDs
+     */
+    private List<UUID> generateMCQTasks(SkillView skill, TaskDifficulty difficulty, int tasksToGenerate, int questionsPerTask) throws IOException {
+        log.info("Generating {} MCQ tasks concurrently for skill {} at {} difficulty with {} questions each",
+                tasksToGenerate, skill.getName(), difficulty, questionsPerTask);
+
+        List<CompletableFuture<List<UUID>>> futures = new ArrayList<>();
+
+        for (int i = 0; i < tasksToGenerate; i++) {
+            final int taskNumber = i + 1;
+            CompletableFuture<List<UUID>> future = CompletableFuture.supplyAsync(() -> {
+                try {
+                    log.info("Generating MCQ task {}/{} for skill {} at {} difficulty with {} questions",
+                            taskNumber, tasksToGenerate, skill.getName(), difficulty, questionsPerTask);
+
+                    List<Task> generatedTasks = contentGeneratorService.generateMCQTask(skill, difficulty, questionsPerTask);
+                    return generatedTasks.stream().map(Task::getId).toList();
+
+                } catch (Exception e) {
+                    log.error("Failed to generate MCQ task {}/{} for skill {}: {}",
+                            taskNumber, tasksToGenerate, skill.getName(), e.getMessage(), e);
+                    throw new RuntimeException("Failed to generate MCQ task: " + e.getMessage(), e);
+                }
+            });
+            futures.add(future);
+        }
+
+        try {
+            CompletableFuture<Void> allFutures = CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
+            allFutures.join();
+
+            List<UUID> taskIds = futures.stream()
+                    .map(CompletableFuture::join)
+                    .flatMap(List::stream)
+                    .collect(Collectors.toList());
+
+            log.info("Successfully generated {} MCQ tasks for skill {}", taskIds.size(), skill.getName());
+            return taskIds;
+
+        } catch (Exception e) {
+            log.error("Failed to generate MCQ tasks for skill {}: {}", skill.getName(), e.getMessage(), e);
+            throw new IOException("Failed to generate MCQ tasks concurrently", e);
         }
     }
 
