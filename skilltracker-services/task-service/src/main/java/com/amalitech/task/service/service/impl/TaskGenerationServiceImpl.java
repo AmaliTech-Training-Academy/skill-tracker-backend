@@ -305,7 +305,7 @@ public class TaskGenerationServiceImpl implements TaskGenerationService {
                 var essayTasks = contentGeneratorService.generateEssayTask(skill, difficulty, tasksToGenerate);
                 return essayTasks.stream().map(Task::getId).toList();
             case MULTIPLE_CHOICE:
-                return generateMCQTasks(skill, difficulty, tasksToGenerate);
+                return generateMCQTasks(skill, difficulty, tasksToGenerate, getQuestionsPerMcqTask());
             default:
                 return List.of();
         }
@@ -324,10 +324,10 @@ public class TaskGenerationServiceImpl implements TaskGenerationService {
      * @param skill the skill to generate MCQ tasks for
      * @param difficulty the difficulty level
      * @param tasksToGenerate the number of MCQ tasks to create
+     * @param questionsPerTask the number of questions per task (can be dynamic)
      * @return list of generated task IDs
      */
-    private List<UUID> generateMCQTasks(SkillView skill, TaskDifficulty difficulty, int tasksToGenerate) throws IOException {
-        int questionsPerTask = getQuestionsPerMcqTask();
+    private List<UUID> generateMCQTasks(SkillView skill, TaskDifficulty difficulty, int tasksToGenerate, int questionsPerTask) throws IOException {
         int totalQuestions = tasksToGenerate * questionsPerTask;
         
         log.info("Generating {} MCQ tasks for skill {} at {} difficulty ({} total questions in single call)",
