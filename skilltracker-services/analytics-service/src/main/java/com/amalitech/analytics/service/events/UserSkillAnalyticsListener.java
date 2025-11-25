@@ -40,6 +40,7 @@ public class UserSkillAnalyticsListener {
         skillEvent.setSource(source);
         skillEvent.setOccurredAt(LocalDateTime.now());
 
+        System.out.println("incomingSkills: " + incomingSkills.size());
         Set<UserSkillSelection> selections = incomingSkills.stream()
                 .map(data -> {
                     UserSkillSelection s = new UserSkillSelection();
@@ -52,6 +53,7 @@ public class UserSkillAnalyticsListener {
                     return s;
                 }).collect(Collectors.toSet());
 
+        System.out.println("selections: " + selections.size());
         skillEvent.setSelections(selections);
         eventRepository.save(skillEvent);
 

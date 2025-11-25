@@ -78,7 +78,7 @@ public class AnalyticsService implements AnalyticsServiceInterface {
         SkillSnapShot snapshot = fetchSkillSnapshot(event.skillId());
         int totalXp = progress.getTotalXpEarned() + event.totalXpEarned();
         double proficiency = calculateProficiency(totalXp, snapshot);
-        progress.updateProgress(event.totalXpEarned(), Math.min(proficiency, 100.0));
+        progress.updateProgress(event, Math.min(proficiency, 100.0));
         return skillProgressRepository.save(progress);
     }
 

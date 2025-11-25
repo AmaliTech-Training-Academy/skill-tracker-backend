@@ -7,11 +7,13 @@ import java.util.Set;
 import java.util.UUID;
 
 @Entity
-@Table(name = "user_skill_selection")
+@Table(name = "user_skill_selection",
+        uniqueConstraints = @UniqueConstraint(columnNames = {"user_id", "skill_id"}))
 @Getter
 @Setter
 @ToString(exclude = "event")
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
+
 public class UserSkillSelection {
 
     @Id
@@ -22,6 +24,7 @@ public class UserSkillSelection {
     private UUID userId;
 
     @Column(nullable = false)
+    @EqualsAndHashCode.Include
     private UUID skillId;
 
     private String skillName;
