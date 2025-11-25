@@ -162,7 +162,7 @@ public class ContentGeneratorServiceImpl implements ContentGeneratorService {
     }
 
     private Task createAndSaveMCQTask(SkillView skill, TaskDifficulty difficulty, List<JsonNode> questionNodes) {
-        String taskTitle = skill.getName() + " - MCQ Quiz";
+        String taskTitle = generateMCQTaskTitle(skill, questionNodes);
         String description = "Multiple choice assessment for " + skill.getName();
         
         // Calculate total duration
@@ -633,5 +633,35 @@ public class ContentGeneratorServiceImpl implements ContentGeneratorService {
                 .satisfactory(categoryNode.path("satisfactory").asText())
                 .needsImprovement(categoryNode.path("needsImprovement").asText())
                 .build();
+    }
+
+    /**
+     * Generates a descriptive MCQ task title based on question topics.
+     * Creates varied titles like "PYTHON - Variables & Data Types" or "PYTHON - Control Flow Mastery"
+     * instead of generic "PYTHON - MCQ Quiz".
+     */
+    private String generateMCQTaskTitle(SkillView skill, List<JsonNode> questionNodes) {
+        if (questionNodes.isEmpty()) {
+            return skill.getName() + " - MCQ Quiz";
+        }
+
+        List<String> titles = new ArrayList<>();
+        for (JsonNode node : questionNodes) {
+            String questionTitle = node.path("question_title").asText("");
+            if (!questionTitle.isEmpty()) {
+                titles.add(questionTitle);
+            }
+        }
+
+        if (titles.isEmpty()) {
+            return skill.getName() + " - MCQ Quiz";
+        }
+
+        String combinedTitle = String.join(" & ", titles.stream().limit(2).collect(Collectors.toList()));
+        if (titles.size() > 2) {
+            combinedTitle += " & More";
+        }
+
+        return skill.getName() + " - " + combinedTitle;
     }
 }
