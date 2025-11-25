@@ -97,24 +97,20 @@ public class SubmissionServiceImpl implements SubmissionService {
         submission.setTask(task);
         submission.setAnswer(request.answer());
 
-        // MCQ tasks are evaluated synchronously (no async needed)
         if (task.getType() == TaskType.MULTIPLE_CHOICE) {
             log.info("MCQ task detected - evaluating synchronously");
             evaluateMcqSubmissionSync(submission);
         } else {
-            // ESSAY and CODING tasks use async evaluation
             submission.setStatus(SubmissionStatus.PENDING);
         }
 
         TaskSubmission savedSubmission = submissionRepository.save(submission);
 
-        // Publish event for async evaluation (MCQ will skip, ESSAY/CODING will process)
         if (task.getType() != TaskType.MULTIPLE_CHOICE) {
             SubmissionCreatedEvent event = submissionMapper.toCreatedEvent(savedSubmission);
             eventProducer.publishSubmissionCreated(event);
             log.info("Submission {} published for async evaluation.", savedSubmission.getId());
         } else {
-            // For MCQ, publish task completed event directly
             publishTaskCompletionEventForMcq(savedSubmission);
         }
 
@@ -132,12 +128,10 @@ public class SubmissionServiceImpl implements SubmissionService {
             McqSubmissionAnswer answer = (McqSubmissionAnswer) submission.getAnswer();
             McqTaskContent content = (McqTaskContent) submission.getTask().getContent();
 
-            // Validate input
             if (answer == null || answer.getAnswers() == null || answer.getAnswers().isEmpty()) {
                 throw new IllegalArgumentException("MCQ answer is empty");
             }
 
-            // Evaluate each question
             List<McqSubmissionFeedback.QuestionFeedback> feedbacks = new ArrayList<>();
             int totalCorrect = 0;
 
@@ -149,7 +143,6 @@ public class SubmissionServiceImpl implements SubmissionService {
                                 "Question not found: " + qa.getQuestionNumber()
                         ));
 
-                // Direct integer comparison
                 int correctOption = question.getCorrect_answer();
                 boolean isCorrect = qa.getSelectedOption() == correctOption;
 
@@ -167,7 +160,6 @@ public class SubmissionServiceImpl implements SubmissionService {
                 ));
             }
 
-            // Build feedback
             int totalQuestions = answer.getAnswers().size();
             double scorePercentage = (totalCorrect * 100.0) / totalQuestions;
 
@@ -178,7 +170,6 @@ public class SubmissionServiceImpl implements SubmissionService {
                     scorePercentage
             );
 
-            // Update submission with results
             submission.setStatus(SubmissionStatus.COMPLETED);
             submission.setFeedback(feedback);
             submission.setIsCorrect(totalCorrect == totalQuestions);
@@ -202,7 +193,6 @@ public class SubmissionServiceImpl implements SubmissionService {
      */
     private void publishTaskCompletionEventForMcq(TaskSubmission submission) {
         try {
-            // Create a synthetic SubmissionEvaluatedEvent from the MCQ evaluation results
             SubmissionEvaluatedEvent event = SubmissionEvaluatedEvent.builder()
                     .submissionId(submission.getId())
                     .userId(submission.getUserId())
@@ -211,7 +201,7 @@ public class SubmissionServiceImpl implements SubmissionService {
                     .isCorrect(submission.getIsCorrect() != null && submission.getIsCorrect())
                     .feedbackType("MULTIPLE_CHOICE")
                     .detailedFeedback(serializeMcqFeedback((McqSubmissionFeedback) submission.getFeedback()))
-                    .overallFeedback(String.format("MCQ evaluation completed"))
+                    .overallFeedback("MCQ evaluation completed")
                     .build();
 
             publishTaskCompletionEvent(submission, event);
