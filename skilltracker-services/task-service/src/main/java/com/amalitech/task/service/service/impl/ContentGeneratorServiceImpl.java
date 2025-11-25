@@ -260,7 +260,10 @@ public class ContentGeneratorServiceImpl implements ContentGeneratorService {
 
     private List<JsonNode> parseMcqResponseToNodes(String response) {
         try {
-            JsonNode root = objectMapper.readTree(response);
+            // Attempt to fix common JSON issues from AI responses
+            String fixedResponse = fixJsonFormatting(response);
+            
+            JsonNode root = objectMapper.readTree(fixedResponse);
             JsonNode challengesNode = root.path("expected_output");
 
             if (challengesNode.isMissingNode() || !challengesNode.isArray()) {
@@ -276,6 +279,58 @@ public class ContentGeneratorServiceImpl implements ContentGeneratorService {
             log.error("Failed to parse MCQ tasks JSON: {}", response, e);
             throw new AiResponseParsingException("Failed to parse OpenAI MCQ response", e);
         }
+    }
+
+    /**
+     * Attempts to fix common JSON formatting issues from AI responses.
+     * Handles unescaped quotes within JSON strings.
+     * 
+     * @param response the potentially malformed JSON response
+     * @return the fixed JSON string
+     */
+    private String fixJsonFormatting(String response) {
+        // This regex finds unescaped single quotes within JSON string values
+        // and replaces them with escaped quotes
+        // Pattern: finds quotes that are preceded by a non-backslash and not escaped
+        
+        // More direct approach: fix unescaped single quotes in string values
+        // We look for patterns like: "...text'text..." and fix to "...text\'text..."
+        StringBuilder fixed = new StringBuilder();
+        boolean inString = false;
+        boolean escaped = false;
+        
+        for (int i = 0; i < response.length(); i++) {
+            char c = response.charAt(i);
+            
+            if (escaped) {
+                fixed.append(c);
+                escaped = false;
+                continue;
+            }
+            
+            if (c == '\\') {
+                fixed.append(c);
+                escaped = true;
+                continue;
+            }
+            
+            if (c == '"' && !escaped) {
+                inString = !inString;
+                fixed.append(c);
+                continue;
+            }
+            
+            // If we're inside a string and encounter an unescaped single quote,
+            // escape it
+            if (inString && c == '\'' && !escaped) {
+                fixed.append("\\'");
+                continue;
+            }
+            
+            fixed.append(c);
+        }
+        
+        return fixed.toString();
     }
 
     /**

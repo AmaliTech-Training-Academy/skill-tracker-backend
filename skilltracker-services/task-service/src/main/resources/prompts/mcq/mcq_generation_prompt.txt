@@ -152,7 +152,9 @@ OUTPUT REQUIREMENTS:
 - NO explanatory text before or after the JSON
 - NO comments or trailing commas
 - Use double quotes for all strings
-- Properly escape special characters in strings
+- CRITICAL: Escape single quotes within strings as \' (backslash-quote)
+- CRITICAL: Escape double quotes within strings as \" (backslash-quote)
+- CRITICAL: Escape backslashes as \\ (double backslash)
 - Use \n for line breaks in multi-line text
 - Ensure clean formatting for readability
 
