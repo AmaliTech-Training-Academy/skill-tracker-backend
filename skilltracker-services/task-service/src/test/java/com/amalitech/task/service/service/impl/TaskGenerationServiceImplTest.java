@@ -98,7 +98,8 @@ class TaskGenerationServiceImplTest {
                 replyEventProducer,
                 userSkillProfileRepository,
                 5,   // codingOnboardingQuantity
-                10,  // mcqOnboardingQuantity
+                5,   // mcqOnboardingTaskQuantity
+                10,  // mcqOnboardingQuestionsPerTask
                 5    // essayOnboardingQuantity
         );
     }
