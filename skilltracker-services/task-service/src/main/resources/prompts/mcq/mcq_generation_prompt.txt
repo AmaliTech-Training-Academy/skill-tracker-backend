@@ -129,6 +129,8 @@ Options:
 - Similar length (within reason)
 - Each distractor should be plausible for the difficulty level
 - One clearly correct option
+- CRITICAL: Randomize the position of the correct answer (don't always put it first)
+- Correct answer should appear in different positions across questions (mix of index 0, 1, 2, 3)
 
 Evaluation Criteria:
 - CONCEPT UNDERSTANDING: What skill/knowledge is tested? What should learner know?
@@ -165,6 +167,7 @@ FINAL VALIDATION CHECKLIST:
 ☐ NO xpReward field in questions (calculated server-side as 50 ÷ {quantity})
 ☐ EVERY question has EXACTLY 4 options
 ☐ EVERY correct_answer is exact match to one of the 4 options
+☐ Correct answers are in MIXED positions (not all index 0, spread across 0-3)
 ☐ All {quantity} questions test different concepts
 ☐ All question_difficulty values match {difficulty} mapping (EASY|MEDIUM|HARD)
 ☐ question_duration is 1-3 minutes per question (individual time)
