@@ -83,7 +83,7 @@ public class MCQTaskEvaluator implements TaskEvaluator {
                     .status("COMPLETED")
                     .score((int) scorePercentage)
                     .isCorrect(totalCorrect == totalQuestions)  // Only true if ALL correct
-                    .feedbackType("MCQ")
+                    .feedbackType("MULTIPLE_CHOICE")
                     .detailedFeedback(detailedFeedbackJson)
                     .overallFeedback(String.format(
                             "You got %d out of %d questions correct (%.0f%%)",
@@ -101,7 +101,7 @@ public class MCQTaskEvaluator implements TaskEvaluator {
 
     @Override
     public String getTaskType() {
-        return "MCQ";
+        return "MULTIPLE_CHOICE";
     }
 
     /**
@@ -169,7 +169,7 @@ public class MCQTaskEvaluator implements TaskEvaluator {
     private String serializeFeedback(McqSubmissionFeedback feedback) throws Exception {
         // Create a wrapper to include feedbackType for polymorphic deserialization in task-service
         java.util.Map<String, Object> polymorphicFeedback = new java.util.HashMap<>();
-        polymorphicFeedback.put("feedbackType", "MCQ");
+        polymorphicFeedback.put("feedbackType", "MULTIPLE_CHOICE");
         polymorphicFeedback.put("totalCorrect", feedback.getTotalCorrect());
         polymorphicFeedback.put("totalQuestions", feedback.getTotalQuestions());
         polymorphicFeedback.put("scorePercentage", feedback.getScorePercentage());
@@ -188,7 +188,7 @@ public class MCQTaskEvaluator implements TaskEvaluator {
                 .status("ERROR")
                 .score(0)
                 .isCorrect(false)
-                .feedbackType("MCQ")
+                .feedbackType("MULTIPLE_CHOICE")
                 .overallFeedback("MCQ evaluation failed. Please contact support.")
                 .build());
     }

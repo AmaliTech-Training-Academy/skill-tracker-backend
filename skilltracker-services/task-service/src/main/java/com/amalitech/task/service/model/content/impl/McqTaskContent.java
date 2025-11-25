@@ -1,10 +1,11 @@
 package com.amalitech.task.service.model.content.impl;
 
 import com.amalitech.task.service.model.content.TaskContent;
-
 import com.fasterxml.jackson.annotation.JsonInclude;
-import jakarta.validation.constraints.*;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.util.List;
 
@@ -37,7 +38,7 @@ public class McqTaskContent implements TaskContent {
         private String question_difficulty;
         private List<String> options;
         private String hint;
-        private int correct_answer;  // Index of the correct option (0-based), not the string value
+        private int correct_answer;
         private int xpReward;
         private String explanation;
     }

@@ -3,7 +3,6 @@ package com.amalitech.task.service.model.feedback;
 import com.amalitech.task.service.model.feedback.impl.CodingSubmissionFeedback;
 import com.amalitech.task.service.model.feedback.impl.EssaySubmissionFeedback;
 import com.amalitech.task.service.model.feedback.impl.McqSubmissionFeedback;
-
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
@@ -17,7 +16,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
         property = "feedbackType"
 )
 @JsonSubTypes({
-        @JsonSubTypes.Type(value = McqSubmissionFeedback.class, name = "MCQ"),
+        @JsonSubTypes.Type(value = McqSubmissionFeedback.class, name = "MULTIPLE_CHOICE"),
         @JsonSubTypes.Type(value = EssaySubmissionFeedback.class, name = "ESSAY"),
         @JsonSubTypes.Type(value = CodingSubmissionFeedback.class, name = "CODING")
 })
