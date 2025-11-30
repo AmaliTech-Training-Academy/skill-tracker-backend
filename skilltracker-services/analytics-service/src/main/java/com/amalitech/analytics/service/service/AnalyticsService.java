@@ -234,7 +234,9 @@ public class AnalyticsService implements AnalyticsServiceInterface {
     private void updateUserAggregateStats(TaskCompletedEvent event) {
         UserAggregateStats stats = fetchOrCreateAggregateStats(event.userId());
         LocalDate practiceDate = getEventDate(event);
-        stats.incrementTasksCompleted();
+        if (event.passed()) {
+            stats.incrementTasksCompleted();
+        }
         stats.updateStreak(practiceDate);
         aggregateStatsRepository.save(stats);
     }
