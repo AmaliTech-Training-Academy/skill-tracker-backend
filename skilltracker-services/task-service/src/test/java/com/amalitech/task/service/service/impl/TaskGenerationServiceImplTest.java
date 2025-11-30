@@ -112,7 +112,7 @@ class TaskGenerationServiceImplTest {
         when(redisTemplate.opsForValue()).thenReturn(redisOps);
         when(redisOps.setIfAbsent(anyString(), anyString(), any(Duration.class)))
                 .thenReturn(true);
-        when(skillViewRepository.findByName("PYTHON")).thenReturn(Optional.of(testSkill));
+        when(skillViewRepository.findByName("PYTHON")).thenReturn(List.of(testSkill));
 
         taskGenerationService.processBatchGeneration(batchRequest);
 
@@ -132,7 +132,7 @@ class TaskGenerationServiceImplTest {
         when(redisTemplate.opsForValue()).thenReturn(redisOps);
         when(redisOps.setIfAbsent(anyString(), anyString(), any(Duration.class)))
                 .thenReturn(true);
-        when(skillViewRepository.findByName("PYTHON")).thenReturn(Optional.of(testSkill));
+        when(skillViewRepository.findByName("PYTHON")).thenReturn(List.of(testSkill));
 
         taskGenerationService.processBatchGeneration(essayRequest);
 
@@ -161,7 +161,7 @@ class TaskGenerationServiceImplTest {
         when(redisTemplate.opsForValue()).thenReturn(redisOps);
         when(redisOps.setIfAbsent(anyString(), anyString(), any(Duration.class)))
                 .thenReturn(true);
-        when(skillViewRepository.findByName("PYTHON")).thenReturn(Optional.empty());
+        when(skillViewRepository.findByName("PYTHON")).thenReturn(List.of());
 
         taskGenerationService.processBatchGeneration(batchRequest);
 
@@ -176,7 +176,7 @@ class TaskGenerationServiceImplTest {
         when(redisTemplate.opsForValue()).thenReturn(redisOps);
         when(redisOps.setIfAbsent(anyString(), anyString(), any(Duration.class)))
                 .thenReturn(true);
-        when(skillViewRepository.findByName("PYTHON")).thenReturn(Optional.of(testSkill));
+        when(skillViewRepository.findByName("PYTHON")).thenReturn(List.of(testSkill));
         doThrow(new RuntimeException("AI service error"))
                 .when(contentGeneratorService)
                 .generateCodingTask(any(), any(), anyInt());
@@ -197,7 +197,7 @@ class TaskGenerationServiceImplTest {
         when(redisTemplate.opsForValue()).thenReturn(redisOps);
         when(redisOps.setIfAbsent(anyString(), anyString(), any(Duration.class)))
                 .thenReturn(true);
-        when(skillViewRepository.findByName("PYTHON")).thenReturn(Optional.of(testSkill));
+        when(skillViewRepository.findByName("PYTHON")).thenReturn(List.of(testSkill));
         when(contentGeneratorService.generateMCQTask(testSkill, TaskDifficulty.INTERMEDIATE, 5))
                 .thenReturn(Collections.emptyList());
 
@@ -215,7 +215,7 @@ class TaskGenerationServiceImplTest {
         when(redisTemplate.opsForValue()).thenReturn(redisOps);
         when(redisOps.setIfAbsent(anyString(), anyString(), any(Duration.class)))
                 .thenReturn(true);
-        when(skillViewRepository.findByName("PYTHON")).thenReturn(Optional.of(testSkill));
+        when(skillViewRepository.findByName("PYTHON")).thenReturn(List.of(testSkill));
 
         taskGenerationService.processBatchGeneration(batchRequest);
 
@@ -228,7 +228,7 @@ class TaskGenerationServiceImplTest {
         when(redisTemplate.opsForValue()).thenReturn(redisOps);
         when(redisOps.setIfAbsent(anyString(), anyString(), any(Duration.class)))
                 .thenReturn(true);
-        when(skillViewRepository.findByName("PYTHON")).thenReturn(Optional.of(testSkill));
+        when(skillViewRepository.findByName("PYTHON")).thenReturn(List.of(testSkill));
 
         taskGenerationService.processBatchGeneration(batchRequest);
 
@@ -262,7 +262,7 @@ class TaskGenerationServiceImplTest {
                 userId, TaskType.CODING, "PYTHON", TaskDifficulty.INTERMEDIATE, "Arrays", "Python"
         );
 
-        when(skillViewRepository.findByName("PYTHON")).thenReturn(Optional.of(testSkill));
+        when(skillViewRepository.findByName("PYTHON")).thenReturn(List.of(testSkill));
 
         taskGenerationService.processAdminGeneration(codingRequest);
 
@@ -282,7 +282,7 @@ class TaskGenerationServiceImplTest {
         javaSkill.setId(UUID.randomUUID());
         javaSkill.setName("JAVA");
 
-        when(skillViewRepository.findByName("JAVA")).thenReturn(Optional.of(javaSkill));
+        when(skillViewRepository.findByName("JAVA")).thenReturn(List.of(javaSkill));
 
         taskGenerationService.processAdminGeneration(essayRequest);
 
@@ -294,7 +294,7 @@ class TaskGenerationServiceImplTest {
 
     @Test
     void testProcessAdminGeneration_SkillNotFound() {
-        when(skillViewRepository.findByName("UNKNOWN")).thenReturn(Optional.empty());
+        when(skillViewRepository.findByName("UNKNOWN")).thenReturn(List.of());
 
         GenerateTaskRequest unknownRequest = new GenerateTaskRequest(
                 userId, TaskType.CODING, "UNKNOWN", TaskDifficulty.BEGINNER, "Test", "Test"
@@ -308,7 +308,7 @@ class TaskGenerationServiceImplTest {
 
     @Test
     void testProcessAdminGeneration_GenerationException() {
-        when(skillViewRepository.findByName("PYTHON")).thenReturn(Optional.of(testSkill));
+        when(skillViewRepository.findByName("PYTHON")).thenReturn(List.of(testSkill));
         doThrow(new RuntimeException("Generation failed"))
                 .when(contentGeneratorService)
                 .generateEssayTask(any(), any(), anyInt());
@@ -325,7 +325,7 @@ class TaskGenerationServiceImplTest {
                 userId, TaskType.MULTIPLE_CHOICE, "PYTHON", TaskDifficulty.INTERMEDIATE, "Test", "Python"
         );
 
-        when(skillViewRepository.findByName("PYTHON")).thenReturn(Optional.of(testSkill));
+        when(skillViewRepository.findByName("PYTHON")).thenReturn(List.of(testSkill));
         when(contentGeneratorService.generateMCQTask(testSkill, TaskDifficulty.INTERMEDIATE, 1))
                 .thenReturn(Collections.emptyList());
 
@@ -337,7 +337,7 @@ class TaskGenerationServiceImplTest {
 
     @Test
     void testProcessAdminGeneration_GeneratesExactlyOneTask() {
-        when(skillViewRepository.findByName("PYTHON")).thenReturn(Optional.of(testSkill));
+        when(skillViewRepository.findByName("PYTHON")).thenReturn(List.of(testSkill));
 
         taskGenerationService.processAdminGeneration(adminRequest);
 
@@ -607,7 +607,7 @@ class TaskGenerationServiceImplTest {
         when(redisTemplate.opsForValue()).thenReturn(redisOps);
         when(redisOps.setIfAbsent(anyString(), anyString(), any(Duration.class)))
                 .thenReturn(true);
-        when(skillViewRepository.findByName("PYTHON")).thenReturn(Optional.of(testSkill));
+        when(skillViewRepository.findByName("PYTHON")).thenReturn(List.of(testSkill));
 
         taskGenerationService.processBatchGeneration(batchRequest);
 
@@ -620,7 +620,7 @@ class TaskGenerationServiceImplTest {
 
     @Test
     void testProcessAdminGeneration_EventContainsUserId() {
-        when(skillViewRepository.findByName("PYTHON")).thenReturn(Optional.of(testSkill));
+        when(skillViewRepository.findByName("PYTHON")).thenReturn(List.of(testSkill));
 
         taskGenerationService.processAdminGeneration(adminRequest);
 
