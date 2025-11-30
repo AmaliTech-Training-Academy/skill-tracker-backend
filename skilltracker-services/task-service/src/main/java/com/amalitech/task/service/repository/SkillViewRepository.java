@@ -13,10 +13,11 @@ import java.util.UUID;
 public interface SkillViewRepository extends JpaRepository<SkillView, UUID> {
 
     /**
-     * Find skill by name (case-insensitive)
+     * Find skills by name (case-insensitive).
+     * Returns a list to handle potential duplicate skill names in the view.
      */
     @Query("SELECT s FROM SkillView s WHERE LOWER(s.name) = LOWER(:name)")
-    Optional<SkillView> findByName(String name);
+    List<SkillView> findByName(String name);
 
     /**
      * Find all skills (for admin/listing purposes)

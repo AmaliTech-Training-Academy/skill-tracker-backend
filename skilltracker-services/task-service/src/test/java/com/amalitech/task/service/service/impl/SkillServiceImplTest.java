@@ -10,7 +10,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.Optional;
+import java.util.List;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -38,7 +38,7 @@ class SkillServiceImplTest {
 
     @Test
     void testGetSkillByName_Success() {
-        when(skillViewRepository.findByName("PYTHON")).thenReturn(Optional.of(testSkill));
+        when(skillViewRepository.findByName("PYTHON")).thenReturn(List.of(testSkill));
 
         SkillView result = skillService.getSkillByName("PYTHON");
 
@@ -50,7 +50,7 @@ class SkillServiceImplTest {
 
     @Test
     void testGetSkillByName_NotFound() {
-        when(skillViewRepository.findByName("NONEXISTENT")).thenReturn(Optional.empty());
+        when(skillViewRepository.findByName("NONEXISTENT")).thenReturn(List.of());
 
         assertThrows(ResourceNotFoundException.class, () -> {
             skillService.getSkillByName("NONEXISTENT");
@@ -62,7 +62,7 @@ class SkillServiceImplTest {
     @Test
     void testGetSkillByName_CacheabilityFirstCall() {
         testSkill.setName("JAVA");
-        when(skillViewRepository.findByName("JAVA")).thenReturn(Optional.of(testSkill));
+        when(skillViewRepository.findByName("JAVA")).thenReturn(List.of(testSkill));
 
         SkillView result = skillService.getSkillByName("JAVA");
 
@@ -73,7 +73,7 @@ class SkillServiceImplTest {
 
     @Test
     void testGetSkillByName_NotFoundExceptionMessage() {
-        when(skillViewRepository.findByName("UNKNOWN")).thenReturn(Optional.empty());
+        when(skillViewRepository.findByName("UNKNOWN")).thenReturn(List.of());
 
         ResourceNotFoundException exception = assertThrows(ResourceNotFoundException.class, () -> {
             skillService.getSkillByName("UNKNOWN");

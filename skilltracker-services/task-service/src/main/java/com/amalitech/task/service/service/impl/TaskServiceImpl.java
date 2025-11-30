@@ -16,6 +16,7 @@ import com.amalitech.task.service.model.enums.CompletedTaskPeriod;
 import com.amalitech.task.service.model.enums.TaskDifficulty;
 import com.amalitech.task.service.model.enums.TaskType;
 import com.amalitech.task.service.model.view.SkillView;
+import com.amalitech.task.service.repository.SkillViewRepository;
 import com.amalitech.task.service.repository.TaskRepository;
 import com.amalitech.task.service.repository.TaskSubmissionRepository;
 import com.amalitech.task.service.repository.UserLearningPathRepository;
@@ -62,6 +63,7 @@ public class TaskServiceImpl implements TaskService {
 
     private final TaskRepository taskRepository;
     private final UserSkillProfileRepository userSkillProfileRepository;
+    private final SkillViewRepository skillViewRepository;
     private final SkillService skillService;
     private final TaskSubmissionRepository submissionRepository;
     private final RabbitMQEventProducer taskEventProducer;
@@ -83,6 +85,7 @@ public class TaskServiceImpl implements TaskService {
 
     public TaskServiceImpl(TaskRepository taskRepository,
                            UserSkillProfileRepository userSkillProfileRepository,
+                           SkillViewRepository skillViewRepository,
                            SkillService skillService,
                            TaskSubmissionRepository submissionRepository,
                            RabbitMQEventProducer taskEventProducer,
@@ -91,6 +94,7 @@ public class TaskServiceImpl implements TaskService {
     ) {
         this.taskRepository = taskRepository;
         this.userSkillProfileRepository = userSkillProfileRepository;
+        this.skillViewRepository = skillViewRepository;
         this.skillService = skillService;
         this.submissionRepository = submissionRepository;
         this.taskEventProducer = taskEventProducer;
@@ -491,10 +495,16 @@ public class TaskServiceImpl implements TaskService {
      * @throws ResourceNotFoundException if skillName is provided but not found.
      */
     private List<UserSkillProfile> getRelevantSkillProfiles(UUID userId, String skillName) {
-        UUID targetSkillId = null;
+        List<UUID> targetSkillIds;
         if (skillName != null && !skillName.isBlank()) {
-            SkillView skill = skillService.getSkillByName(skillName);
-            targetSkillId = skill.getId();
+            // Get all skills matching the name (in case of duplicates in the view)
+            List<SkillView> skills = skillViewRepository.findByName(skillName);
+            if (skills.isEmpty()) {
+                throw new ResourceNotFoundException("Skill not found: " + skillName);
+            }
+            targetSkillIds = skills.stream().map(SkillView::getId).collect(Collectors.toList());
+        } else {
+            targetSkillIds = Collections.emptyList();
         }
 
         List<UserSkillProfile> allProfiles = userSkillProfileRepository.findById_UserId(userId);
@@ -502,10 +512,10 @@ public class TaskServiceImpl implements TaskService {
             return Collections.emptyList();
         }
 
-        if (targetSkillId != null) {
-            final UUID finalTargetSkillId = targetSkillId;
+        if (!targetSkillIds.isEmpty()) {
+            final List<UUID> finalTargetSkillIds = targetSkillIds;
             return allProfiles.stream()
-                    .filter(p -> p.getId().getSkillId().equals(finalTargetSkillId))
+                    .filter(p -> finalTargetSkillIds.contains(p.getId().getSkillId()))
                     .collect(Collectors.toList());
         }
 

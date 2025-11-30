@@ -21,6 +21,8 @@ public class SkillServiceImpl implements SkillService {
     public SkillView getSkillByName(String skillName) {
         log.info("Cache miss for SkillView: {}", skillName);
         return skillViewRepository.findByName(skillName)
+                .stream()
+                .findFirst()
                 .orElseThrow(() -> new ResourceNotFoundException("Skill not found: " + skillName));
     }
 }

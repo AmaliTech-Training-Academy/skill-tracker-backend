@@ -16,16 +16,10 @@ public interface UserSkillProfileRepository extends JpaRepository<UserSkillProfi
 
     /**
      * Finds a user's skill profile by their ID (which is nested in the 'id' field)
-     * and the name of the skill.
-     *
-     * Spring Data JPA understands this naming convention:
-     * "findBy"
-     * "Id" (the name of the @EmbeddedId field)
-     * "UserId" (the name of the field *inside* UserSkillId)
-     * "And"
-     * "SkillName" (the top-level field in UserSkillProfile)
+     * and the name of the skill (case-insensitive).
      */
-    Optional<UserSkillProfile> findByIdUserIdAndSkillName(UUID userId, String skillName);
+    @Query("SELECT usp FROM UserSkillProfile usp WHERE usp.id.userId = :userId AND LOWER(usp.skillName) = LOWER(:skillName)")
+    Optional<UserSkillProfile> findByIdUserIdAndSkillName(@Param("userId") UUID userId, @Param("skillName") String skillName);
 
     /**
      * Finds all skill IDs associated with a user.
