@@ -109,6 +109,8 @@ public class TaskGenerationServiceImpl implements TaskGenerationService {
         try {
             log.info("Acquired lock {}. Generating {} {} tasks in a single batch...", lockKey, request.requiredCount(), request.taskType());
             SkillView skill = skillViewRepository.findByName(request.skillName())
+                    .stream()
+                    .findFirst()
                     .orElseThrow(() -> new TaskGenerationException("Skill not found: " + request.skillName()));
 
             List<UUID> generatedTaskIds = new ArrayList<>();
@@ -141,7 +143,7 @@ public class TaskGenerationServiceImpl implements TaskGenerationService {
 
         } catch (Exception e) {
             log.error("Failed to generate BATCH tasks for {}: {}", lockKey, e.getMessage(), e);
-            SkillView skill = skillViewRepository.findByName(request.skillName()).orElse(null);
+            SkillView skill = skillViewRepository.findByName(request.skillName()).stream().findFirst().orElse(null);
             TaskGenerationFailedEvent failEvent = new TaskGenerationFailedEvent(
                     requesterUserId,
                     skill != null ? List.of(skill.getId()) : List.of(),
@@ -166,6 +168,8 @@ public class TaskGenerationServiceImpl implements TaskGenerationService {
 
         try {
             SkillView skill = skillViewRepository.findByName(request.skillName())
+                    .stream()
+                    .findFirst()
                     .orElseThrow(() -> new TaskGenerationException("Skill not found: " + request.skillName()));
 
             log.info("Generating ADMIN {} task (1) for topic '{}'...", request.taskType(), request.topic());
@@ -200,7 +204,7 @@ public class TaskGenerationServiceImpl implements TaskGenerationService {
 
         } catch (Exception e) {
             log.error("Failed to generate ADMIN task...", e);
-            SkillView skill = skillViewRepository.findByName(request.skillName()).orElse(null);
+            SkillView skill = skillViewRepository.findByName(request.skillName()).stream().findFirst().orElse(null);
             TaskGenerationFailedEvent failEvent = new TaskGenerationFailedEvent(
                     requesterUserId,
                     skill != null ? List.of(skill.getId()) : List.of(),
