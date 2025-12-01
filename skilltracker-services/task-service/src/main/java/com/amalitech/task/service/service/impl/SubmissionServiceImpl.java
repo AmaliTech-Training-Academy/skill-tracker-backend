@@ -308,7 +308,7 @@ public class SubmissionServiceImpl implements SubmissionService {
         try {
             Task task = submission.getTask();
             UUID skillId = task.getTaskDefinition().getSkill().getId();
-            Integer totalXpEarned = task.getXpReward();
+            Integer totalXpEarned = event.isCorrect() ? task.getXpReward() : 0;
 
             TaskCompletedEvent taskCompletedEvent = taskCompletionMapper.toTaskCompletedEvent(
                     submission,
